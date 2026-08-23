@@ -1,3 +1,61 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
+
+@theme {
+  --color-brand: #73aa8b;
+  --color-brand-dark: #4d7d61;
+
+  --color-bg: #f7faff;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f2f8f5;
+  --color-border: rgba(115, 170, 139, 0.22);
+
+  --color-fg: #1a2e22;
+  --color-fg-muted: #4a6555;
+  --color-fg-subtle: #7a9886;
+
+  --color-sidebar: #73aa8b;
+  --color-sidebar-fg: #ffffff;
+  --color-sidebar-fg-muted: rgba(255, 255, 255, 0.92);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.22);
+
+  --color-topbar: #81b397;
+  --color-topbar-fg: #ffffff;
+  --color-topbar-fg-muted: rgba(255, 255, 255, 0.75);
+
+  --color-card-accent: #e8f3ed;
+
+  --animate-flyout-in: flyout-in 120ms ease both;
+}
+
+@keyframes flyout-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Los valores de --color-* se redefinen aquí para modo oscuro; como las
+   utilidades de Tailwind generadas (bg-sidebar, text-fg, etc.) solo leen
+   la variable CSS en tiempo de render, el tema cambia entero con un único
+   toggle de clase en <body>, sin duplicar clases dark: en cada plantilla. */
+body.dark {
+  --color-bg: #0d0d0d;
+  --color-surface: #1a1a1a;
+  --color-surface-alt: #222222;
+  --color-border: rgba(255, 255, 255, 0.08);
+
+  --color-fg: #f0f0f0;
+  --color-fg-muted: #a0a0a0;
+  --color-fg-subtle: #606060;
+
+  --color-sidebar: #111111;
+  --color-sidebar-fg: #e0e0e0;
+  --color-sidebar-fg-muted: rgba(224, 224, 224, 0.85);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+
+  --color-topbar: #161616;
+  --color-topbar-fg: #f0f0f0;
+  --color-topbar-fg-muted: rgba(240, 240, 240, 0.55);
+
+  --color-card-accent: #1e1e1e;
+}
