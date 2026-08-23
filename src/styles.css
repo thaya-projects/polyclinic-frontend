@@ -1,3 +1,440 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import 'tailwindcss';
+
+:root {
+  --mil: #73aa8b;
+  --mil-dark: #4d7d61;
+  --mil-pale: #e8f3ed;
+  --mil-text: #2e5640;
+  --white: #f7faff;
+  --bg: #f7faff;
+  --bg2: #eef4f0;
+  --bg3: #e0ece6;
+  --surface: #ffffff;
+  --surface2: #f2f8f5;
+  --border: rgba(115,170,139,0.22);
+  --border2: rgba(115,170,139,0.45);
+  --tx: #1a2e22;
+  --tx2: #4a6555;
+  --tx3: #7a9886;
+  --sidebar-bg: #73aa8b;
+  --sidebar-tx: #ffffff;
+  --sidebar-tx2: rgba(255,255,255,0.7);
+  --sidebar-act: rgba(255,255,255,0.22);
+  --topbar-bg: #81b397;
+  --topbar-tx: #ffffff;
+  --topbar-tx2: rgba(255,255,255,0.75);
+  --card-accent: #e8f3ed;
+  --card-accent-border: rgba(115,170,139,0.45);
+  --date-tx: #2e5640;
+  --red: #c94040;
+  --amber: #7a4a0a;
+  --amber-pale: #fdf3e3;
+  --purple: #3d358a;
+  --purple-pale: #efedfd;
+}
+
+body.dark {
+  --bg: #0d0d0d;
+  --bg2: #141414;
+  --surface: #1a1a1a;
+  --surface2: #222222;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --tx: #f0f0f0;
+  --tx2: #a0a0a0;
+  --tx3: #606060;
+  --sidebar-bg: #111111;
+  --sidebar-tx: #e0e0e0;
+  --sidebar-tx2: rgba(224,224,224,0.6);
+  --sidebar-act: rgba(255,255,255,0.08);
+  --topbar-bg: #161616;
+  --topbar-tx: #f0f0f0;
+  --topbar-tx2: rgba(240,240,240,0.55);
+  --card-accent: #1e1e1e;
+  --card-accent-border: rgba(255,255,255,0.1);
+  --date-tx: #73aa8b;
+  --stat-accent: #73aa8b;
+  --red: #e06060;
+  --red-pale: #2a1414;
+  --amber-pale: #241a08;
+  --amber-text: #e0b060;
+  --purple: #a09ae0;
+  --purple-pale: #1e1c35;
+  --purple-text: #a09ae0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background-color: var(--bg);
+  color: var(--tx);
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.page-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.section-heading {
+  color: var(--mil);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: .05em;
+  font-size: .75rem;
+  margin-bottom: .75rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.card-accent {
+  background: var(--card-accent);
+  border: 1px solid var(--card-accent-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.att-box {
+  border: 2px dashed var(--border2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  gap: 0.5rem;
+  min-height: 80px;
+}
+
+.att-box:hover {
+  background: var(--card-accent);
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.pulse-live {
+  animation: pulse-live 1.5s ease-in-out infinite;
+}
+
+.tab-btn {
+  padding: .5rem 1rem;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--tx2);
+  transition: all 0.15s;
+}
+
+.tab-btn.active {
+  color: var(--mil);
+  border-bottom-color: var(--mil);
+}
+
+.hora-slot {
+  padding: .4rem .6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: .8rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  color: var(--tx);
+}
+
+.hora-slot:hover:not(.ocupado) {
+  background: var(--card-accent);
+  border-color: var(--mil);
+  color: var(--mil);
+}
+
+.hora-slot.selected {
+  background: var(--mil);
+  color: white;
+  border-color: var(--mil);
+}
+
+.hora-slot.ocupado {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.chip-esp {
+  padding: .35rem .85rem;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  font-size: .8rem;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--tx2);
+  transition: all 0.15s;
+}
+
+.chip-esp.selected {
+  background: var(--mil);
+  color: white;
+  border-color: var(--mil);
+}
+
+input[type="text"], input[type="date"], input[type="number"], select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: .5rem .75rem;
+  color: var(--tx);
+  font-size: .875rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+  border-color: var(--mil);
+}
+
+.btn-primary {
+  background: var(--mil);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: .6rem 1.25rem;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.btn-primary:hover {
+  background: var(--mil-dark);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--tx);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: .6rem 1.25rem;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.btn-secondary:hover {
+  border-color: var(--mil);
+  color: var(--mil);
+}
+
+.btn-danger {
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: .6rem 1.25rem;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg3);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--mil);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.sidebar-active {
+  background: var(--sidebar-act) !important;
+  color: var(--sidebar-tx) !important;
+}
+
+.nav-group-hdr {
+  display: flex; align-items: center; gap: .65rem; width: 100%;
+  padding: .6rem .75rem; border-radius: 8px; background: none; border: none;
+  color: var(--sidebar-tx2); text-align: left; cursor: pointer;
+  font-size: .85rem; font-weight: 500; font-family: inherit; transition: background .15s;
+}
+.nav-group-hdr:hover { background: var(--sidebar-act); color: var(--sidebar-tx); }
+.nav-group-hdr .grow { flex: 1; }
+.nav-group-hdr .chev { font-size: .8rem; transition: transform .15s; }
+.nav-group-hdr .chev.rot { transform: rotate(180deg); }
+
+.nav-group-children { display: flex; flex-direction: column; gap: .1rem; padding-left: .9rem; margin-bottom: .15rem; }
+
+.soon-badge {
+  margin-left: auto; font-size: .62rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; padding: .1rem .4rem; border-radius: 5px;
+  background: rgba(255,255,255,.12); color: var(--sidebar-tx2);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Sidebar — colapsable a modo icono + flyout de submenús
+   ════════════════════════════════════════════════════════════════ */
+.sidebar {
+  position: relative;
+  width: 220px; min-width: 220px; background: var(--sidebar-bg);
+  display: flex; flex-direction: column; min-height: 100vh; padding: 0;
+  transition: width .18s ease, min-width .18s ease;
+}
+.sidebar.collapsed { width: 76px; min-width: 76px; }
+
+.sb-edge-handle {
+  position: absolute; top: 42px; right: -12px; z-index: 40;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--sidebar-bg); border: 1px solid rgba(255,255,255,.25);
+  color: var(--sidebar-tx2); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: .7rem; box-shadow: 0 2px 6px rgba(0,0,0,.18);
+  transition: background .15s, color .15s, transform .1s;
+}
+.sb-edge-handle:hover { background: var(--sidebar-act); color: var(--sidebar-tx); transform: scale(1.06); }
+
+.sb-header {
+  padding: 1.25rem 1rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.12);
+  display: flex; align-items: center; gap: .5rem;
+}
+.sidebar.collapsed .sb-header { justify-content: center; padding: 1.1rem .5rem; }
+
+.sb-brand { display: flex; align-items: center; gap: .6rem; min-width: 0; overflow: hidden; }
+.sb-brand-icon {
+  width: 32px; height: 32px; background: white; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sb-brand-icon i { color: var(--mil); font-size: 1.1rem; }
+.sb-brand-name {
+  color: var(--sidebar-tx); font-weight: 700; font-size: .95rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.sb-nav {
+  flex: 1; padding: .75rem .5rem; display: flex; flex-direction: column; gap: .15rem; overflow-y: auto;
+}
+.sidebar.collapsed .sb-nav { align-items: center; padding: .75rem .45rem; }
+
+.sb-link {
+  display: flex; align-items: center; gap: .65rem; width: 100%; padding: .6rem .75rem; border-radius: 8px;
+  color: var(--sidebar-tx2); text-decoration: none; font-size: .85rem; font-weight: 500;
+  background: none; border: none; text-align: left; font-family: inherit; cursor: pointer;
+  transition: all .15s;
+}
+.sb-link i { font-size: 1rem; flex-shrink: 0; width: 1.1rem; text-align: center; }
+.sb-link:hover { background: var(--sidebar-act); color: var(--sidebar-tx); }
+.sb-link.disabled { opacity: .45; cursor: default; }
+.sb-link.disabled:hover { background: none; color: var(--sidebar-tx2); }
+.sb-link.child { padding: .55rem .75rem; font-size: .82rem; }
+.sb-link.child i { font-size: .9rem; }
+
+.sidebar.collapsed .sb-link { justify-content: center; width: 44px; padding: .65rem; }
+
+.sb-label { flex: 1; min-width: 0; }
+
+.sidebar.collapsed .nav-group-hdr { justify-content: center; width: 44px; padding: .65rem; }
+
+.sb-group { position: relative; }
+
+.sb-footer {
+  padding: .75rem .5rem; border-top: 1px solid rgba(255,255,255,0.12);
+  display: flex; flex-direction: column; gap: .15rem;
+}
+.sidebar.collapsed .sb-footer { align-items: center; padding: .75rem .45rem; }
+
+.sb-footer-btn.danger { color: rgba(255,100,100,.75); }
+.sb-footer-btn.danger:hover { background: rgba(201,64,64,.15); }
+
+/* Flyout — submenú flotante cuando el sidebar está colapsado */
+.sb-flyout {
+  position: fixed; z-index: 2000; min-width: 210px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.22); padding: .5rem;
+  display: flex; flex-direction: column; gap: .1rem;
+  animation: sb-flyout-in .12s ease both;
+}
+@keyframes sb-flyout-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+
+.sb-flyout-title {
+  font-size: .68rem; font-weight: 700; color: var(--tx3); text-transform: uppercase;
+  letter-spacing: .05em; padding: .3rem .6rem .5rem;
+}
+
+.sb-flyout-link {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .5rem .6rem; border-radius: 7px; color: var(--tx2); text-decoration: none;
+  font-size: .82rem; font-weight: 500; transition: background .12s, color .12s;
+}
+.sb-flyout-link:hover { background: var(--card-accent); color: var(--tx); }
+.sb-flyout-link.disabled { opacity: .5; cursor: default; }
+.sb-flyout-link.disabled:hover { background: none; color: var(--tx2); }
+.sb-flyout-link .soon-badge { color: var(--tx3); background: var(--card-accent); }
+
+/* ════════════════════════════════════════════════════════════════
+   Dark mode — inputs de formulario (login, admin, users)
+   Estas reglas viven aquí (y no en los estilos de cada componente)
+   porque la encapsulación de Angular impide que un selector
+   "body.dark ..." definido dentro de un componente coincida con
+   el <body> real.
+   ════════════════════════════════════════════════════════════════ */
+body.dark .form-panel { background: #0d0d0d; }
+
+body.dark .field-wrap,
+body.dark .fwrap {
+  background: #222222;
+  border-color: rgba(255,255,255,0.12);
+}
+
+body.dark .field-wrap:focus-within { background: #2a2a2a; }
+
+body.dark .field-wrap input::placeholder { color: #606060; }
+
+body.dark .field-wrap input:-webkit-autofill,
+body.dark .field-wrap input:-webkit-autofill:hover,
+body.dark .field-wrap input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #222222 inset !important;
+  -webkit-text-fill-color: #f0f0f0 !important;
+}
