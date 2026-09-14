@@ -1,0 +1,142 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-navy">Gestión de tenants</h2>
+      <p class="mt-1 text-sm text-muted">Listado de clínicas (tenants) registradas en la plataforma.</p>
+    </div>
+    <button type="button" (click)="openCreateModal()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nuevo tenant
+    </button>
+  </div>
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+
+  <app-tenants-filters [(search)]="search" [(values)]="filters" />
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando tenants...
+    </div>
+  } @else {
+    <app-tenants-table [tenants]="pagedTenants()" (view)="openDetail($event)" />
+
+    <app-pagination [(page)]="page" [pageSize]="pageSize" [total]="filteredTenants().length" />
+  }
+</div>
+
+<!-- Alta de tenant (wizard) -->
+<app-modal [open]="modalMode() === 'create'" title="Nuevo tenant" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <app-create-tenant-form #tenantForm (submitted)="onCreate($event)" (cancelled)="closeModal()" />
+
+  <div modalFooter class="flex items-center justify-between gap-3 border-t border-border px-6 py-4">
+    <span class="text-xs text-muted">Paso {{ tenantForm.currentStep() }} de {{ tenantForm.totalSteps }}</span>
+    <div class="flex items-center gap-3">
+      @if (tenantForm.currentStep() > 1) {
+        <button type="button" (click)="tenantForm.back()" [disabled]="saving()"
+          class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+          Atrás
+        </button>
+      }
+      @if (tenantForm.currentStep() < tenantForm.totalSteps) {
+        <button type="button" (click)="tenantForm.next()"
+          class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark">
+          Siguiente
+        </button>
+      } @else {
+        <button type="button" (click)="tenantForm.submit()" [disabled]="saving()"
+          class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+          {{ saving() ? 'Creando...' : 'Crear tenant' }}
+        </button>
+      }
+    </div>
+  </div>
+</app-modal>
+
+<!-- Detalle de tenant -->
+<app-modal [open]="modalMode() === 'detail'" title="Detalle del tenant" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  @if (detailLoading()) {
+    <div class="flex items-center justify-center gap-2 py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando tenant...
+    </div>
+  } @else if (selectedTenant(); as tenant) {
+    <app-tenant-detail-page [tenant]="tenant" />
+  }
+
+  @if (selectedTenant(); as tenant) {
+    <div modalFooter class="flex items-center justify-between gap-3 border-t border-border px-6 py-4">
+      <button type="button" (click)="requestToggleActive()"
+        class="flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition-colors"
+        [class]="tenant.is_active
+          ? 'border-border text-navy hover:border-red-400 hover:text-red-500'
+          : 'border-border text-navy hover:border-brand hover:text-brand'">
+        {{ tenant.is_active ? 'Suspender' : 'Activar' }}
+      </button>
+      <div class="flex items-center gap-3">
+        <button type="button" (click)="closeModal()"
+          class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+          Cerrar
+        </button>
+        <button type="button" (click)="openEdit()"
+          class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark">
+          Editar
+        </button>
+      </div>
+    </div>
+  }
+</app-modal>
+
+<!-- Edición de tenant -->
+@if (selectedTenant(); as tenant) {
+  <app-modal [open]="modalMode() === 'edit'" title="Editar tenant" size="lg" (closed)="closeModal()">
+    @if (actionError()) {
+      <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ actionError() }}
+      </div>
+    }
+    <app-edit-tenant-form #editForm [tenant]="tenant" (submitted)="onSaveEdit($event)" (cancelled)="backToDetail()" />
+
+    <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+      <button type="button" (click)="backToDetail()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="editForm.submit()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- Confirmación de suspender/activar (T19) -->
+<app-confirm-dialog
+  [open]="confirmingToggle()"
+  [title]="confirmTitle()"
+  [message]="confirmMessage()"
+  [confirmLabel]="togglingActive() ? 'Procesando...' : confirmLabel()"
+  [tone]="confirmTone()"
+  (confirmed)="confirmToggleActive()"
+  (cancelled)="cancelToggleActive()" />
+

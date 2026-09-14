@@ -1,4 +1,4 @@
-<aside class="relative flex flex-col min-h-screen bg-sidebar transition-[width] duration-200 ease-out" [class]="widthClass()">
+<aside class="relative flex h-screen flex-col bg-sidebar transition-[width] duration-200 ease-out" [class]="widthClass()">
   <button type="button"
     class="absolute top-10.5 -right-3 z-40 flex h-6 w-6 items-center justify-center rounded-full border border-white/25 bg-sidebar text-xs text-sidebar-fg-muted shadow-md transition-all hover:bg-sidebar-hover hover:text-sidebar-fg hover:scale-105"
     (click)="toggleCollapsed()"
@@ -29,7 +29,7 @@
             }
           </span>
         } @else {
-          <a [routerLink]="item.route" routerLinkActive="bg-sidebar-hover text-sidebar-fg" [class]="navLinkClass()"
+          <a [routerLink]="item.route" routerLinkActive="bg-sidebar-active text-white" [class]="navLinkClass()"
              [title]="collapsed() ? item.label : null">
             <i [class]="'ti ti-' + item.icon"></i>
             @if (!collapsed()) { <span class="min-w-0 flex-1">{{ item.label }}</span> }
@@ -57,7 +57,7 @@
                     <span class="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-sidebar-fg-muted">Pronto</span>
                   </span>
                 } @else {
-                  <a [routerLink]="child.route" routerLinkActive="bg-sidebar-hover text-sidebar-fg" [class]="navLinkChildClass">
+                  <a [routerLink]="child.route" routerLinkActive="bg-sidebar-active text-white" [class]="navLinkChildClass">
                     <i [class]="'ti ti-' + child.icon"></i>
                     <span class="min-w-0 flex-1">{{ child.label }}</span>
                   </a>

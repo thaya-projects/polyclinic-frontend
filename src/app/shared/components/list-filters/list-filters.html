@@ -1,0 +1,60 @@
+<div class="flex flex-col gap-3">
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="group relative min-w-64 flex-1">
+      <i class="ti ti-search pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted transition-colors group-focus-within:text-brand"></i>
+      <input type="text" [value]="rawSearch()" (input)="onSearchInput($any($event.target).value)"
+        [placeholder]="searchPlaceholder()"
+        class="h-11 w-full rounded-xl border border-border bg-surface pr-3 pl-10 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none" />
+    </div>
+
+    @for (filter of filters(); track filter.key) {
+      <div class="relative">
+        <button type="button" (click)="toggleFilter(filter.key)"
+          class="flex h-11 items-center gap-2 rounded-xl border bg-surface px-3.5 text-sm transition-colors"
+          [class]="valueFor(filter.key) ? 'border-brand text-brand' : 'border-border text-text'">
+          <span class="whitespace-nowrap">{{ selectedLabel(filter) }}</span>
+          <i class="ti ti-chevron-down text-xs" [class]="valueFor(filter.key) ? 'text-brand' : 'text-muted'"></i>
+        </button>
+
+        @if (openFilterKey() === filter.key) {
+          <div class="absolute z-30 mt-1.5 min-w-full overflow-hidden rounded-xl border border-border bg-surface py-1.5 shadow-lg">
+            <button type="button" (click)="selectOption(filter.key, '')"
+              class="flex w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-sm whitespace-nowrap hover:bg-table-hover"
+              [class]="!valueFor(filter.key) ? 'text-brand' : 'text-text'">
+              {{ filter.allLabel ?? filter.label }}
+              @if (!valueFor(filter.key)) { <i class="ti ti-check text-brand"></i> }
+            </button>
+            @for (opt of filter.options; track opt.value) {
+              <button type="button" (click)="selectOption(filter.key, opt.value)"
+                class="flex w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-sm whitespace-nowrap hover:bg-table-hover"
+                [class]="valueFor(filter.key) === opt.value ? 'text-brand' : 'text-text'">
+                @if (opt.tone) {
+                  <app-status-chip [label]="opt.label" [tone]="opt.tone" />
+                } @else {
+                  <span>{{ opt.label }}</span>
+                }
+                @if (valueFor(filter.key) === opt.value) { <i class="ti ti-check text-brand"></i> }
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (activeChips().length > 0) {
+    <div class="flex flex-wrap items-center gap-2">
+      @for (chip of activeChips(); track chip.key) {
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-icon-soft py-1 pr-2 pl-3 text-xs font-medium text-brand">
+          {{ chip.label }}
+          <button type="button" (click)="clearFilter(chip.key)" class="text-muted transition-colors hover:text-text" aria-label="Quitar filtro">
+            <i class="ti ti-x text-[0.7rem]"></i>
+          </button>
+        </span>
+      }
+      <button type="button" (click)="clearAll()" class="text-xs font-medium text-muted underline-offset-2 hover:text-brand hover:underline">
+        Limpiar filtros
+      </button>
+    </div>
+  }
+</div>

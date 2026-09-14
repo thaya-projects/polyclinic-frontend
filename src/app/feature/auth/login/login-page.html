@@ -1,0 +1,55 @@
+<div class="flex min-h-screen bg-bg">
+
+  <!-- Panel de marca — oculto en mobile -->
+  <div class="relative hidden w-2/5 flex-col justify-between overflow-hidden bg-sidebar p-10 lg:flex">
+    <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full border border-white/10"></div>
+    <div class="absolute -bottom-32 -left-16 h-64 w-64 rounded-full border border-white/10"></div>
+
+    <div class="relative z-10 flex items-center gap-3">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white">
+        <i class="ti ti-heart-rate-monitor text-lg text-brand"></i>
+      </div>
+      <span class="text-lg font-bold text-sidebar-fg">MedConnect</span>
+    </div>
+
+    <div class="relative z-10 flex flex-col gap-4">
+      <h1 class="text-3xl leading-tight font-bold text-sidebar-fg">Acceso para clínicas</h1>
+      <p class="text-sm text-sidebar-fg-muted">
+        Ingresá con el identificador de tu clínica, tu correo y tu contraseña para entrar al panel de tu equipo.
+      </p>
+    </div>
+
+    <p class="relative z-10 text-xs text-sidebar-fg-muted">MedConnect · Panel de clínicas</p>
+  </div>
+
+  <!-- Panel del formulario -->
+  <div class="flex flex-1 items-center justify-center p-6 sm:p-10">
+    <div class="w-full max-w-sm">
+      <div class="mb-8 flex flex-col gap-1 lg:hidden">
+        <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-icon-soft">
+          <i class="ti ti-heart-rate-monitor text-lg text-brand"></i>
+        </div>
+        <h1 class="text-xl font-bold text-navy">MedConnect</h1>
+      </div>
+
+      <h2 class="text-2xl font-bold text-navy">Iniciar sesión</h2>
+      <p class="mt-1 mb-6 text-sm text-muted">Accedé al panel de tu clínica.</p>
+
+      @if (errorMessage()) {
+        <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <i class="ti ti-alert-circle"></i>
+          {{ errorMessage() }}
+        </div>
+      }
+
+      @if (successMessage()) {
+        <div class="mb-4 flex items-center gap-2 rounded-xl border border-border bg-chip-ok-bg px-4 py-3 text-sm text-chip-ok-fg">
+          <i class="ti ti-circle-check"></i>
+          {{ successMessage() }}
+        </div>
+      }
+
+      <app-login-form [loading]="loading()" (submitted)="onSubmit($event)" />
+    </div>
+  </div>
+</div>
