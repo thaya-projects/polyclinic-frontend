@@ -1,0 +1,40 @@
+<div class="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr>
+          @for (col of columns(); track col.key) {
+            <th class="sticky top-0 z-10 border-b border-border bg-table-head px-4 py-3.5 text-xs font-medium text-muted"
+                [class]="alignClass(col.align)" [style.width]="col.width ?? null">
+              {{ col.label }}
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @if (rows().length === 0) {
+          <tr>
+            <td [attr.colspan]="columns().length" class="px-4 py-14 text-center">
+              <i class="ti ti-mood-empty mb-2 block text-3xl text-muted"></i>
+              <span class="text-sm text-muted">{{ emptyMessage() }}</span>
+            </td>
+          </tr>
+        } @else {
+          @for (row of rows(); track rowKey()(row)) {
+            <tr class="border-b border-border last:border-0 hover:bg-table-hover">
+              @for (col of columns(); track col.key) {
+                <td class="px-4 py-5 text-text" [class]="alignClass(col.align)">
+                  @if (templateFor(col.key); as tpl) {
+                    <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: row }" />
+                  } @else {
+                    {{ value(row, col.key) }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

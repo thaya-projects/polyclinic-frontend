@@ -1,0 +1,32 @@
+<div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-navy p-6">
+  <div class="absolute -top-32 -right-32 h-96 w-96 rounded-full border border-white/10"></div>
+  <div class="absolute -bottom-40 -left-24 h-80 w-80 rounded-full border border-white/5"></div>
+  <div class="absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/10 blur-3xl"></div>
+
+  <div class="relative z-10 w-full max-w-sm">
+    <div class="mb-8 flex flex-col items-center gap-3 text-center">
+      <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+        <i class="ti ti-shield-lock-filled text-2xl text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white">MedConnect — Super Admin</h1>
+        <p class="mt-1 text-sm text-white/60">Acceso restringido al equipo de la plataforma.</p>
+      </div>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <i class="ti ti-alert-circle"></i>
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <div class="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+      <app-superadmin-login-form [loading]="loading()" (submitted)="onSubmit($event)" />
+    </div>
+
+    <p class="mt-6 text-center text-xs text-white/40">
+      ¿Sos parte del equipo de una clínica? <a routerLink="/login" class="font-medium text-white/70 hover:text-white">Ingresá acá</a>
+    </p>
+  </div>
+</div>

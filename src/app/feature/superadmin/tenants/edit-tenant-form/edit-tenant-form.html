@@ -1,0 +1,92 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-6">
+
+  <section class="flex flex-col gap-4">
+    <h3 class="text-base font-semibold text-navy">Datos de la clínica</h3>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Nombre</span>
+        <input type="text" formControlName="name" [class]="inputClass(form.controls.name)" />
+        @if (isInvalid(form.controls.name)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.name) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Slug</span>
+        <input type="text" formControlName="slug" class="font-mono" [class]="inputClass(form.controls.slug)" />
+        @if (isInvalid(form.controls.slug)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.slug) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">País</span>
+        <select formControlName="country_code" [class]="inputClass(form.controls.country_code)">
+          @for (opt of countryOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+        @if (isInvalid(form.controls.country_code)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.country_code) }}</span>
+        }
+      </label>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-4">
+    <h3 class="text-base font-semibold text-navy">Configuración regional</h3>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Moneda</span>
+        <input type="text" formControlName="default_currency" [class]="inputClass(form.controls.default_currency)" />
+        @if (isInvalid(form.controls.default_currency)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.default_currency) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Zona horaria</span>
+        <input type="text" formControlName="default_timezone" [class]="inputClass(form.controls.default_timezone)" />
+        @if (isInvalid(form.controls.default_timezone)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.default_timezone) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Locale</span>
+        <input type="text" formControlName="locale" [class]="inputClass(form.controls.locale)" />
+        @if (isInvalid(form.controls.locale)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.locale) }}</span>
+        }
+      </label>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-4">
+    <h3 class="text-base font-semibold text-navy">Facturación</h3>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Razón social</span>
+        <input type="text" formControlName="legal_name" [class]="inputClass(form.controls.legal_name)" />
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">NIT / Tax ID</span>
+        <input type="text" formControlName="tax_id" [class]="inputClass(form.controls.tax_id)" />
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Correo de facturación</span>
+        <input type="email" formControlName="billing_email" [class]="inputClass(form.controls.billing_email)" />
+        @if (isInvalid(form.controls.billing_email)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.billing_email) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Dirección de facturación</span>
+        <input type="text" formControlName="billing_address" [class]="inputClass(form.controls.billing_address)" />
+      </label>
+    </div>
+  </section>
+</form>

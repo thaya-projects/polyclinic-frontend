@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, sign
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
+import { SessionService } from '../../core/services/session.service';
 
 interface NavLeaf  { kind: 'leaf';  label: string; icon: string; route?: string; comingSoon?: boolean; }
 interface NavGroup { kind: 'group'; label: string; icon: string; children: NavLeaf[]; }
@@ -14,10 +15,7 @@ const COLLAPSE_KEY = 'mc_sidebar_collapsed';
 // TODO: reemplazar por un nav dinámico según el rol del usuario cuando exista Auth.
 const NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
-  { kind: 'group', label: 'Clínicas', icon: 'building-hospital', children: [
-    { kind: 'leaf', label: 'Listado de clínicas', icon: 'list', comingSoon: true },
-    { kind: 'leaf', label: 'Crear nueva clínica', icon: 'plus', comingSoon: true },
-  ]},
+  { kind: 'leaf', label: 'Tenants (Clínicas)', icon: 'building-hospital', route: '/admin/tenants' },
   { kind: 'group', label: 'Usuarios', icon: 'users', children: [
     { kind: 'leaf', label: 'Doctores', icon: 'stethoscope', comingSoon: true },
     { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', comingSoon: true },
@@ -33,6 +31,7 @@ const NAV_ITEMS: NavEntry[] = [
 })
 export class Sidebar {
   theme = inject(ThemeService);
+  private session = inject(SessionService);
 
   private platformId = inject(PLATFORM_ID);
   private closeTimer?: ReturnType<typeof setTimeout>;
@@ -88,8 +87,9 @@ export class Sidebar {
       : `${base}${buttonReset} w-full px-3 py-2.5`;
   }
 
-  // TODO: conectar a AuthService.logout() cuando exista autenticación.
-  logout(): void {}
+  logout(): void {
+    this.session.logout();
+  }
 
   toggleCollapsed(): void {
     this.collapsed.update(v => !v);
