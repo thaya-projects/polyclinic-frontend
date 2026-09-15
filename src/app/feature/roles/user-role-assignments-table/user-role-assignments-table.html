@@ -1,0 +1,18 @@
+<app-data-table [columns]="columns()" [rows]="gridRows()" emptyMessage="Sin roles asignados.">
+  <ng-template appDataTableCell="roleName" let-row>
+    <span class="font-semibold text-text">{{ row.roleName }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="branchName" let-row>
+    <span class="text-muted">{{ row.branchName }}</span>
+  </ng-template>
+
+  @if (editable()) {
+    <ng-template appDataTableCell="actions" let-row>
+      <button type="button" (click)="remove.emit(row.id)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-red-400 hover:text-red-500">
+        Quitar
+      </button>
+    </ng-template>
+  }
+</app-data-table>

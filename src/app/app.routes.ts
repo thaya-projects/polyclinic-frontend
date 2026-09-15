@@ -27,6 +27,19 @@ export const routes: Routes = [
           import('./feature/superadmin/tenants/tenants-page/tenants-page').then(m => m.TenantsPage),
         canActivate: [authGuard, roleGuard(['super_admin'])],
       },
+      {
+        // T12: sin guard a propósito — todavía no hay panel de clínica
+        // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
+        // exista ese panel.
+        path: 'roles',
+        loadComponent: () => import('./feature/roles/roles-page/roles-page').then(m => m.RolesPage),
+      },
+      {
+        // T14: mismo criterio que T12 (sin guard, panel de clínica no existe todavía).
+        path: 'user-roles',
+        loadComponent: () =>
+          import('./feature/roles/user-roles-page/user-roles-page').then(m => m.UserRolesPage),
+      },
     ],
   },
 ];
