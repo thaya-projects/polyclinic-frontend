@@ -1,0 +1,41 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="No hay roles para mostrar.">
+  <ng-template appDataTableCell="name" let-row>
+    <div class="flex items-center gap-2">
+      @if (isSystem(row)) {
+        <i class="ti ti-lock text-fg-subtle" title="Rol de sistema, no editable"></i>
+      }
+      <span class="font-semibold text-text">{{ row.name }}</span>
+    </div>
+  </ng-template>
+
+  <ng-template appDataTableCell="code" let-row>
+    <code class="rounded bg-icon-soft px-1.5 py-0.5 text-xs text-muted">{{ row.code }}</code>
+  </ng-template>
+
+  <ng-template appDataTableCell="permissions" let-row>
+    {{ row.permissions.length }}
+  </ng-template>
+
+  <ng-template appDataTableCell="origin" let-row>
+    @if (isSystem(row)) {
+      <app-status-chip label="Sistema" tone="neutral" />
+    } @else {
+      <app-status-chip label="Clínica" tone="ok" />
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" (click)="edit.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        {{ isSystem(row) ? 'Ver' : 'Editar' }}
+      </button>
+      @if (!isSystem(row)) {
+        <button type="button" (click)="remove.emit(row)"
+          class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-red-400 hover:text-red-500">
+          Eliminar
+        </button>
+      }
+    </div>
+  </ng-template>
+</app-data-table>

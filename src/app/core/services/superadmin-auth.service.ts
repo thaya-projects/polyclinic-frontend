@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { SuperAdminAuthApi } from './superadmin-auth-api';
 import { AuthTokenService } from './auth-token.service';
 import { AuthStore } from './auth-store.service';
@@ -14,6 +14,20 @@ export class SuperAdminAuthService {
   // POST /auth/superadmin/login — guarda tokens y sesión (usuario/tenant) en éxito (T15).
   login(dto: SuperAdminLoginDto): Observable<AuthTokenResponse> {
     return this.api.login(dto).pipe(
+      // Este endpoint es exclusivo de super admins: se fuerza el rol acá
+      // en vez de confiar en que el backend lo mande igual al valor que
+      // usa el frontend ('super_admin'). Si no coincidía exactamente, el
+      // redirect post-login (T18) y los guards de /admin/tenants fallaban
+      // en silencio y terminaban mandando al usuario al login de clínica.
+      map(res => ({
+        ...res,
+        user: {
+          id: res.user?.id ?? '',
+          full_name: res.user?.full_name ?? '',
+          email: res.user?.email ?? dto.email,
+          role: 'super_admin' as const,
+        },
+      })),
       tap(res => {
         this.tokens.save(res);
         this.store.setSession(res);

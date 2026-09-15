@@ -1,0 +1,34 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  @if (readOnly()) {
+    <div class="flex items-center gap-2 rounded-xl border border-border bg-icon-soft px-4 py-3 text-sm text-muted">
+      <i class="ti ti-lock"></i>
+      Este rol es de sistema y no se puede editar.
+    </div>
+  }
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Código</span>
+    <input type="text" formControlName="code" placeholder="ej. front_desk" [class]="inputClass(form.controls.code)" />
+    @if (isInvalid(form.controls.code)) {
+      <span class="text-xs text-red-600">{{ errorMessage(form.controls.code) }}</span>
+    }
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Nombre</span>
+    <input type="text" formControlName="name" placeholder="ej. Recepción" [class]="inputClass(form.controls.name)" />
+    @if (isInvalid(form.controls.name)) {
+      <span class="text-xs text-red-600">{{ errorMessage(form.controls.name) }}</span>
+    }
+  </label>
+
+  <div formArrayName="permissions" class="flex flex-col gap-2">
+    <span class="text-xs font-medium text-muted">Permisos</span>
+    @for (perm of permissionOptions; track perm.code; let i = $index) {
+      <label class="flex items-center gap-2 text-sm text-text">
+        <input type="checkbox" [formControlName]="i" class="h-4 w-4 rounded border-border" />
+        {{ perm.label }}
+      </label>
+    }
+  </div>
+</form>
