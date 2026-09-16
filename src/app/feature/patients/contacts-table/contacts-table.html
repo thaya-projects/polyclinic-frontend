@@ -1,0 +1,40 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Todavía no hay contactos.">
+  <ng-template appDataTableCell="full_name" let-row>
+    <span class="font-semibold text-text">{{ row.full_name }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="relationship" let-row>
+    <span class="text-muted">{{ row.relationship || '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="phone" let-row>
+    {{ row.phone || '—' }}
+  </ng-template>
+
+  <ng-template appDataTableCell="is_primary" let-row>
+    @if (row.is_primary) {
+      <app-status-chip label="Principal" tone="ok" />
+    } @else {
+      <span class="text-xs text-muted">—</span>
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex items-center justify-end gap-2">
+      @if (!row.is_primary) {
+        <button type="button" (click)="setPrimary.emit(row)"
+          class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+          Marcar principal
+        </button>
+      }
+      <button type="button" (click)="edit.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        Editar
+      </button>
+      <button type="button" (click)="remove.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-red-400 hover:text-red-500">
+        Eliminar
+      </button>
+    </div>
+  </ng-template>
+</app-data-table>

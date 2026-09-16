@@ -1,0 +1,34 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Nombre completo</span>
+      <input type="text" formControlName="full_name" [class]="inputClass(form.controls.full_name)" />
+      @if (isInvalid(form.controls.full_name)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.full_name) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Relación</span>
+      <input type="text" formControlName="relationship" placeholder="ej. Madre, esposo..." [class]="inputClass(form.controls.relationship)" />
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Teléfono</span>
+      <input type="tel" formControlName="phone" [class]="inputClass(form.controls.phone)" />
+    </label>
+  </div>
+
+  <div class="flex justify-end gap-3">
+    @if (contact()) {
+      <button type="button" (click)="cancel()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+    }
+    <button type="submit" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : (contact() ? 'Guardar cambios' : 'Agregar contacto') }}
+    </button>
+  </div>
+</form>

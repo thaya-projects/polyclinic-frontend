@@ -1,0 +1,49 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <label class="flex max-w-40 flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Grupo sanguíneo</span>
+    <select formControlName="blood_type" [class]="inputClass(form.controls.blood_type)">
+      <option value="">Sin especificar</option>
+      @for (type of bloodTypes; track type) {
+        <option [value]="type">{{ type }}</option>
+      }
+    </select>
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Alergias</span>
+    <textarea formControlName="allergies" rows="2" [class]="textareaClass"></textarea>
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Antecedentes crónicos</span>
+    <textarea formControlName="chronic_conditions" rows="2" [class]="textareaClass"></textarea>
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Medicación actual</span>
+    <textarea formControlName="current_medications" rows="2" [class]="textareaClass"></textarea>
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Antecedentes familiares</span>
+    <textarea formControlName="family_history" rows="2" [class]="textareaClass"></textarea>
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Hábitos</span>
+    <textarea formControlName="habits" rows="2" [class]="textareaClass"></textarea>
+  </label>
+
+  <div class="flex items-center justify-end gap-3">
+    @if (saved()) {
+      <span class="text-xs font-medium text-positive">
+        <i class="ti ti-circle-check"></i>
+        Guardado.
+      </span>
+    }
+    <button type="submit" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+</form>
