@@ -1,0 +1,21 @@
+@if (listError()) {
+  <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+    <i class="ti ti-alert-circle"></i>
+    {{ listError() }}
+  </div>
+}
+
+@if (listLoading()) {
+  <div class="flex items-center justify-center gap-2 py-8 text-sm text-muted">
+    <i class="ti ti-loader-2 animate-spin"></i>
+    Cargando historia clínica...
+  </div>
+} @else {
+  @if (saveError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ saveError() }}
+    </div>
+  }
+  <app-clinical-record-form [record]="record()" [saving]="saving()" [saved]="savedJustNow()" (submitted)="onSave($event)" />
+}

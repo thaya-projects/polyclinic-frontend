@@ -40,6 +40,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./feature/roles/user-roles-page/user-roles-page').then(m => m.UserRolesPage),
       },
+      {
+        // T6 (fase 3, pacientes): mismo criterio que roles/user-roles.
+        path: 'patients',
+        loadComponent: () => import('./feature/patients/patients-page/patients-page').then(m => m.PatientsPage),
+      },
     ],
   },
 ];

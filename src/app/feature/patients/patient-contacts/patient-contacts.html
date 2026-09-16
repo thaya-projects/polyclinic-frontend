@@ -1,0 +1,44 @@
+<div class="flex flex-col gap-4">
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-10 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando contactos...
+    </div>
+  } @else {
+    <app-contacts-table
+      [contacts]="contacts()"
+      (setPrimary)="onSetPrimary($event)"
+      (edit)="onEdit($event)"
+      (remove)="requestRemove($event)" />
+  }
+
+  @if (saveError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ saveError() }}
+    </div>
+  }
+
+  <div class="rounded-xl border border-border bg-surface p-4">
+    <h4 class="mb-3 text-xs font-semibold tracking-wide text-muted uppercase">
+      {{ editingContact() ? 'Editar contacto' : 'Agregar contacto' }}
+    </h4>
+    <app-contact-form [contact]="editingContact()" [saving]="saving()" (submitted)="onSave($event)" (cancelled)="onCancelEdit()" />
+  </div>
+</div>
+
+<app-confirm-dialog
+  [open]="contactToRemove() !== null"
+  title="Eliminar contacto"
+  [message]="removeMessage()"
+  [confirmLabel]="removing() ? 'Eliminando...' : 'Eliminar'"
+  tone="danger"
+  (confirmed)="confirmRemove()"
+  (cancelled)="cancelRemove()" />
