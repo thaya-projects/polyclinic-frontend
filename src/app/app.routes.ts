@@ -28,6 +28,12 @@ export const routes: Routes = [
         canActivate: [authGuard, roleGuard(['super_admin'])],
       },
       {
+        path: 'admin/plans',
+        loadComponent: () =>
+          import('./feature/superadmin/plans/plans-page/plans-page').then(m => m.PlansPage),
+        canActivate: [authGuard, roleGuard(['super_admin'])],
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.

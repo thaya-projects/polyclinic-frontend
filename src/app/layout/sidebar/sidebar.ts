@@ -16,6 +16,7 @@ const COLLAPSE_KEY = 'mc_sidebar_collapsed';
 const NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
   { kind: 'leaf', label: 'Tenants (Clínicas)', icon: 'building-hospital', route: '/admin/tenants' },
+  { kind: 'leaf', label: 'Planes', icon: 'package', route: '/admin/plans' },
   { kind: 'group', label: 'Usuarios', icon: 'users', children: [
     { kind: 'leaf', label: 'Doctores', icon: 'stethoscope', comingSoon: true },
     { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', comingSoon: true },
