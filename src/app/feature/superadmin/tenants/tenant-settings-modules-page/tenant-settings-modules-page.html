@@ -1,0 +1,84 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <a [routerLink]="['/admin/tenants']" class="text-xs text-muted hover:text-brand">← Tenants</a>
+    <h2 class="mt-1 text-2xl font-bold text-navy">Módulos del tenant</h2>
+    <p class="mt-1 text-sm text-muted">
+      Override manual de los módulos que este tenant tiene activos. Si elegís "Usar plan", la clínica
+      hereda lo que dice su plan comercial.
+    </p>
+  </div>
+
+  @if (loadError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ loadError() }}
+    </div>
+  }
+  @if (saveError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ saveError() }}
+    </div>
+  }
+  @if (saved()) {
+    <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+      <i class="ti ti-check"></i>
+      Cambios guardados.
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando overrides actuales...
+    </div>
+  } @else {
+  <div class="rounded-xl border border-border bg-surface p-4">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs uppercase text-muted">
+          <th class="py-2">Módulo</th>
+          <th class="py-2">Usar plan</th>
+          <th class="py-2">Activado</th>
+          <th class="py-2">Desactivado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (key of moduleKeys; track key) {
+          <tr class="border-t border-border">
+            <td class="py-2 font-mono text-text">{{ key }}</td>
+            <td class="py-2">
+              <label class="cursor-pointer">
+                <input type="radio" [name]="'mod-' + key" [checked]="stateOf(key) === 'plan'"
+                  (change)="setState(key, 'plan')" class="accent-brand" />
+              </label>
+            </td>
+            <td class="py-2">
+              <label class="cursor-pointer">
+                <input type="radio" [name]="'mod-' + key" [checked]="stateOf(key) === 'on'"
+                  (change)="setState(key, 'on')" class="accent-brand" />
+              </label>
+            </td>
+            <td class="py-2">
+              <label class="cursor-pointer">
+                <input type="radio" [name]="'mod-' + key" [checked]="stateOf(key) === 'off'"
+                  (change)="setState(key, 'off')" class="accent-brand" />
+              </label>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <button type="button" (click)="save()" [disabled]="saving() || !hasPendingChanges()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50">
+      {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+    </button>
+    <span class="text-xs text-muted">
+      Solo se persisten las keys que cambies. "Usar plan" limpia el override.
+    </span>
+  </div>
+  }
+</div>
