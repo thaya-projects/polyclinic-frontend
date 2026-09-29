@@ -60,6 +60,13 @@ export const routes: Routes = [
             .then(m => m.SubscriptionSettingsPage),
       },
       {
+        // Fase 2 T6/T7: gestión de sucursales por el propio tenant. Sin guard fuerte por el
+        // mismo motivo (layout de clínica sigue pendiente).
+        path: 'branches',
+        loadComponent: () =>
+          import('./feature/clinic/branches/branches-page/branches-page').then(m => m.BranchesPage),
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.

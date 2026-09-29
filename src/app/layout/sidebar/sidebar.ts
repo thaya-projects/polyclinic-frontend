@@ -24,6 +24,9 @@ const NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
   { kind: 'leaf', label: 'Tenants (Clínicas)', icon: 'building-hospital', route: '/admin/tenants' },
   { kind: 'leaf', label: 'Planes', icon: 'package', route: '/admin/plans' },
+  // Fase 2 T7: sucursales del tenant. Cuando exista el layout de clínica se mueve al sidebar
+  // de tenant y sale del super admin. Por ahora se muestra siempre.
+  { kind: 'leaf', label: 'Sucursales', icon: 'building', route: '/branches' },
   { kind: 'group', label: 'Usuarios', icon: 'users', children: [
     { kind: 'leaf', label: 'Doctores', icon: 'stethoscope', comingSoon: true },
     { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', comingSoon: true },
