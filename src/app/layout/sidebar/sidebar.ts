@@ -28,10 +28,8 @@ const NAV_ITEMS: NavEntry[] = [
   // de tenant y sale del super admin. Por ahora se muestra siempre.
   { kind: 'leaf', label: 'Sucursales', icon: 'building', route: '/branches' },
   { kind: 'leaf', label: 'Especialidades', icon: 'certificate', route: '/specialties' },
-  { kind: 'group', label: 'Usuarios', icon: 'users', children: [
-    { kind: 'leaf', label: 'Doctores', icon: 'stethoscope', comingSoon: true },
-    { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', comingSoon: true },
-  ]},
+  { kind: 'leaf', label: 'Profesionales', icon: 'stethoscope', route: '/professionals' },
+  { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', route: '/patients' },
   // T6 FF (demo): entry gated por feature 'odontogram'. Aparece sólo si el tenant lo tiene
   // activo. Sirve de contrato de referencia — cuando el layout de clínica exista se moverá allí.
   { kind: 'leaf', label: 'Odontograma', icon: 'tooth', comingSoon: true, moduleKey: 'odontogram' },

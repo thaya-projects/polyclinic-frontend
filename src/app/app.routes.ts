@@ -77,6 +77,14 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        // Fase 2 T7/T8: profesionales del tenant.
+        path: 'professionals',
+        loadComponent: () =>
+          import('./feature/clinic/professionals/professionals-page/professionals-page')
+            .then(m => m.ProfessionalsPage),
+        canActivate: [authGuard],
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.

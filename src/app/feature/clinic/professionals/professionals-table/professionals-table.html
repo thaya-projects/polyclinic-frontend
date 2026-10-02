@@ -1,0 +1,57 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Sin profesionales todavía.">
+  <ng-template appDataTableCell="full_name" let-row>
+    <div class="flex items-center gap-3">
+      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-icon-soft text-brand">
+        <i class="ti ti-user-heart"></i>
+      </div>
+      <div class="flex flex-col">
+        <span class="font-semibold text-text">{{ row.full_name }}</span>
+        @if (row.license_number) {
+          <span class="text-xs text-muted">Licencia: {{ row.license_number }}</span>
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template appDataTableCell="specialties" let-row>
+    @if (specialtyNamesFor(row.specialty_ids).length === 0) {
+      <span class="text-xs text-muted">—</span>
+    } @else {
+      <div class="flex flex-wrap gap-1">
+        @for (name of specialtyNamesFor(row.specialty_ids); track name) {
+          <span class="inline-flex items-center rounded-full bg-icon-soft px-2 py-0.5 text-xs font-medium text-fg-muted">
+            {{ name }}
+          </span>
+        }
+      </div>
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="email" let-row>
+    <span class="text-sm text-muted">{{ row.email || '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="phone" let-row>
+    <span class="text-sm text-muted">{{ row.phone || '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="is_active" let-row>
+    <app-status-chip [label]="row.is_active ? 'Activo' : 'Inactivo'"
+      [tone]="row.is_active ? 'ok' : 'neutral'" />
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" (click)="edit.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        Editar
+      </button>
+      @if (row.is_active) {
+        <button type="button" (click)="deactivate.emit(row)"
+          class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+          Desactivar
+        </button>
+      }
+    </div>
+  </ng-template>
+</app-data-table>
