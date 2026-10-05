@@ -1,0 +1,106 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-navy">Salas</h2>
+      <p class="mt-1 text-sm text-muted">Consultorios y salas por sucursal.</p>
+    </div>
+    <button type="button" (click)="openCreateModal()"
+      [disabled]="!hasActiveBranch()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark disabled:opacity-50">
+      <i class="ti ti-plus"></i>
+      Nueva sala
+    </button>
+  </div>
+
+  @if (!hasActiveBranch()) {
+    <div class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+      <i class="ti ti-info-circle"></i>
+      Primero crea al menos una sucursal activa para poder administrar salas.
+    </div>
+  }
+  @if (branchesForSelector().length > 0) {
+    <div class="flex flex-col gap-2">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="branch-selector">Sucursal</label>
+      <select id="branch-selector" [value]="selectedBranchId() ?? ''"
+        (change)="onBranchChange($any($event.target).value)"
+        class="h-11 rounded-xl border border-border bg-surface px-3.5 text-sm text-text focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none md:w-80">
+        @for (b of branchesForSelector(); track b.id) {
+          <option [value]="b.id">{{ b.name }}{{ b.is_active ? '' : ' (inactiva)' }}</option>
+        }
+      </select>
+    </div>
+  }
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+  @if (toggleError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ toggleError() }}
+    </div>
+  }
+
+  @if (selectedBranchId()) {
+    @if (listLoading()) {
+      <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+        <i class="ti ti-loader-2 animate-spin"></i>
+        Cargando salas...
+      </div>
+    } @else {
+      <app-rooms-table [rooms]="rooms()" [togglingId]="toggling()"
+        (edit)="openEdit($event)" (toggleActive)="onToggleActive($event)" />
+    }
+  }
+</div>
+
+<!-- Crear -->
+<app-modal [open]="modalMode() === 'create'" title="Nueva sala" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <app-room-form #createForm [availableBranches]="branchesForSelector()" [defaultBranchId]="selectedBranchId()"
+    (created)="onCreate($event)" (cancelled)="closeModal()" />
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="createForm.submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Creando...' : 'Crear sala' }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- Editar -->
+@if (selectedRoom(); as room) {
+  <app-modal [open]="modalMode() === 'edit'" title="Editar sala" size="lg" (closed)="closeModal()">
+    @if (actionError()) {
+      <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ actionError() }}
+      </div>
+    }
+    <app-room-form #editForm [room]="room" [availableBranches]="branchesForSelector()"
+      (saved)="onSaveEdit($event)" (cancelled)="closeModal()" />
+
+    <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+      <button type="button" (click)="closeModal()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="editForm.submit()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </app-modal>
+}

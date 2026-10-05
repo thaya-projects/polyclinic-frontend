@@ -1,0 +1,121 @@
+<div class="flex flex-col gap-4">
+  <div class="flex items-center justify-between">
+    <h3 class="text-lg font-semibold text-navy">Excepciones</h3>
+    <button type="button" (click)="openModal()"
+      class="inline-flex items-center gap-1 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nueva excepción
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-10 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando excepciones...
+    </div>
+  } @else if (exceptions().length === 0) {
+    <div class="rounded-xl border border-border bg-surface p-6 text-sm text-muted">
+      Sin excepciones registradas.
+    </div>
+  } @else {
+    <div class="flex flex-col gap-2">
+      @for (e of exceptions(); track e.id) {
+        <div class="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-surface p-4">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-semibold text-text">
+              {{ e.starts_at | date:'medium' }} — {{ e.ends_at | date:'medium' }}
+            </span>
+            <span class="text-xs text-muted">Alcance: {{ scopeLabel(e) }}</span>
+            @if (e.reason) {
+              <span class="text-xs text-muted">Motivo: {{ e.reason }}</span>
+            }
+          </div>
+          <button type="button" (click)="remove.emit(e.id)" [disabled]="removingId() === e.id"
+            class="h-9 rounded-lg border border-red-200 px-3 text-xs font-medium text-red-600 transition-colors hover:border-red-400 disabled:opacity-50">
+            @if (removingId() === e.id) {
+              <i class="ti ti-loader-2 animate-spin"></i>
+            } @else {
+              Eliminar
+            }
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<app-modal [open]="modalOpen()" title="Nueva excepción" size="lg" (closed)="closeModal()">
+  @if (localError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ localError() }}
+    </div>
+  }
+  <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4 px-6 py-5">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium text-muted uppercase tracking-wide" for="exc-start">Desde</label>
+        <input id="exc-start" type="datetime-local" formControlName="starts_at"
+          [class]="inputClass(form.controls.starts_at)" />
+        @if (isInvalid(form.controls.starts_at)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.starts_at) }}</span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium text-muted uppercase tracking-wide" for="exc-end">Hasta</label>
+        <input id="exc-end" type="datetime-local" formControlName="ends_at"
+          [class]="inputClass(form.controls.ends_at)" />
+        @if (isInvalid(form.controls.ends_at)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.ends_at) }}</span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium text-muted uppercase tracking-wide" for="exc-prof">Profesional (opcional)</label>
+        <select id="exc-prof" formControlName="professional_id"
+          [class]="inputClass(form.controls.professional_id)">
+          <option value="">— Todos —</option>
+          @for (p of professionals(); track p.id) {
+            <option [value]="p.id">{{ p.full_name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium text-muted uppercase tracking-wide" for="exc-branch">Sucursal (opcional)</label>
+        <select id="exc-branch" formControlName="branch_id"
+          [class]="inputClass(form.controls.branch_id)">
+          <option value="">— Todas —</option>
+          @for (b of branches(); track b.id) {
+            <option [value]="b.id">{{ b.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1.5 md:col-span-2">
+        <label class="text-xs font-medium text-muted uppercase tracking-wide" for="exc-reason">Motivo (opcional)</label>
+        <input id="exc-reason" type="text" formControlName="reason" placeholder="ej: Feriado nacional"
+          [class]="inputClass(form.controls.reason)" />
+      </div>
+    </div>
+  </form>
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Creando...' : 'Crear excepción' }}
+    </button>
+  </div>
+</app-modal>

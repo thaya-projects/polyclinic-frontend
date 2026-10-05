@@ -29,6 +29,8 @@ const NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Sucursales', icon: 'building', route: '/branches' },
   { kind: 'leaf', label: 'Especialidades', icon: 'certificate', route: '/specialties' },
   { kind: 'leaf', label: 'Profesionales', icon: 'stethoscope', route: '/professionals' },
+  { kind: 'leaf', label: 'Salas', icon: 'door', route: '/rooms' },
+  { kind: 'leaf', label: 'Horarios', icon: 'calendar-time', route: '/schedules' },
   { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', route: '/patients' },
   // T6 FF (demo): entry gated por feature 'odontogram'. Aparece sólo si el tenant lo tiene
   // activo. Sirve de contrato de referencia — cuando el layout de clínica exista se moverá allí.

@@ -85,6 +85,20 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        // Fase 2 Rooms T4/T5: salas por sucursal del tenant.
+        path: 'rooms',
+        loadComponent: () =>
+          import('./feature/clinic/rooms/rooms-page/rooms-page').then(m => m.RoomsPage),
+        canActivate: [authGuard],
+      },
+      {
+        // Fase 2 Horarios T6-T8: grilla semanal + excepciones por tenant.
+        path: 'schedules',
+        loadComponent: () =>
+          import('./feature/clinic/schedules/schedules-page/schedules-page').then(m => m.SchedulesPage),
+        canActivate: [authGuard],
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.
