@@ -9,6 +9,11 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
+    // Fase 4: detalle de encounter por id — ruta con parámetro, sin datos para prerenderizar.
+    path: 'encounters/:id',
+    renderMode: RenderMode.Client,
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender,
   },

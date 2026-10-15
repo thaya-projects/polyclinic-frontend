@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-export type StatusChipTone = 'ok' | 'wait' | 'neutral';
+export type StatusChipTone = 'ok' | 'wait' | 'neutral' | 'danger';
 
 @Component({
   selector: 'app-status-chip',
@@ -20,6 +20,7 @@ export class StatusChip {
     switch (this.tone()) {
       case 'ok':   return 'bg-chip-ok-bg text-chip-ok-fg';
       case 'wait': return 'bg-chip-wait-bg text-chip-wait-fg';
+      case 'danger': return 'bg-chip-danger-bg text-chip-danger-fg';
       default:     return 'bg-icon-soft text-fg-muted';
     }
   });

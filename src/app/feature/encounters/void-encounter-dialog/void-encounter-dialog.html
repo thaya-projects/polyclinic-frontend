@@ -1,0 +1,40 @@
+<app-modal [open]="open()" title="Anular encuentro" size="sm" (closed)="cancel()">
+  <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+    <p class="text-sm text-text">
+      La nota queda visible como <span class="font-semibold">anulada</span> y ya no se puede editar ni firmar.
+      Indicá el motivo.
+    </p>
+
+    @if (error()) {
+      <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ error() }}
+      </div>
+    }
+
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-medium tracking-wide text-muted uppercase" for="void-reason">Motivo</label>
+        <span class="text-xs" [class]="reasonLength > maxLength ? 'text-red-500' : 'text-muted'">{{ reasonLength }}/{{ maxLength }}</span>
+      </div>
+      <textarea id="void-reason" rows="4" formControlName="reason" data-testid="void-reason" [attr.maxlength]="maxLength"
+        placeholder="ej: Nota cargada en el paciente equivocado"
+        class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:ring-3 focus:outline-none"
+        [class]="isInvalid(form.controls.reason) ? 'border-red-400 focus:border-red-400 focus:ring-red-400/18' : 'border-border focus:border-brand focus:ring-brand/18'"></textarea>
+      @if (isInvalid(form.controls.reason)) {
+        <span class="text-xs text-red-500" data-testid="void-reason-error">{{ errorMessage(form.controls.reason) }}</span>
+      }
+    </div>
+  </form>
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="cancel()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" data-testid="void-confirm" (click)="submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-red-500 px-5 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-60">
+      {{ saving() ? 'Anulando...' : 'Anular' }}
+    </button>
+  </div>
+</app-modal>

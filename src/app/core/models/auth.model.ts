@@ -22,6 +22,9 @@ export interface SessionUser {
   full_name: string;
   email: string;
   role: AppRole;
+  // Códigos de permiso del usuario (AuthUserDTO.Permissions, en login y GET /auth/me). Opcional:
+  // sesiones guardadas antes de tiparlo pueden no traerlo. Ej.: 'clinical.void'.
+  permissions?: string[];
 }
 
 // Tenant al que pertenece el usuario logueado — ausente para un super admin.

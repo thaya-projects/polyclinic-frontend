@@ -1,16 +1,20 @@
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { SessionService } from '../../core/services/session.service';
 import { FeaturesService } from '../../core/services/features.service';
 import { FeatureKey } from '../../core/models/features.model';
+import { EncounterLookupsService } from '../../core/services/encounter-lookups.service';
+import { AuthStore } from '../../core/services/auth-store.service';
 
 interface NavLeaf  {
   kind: 'leaf'; label: string; icon: string; route?: string; comingSoon?: boolean;
   // T6 FF: si viene, el sidebar oculta la entry cuando FeaturesService.enabled(key) es false.
   // Sin key, la entry es siempre visible (menús admin como Tenants/Planes).
   moduleKey?: FeatureKey;
+  // Fase 4: visible solo si el usuario puede leer encounters (profesional activo o clinical.void).
+  requiresEncountersAccess?: boolean;
 }
 interface NavGroup { kind: 'group'; label: string; icon: string; children: NavLeaf[]; }
 type NavEntry = NavLeaf | NavGroup;
@@ -32,6 +36,8 @@ const NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Salas', icon: 'door', route: '/rooms' },
   { kind: 'leaf', label: 'Horarios', icon: 'calendar-time', route: '/schedules' },
   { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', route: '/patients' },
+  // Fase 4 T6: encuentros clínicos (notas de evolución).
+  { kind: 'leaf', label: 'Encuentros', icon: 'notes', route: '/encounters', requiresEncountersAccess: true },
   // T6 FF (demo): entry gated por feature 'odontogram'. Aparece sólo si el tenant lo tiene
   // activo. Sirve de contrato de referencia — cuando el layout de clínica exista se moverá allí.
   { kind: 'leaf', label: 'Odontograma', icon: 'tooth', comingSoon: true, moduleKey: 'odontogram' },
@@ -52,6 +58,12 @@ export class Sidebar {
   private closeTimer?: ReturnType<typeof setTimeout>;
 
   private features = inject(FeaturesService);
+  private encounterLookups = inject(EncounterLookupsService);
+  private authStore = inject(AuthStore);
+
+  // Último veredicto conocido de acceso a Encuentros: no se oculta/muestra mientras una pantalla
+  // recarga los lookups (evita parpadeo). Arranca oculto hasta saberlo (default cerrado).
+  private readonly encountersVisible = signal(false);
 
   collapsed  = signal<boolean>(this.loadCollapsed());
   openFlyout = signal<OpenFlyout | null>(null);
@@ -62,17 +74,31 @@ export class Sidebar {
   readonly navItems = computed<NavEntry[]>(() => {
     const enabled = this.features.enabledMap();
     const loaded = this.features.loaded();
+    const encountersVisible = this.encountersVisible();
     return NAV_ITEMS
       .map(entry => {
         if (entry.kind === 'group') {
-          return { ...entry, children: entry.children.filter(c => this.showLeaf(c, enabled, loaded)) };
+          return { ...entry, children: entry.children.filter(c => this.showLeaf(c, enabled, loaded, encountersVisible)) };
         }
-        return this.showLeaf(entry, enabled, loaded) ? entry : null;
+        return this.showLeaf(entry, enabled, loaded, encountersVisible) ? entry : null;
       })
       .filter((e): e is NavEntry => e !== null && !(e.kind === 'group' && e.children.length === 0));
   });
 
-  private showLeaf(leaf: NavLeaf, enabled: Record<string, boolean>, loaded: boolean): boolean {
+  constructor() {
+    // Solo usuarios de un tenant (el super admin no tiene profesionales: evita un 403 + toast).
+    effect(() => {
+      if (this.authStore.tenant()) untracked(() => this.encounterLookups.ensureProfessionalsLoaded());
+    });
+    effect(() => {
+      const access = this.encounterLookups.encountersAccess();
+      if (access === 'allowed') this.encountersVisible.set(true);
+      else if (access === 'denied' || access === 'error') this.encountersVisible.set(false);
+    });
+  }
+
+  private showLeaf(leaf: NavLeaf, enabled: Record<string, boolean>, loaded: boolean, encountersVisible: boolean): boolean {
+    if (leaf.requiresEncountersAccess && !encountersVisible) return false;
     if (!leaf.moduleKey) return true;
     return loaded && enabled[leaf.moduleKey] === true;
   }

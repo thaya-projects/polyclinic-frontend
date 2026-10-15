@@ -99,6 +99,23 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        // Fase 4 T6/T7: encuentros clínicos (notas de evolución). Mismo criterio que professionals:
+        // authGuard; el backend aplica la policy TenantUser.
+        path: 'encounters',
+        loadComponent: () =>
+          import('./feature/encounters/encounters-page/encounters-page').then(m => m.EncountersPage),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'encounters/:id',
+        loadComponent: () =>
+          import('./feature/encounters/encounter-detail-page/encounter-detail-page')
+            .then(m => m.EncounterDetailPage),
+        canActivate: [authGuard],
+        // B6: si la nota tiene cambios sin guardar, pregunta antes de salir.
+        canDeactivate: [(page: { canLeave(): boolean | Promise<boolean> }) => page.canLeave()],
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.

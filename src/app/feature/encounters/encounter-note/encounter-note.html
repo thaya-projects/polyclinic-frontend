@@ -1,0 +1,139 @@
+<div class="flex flex-col gap-6">
+
+  <!-- Encabezado -->
+  <div class="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-border bg-surface p-4">
+    <div class="grid flex-1 grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-3">
+      <div>
+        <p class="text-xs text-muted">Paciente</p>
+        <p class="text-sm font-semibold text-text">{{ patientName() || '—' }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted">Profesional</p>
+        <p class="text-sm text-text">{{ professionalName() || '—' }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted">Fecha de atención</p>
+        <p class="text-sm text-text">{{ formatDate(encounter().encounter_date) }}</p>
+      </div>
+    </div>
+    <app-encounter-status-badge data-testid="status-badge" [status]="encounter().status" />
+  </div>
+
+  <!-- Firma / anulación -->
+  @if (encounter().signed_at) {
+    <div data-testid="signed-info"
+      class="flex items-center gap-2 rounded-xl border border-border bg-chip-ok-bg/40 px-4 py-3 text-sm text-text">
+      <i class="ti ti-signature text-chip-ok-fg"></i>
+      Firmado el {{ formatDate(encounter().signed_at) }}
+      @if (signedByName()) { por <span class="font-semibold">{{ signedByName() }}</span> }
+    </div>
+  }
+  @if (encounter().status === 'voided') {
+    <div data-testid="voided-info"
+      class="flex flex-col gap-1 rounded-xl border border-red-200 bg-chip-danger-bg/40 px-4 py-3 text-sm text-text">
+      <span class="flex items-center gap-2">
+        <i class="ti ti-ban text-chip-danger-fg"></i>
+        Anulado el {{ formatDate(encounter().voided_at) }}
+        @if (voidedByName()) { por <span class="font-semibold">{{ voidedByName() }}</span> }
+      </span>
+      <span class="pl-6 text-muted">Motivo: <span class="whitespace-pre-line text-text">{{ encounter().void_reason || '—' }}</span></span>
+    </div>
+  }
+
+  @if (!canEdit()) {
+    <p class="flex items-center gap-2 text-xs text-muted" data-testid="not-owner-info">
+      <i class="ti ti-lock"></i>
+      {{ readOnlyReason() }}
+    </p>
+  } @else if (readOnly()) {
+    <p class="flex items-center gap-2 text-xs text-muted">
+      <i class="ti ti-lock"></i>
+      La nota está {{ encounter().status === 'signed' ? 'firmada' : 'anulada' }} y no se puede editar.
+    </p>
+  }
+
+  <!-- Nota de evolución -->
+  <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5">
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-medium tracking-wide text-muted uppercase" for="enc-chief-complaint">Motivo de consulta</label>
+        <span class="text-xs" [class]="count('chief_complaint') > limits.chief_complaint ? 'text-red-500' : 'text-muted'"
+          data-testid="counter-chief_complaint">
+          {{ count('chief_complaint') }}/{{ limits.chief_complaint }}
+        </span>
+      </div>
+      <textarea id="enc-chief-complaint" rows="2" formControlName="chief_complaint" data-testid="field-chief_complaint"
+        [readOnly]="fieldsLocked()" [attr.maxlength]="limits.chief_complaint"
+        placeholder="Motivo principal de la consulta" [class]="textareaClass('chief_complaint')"></textarea>
+      @if (isInvalid(form.controls.chief_complaint)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.chief_complaint) }}</span>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-medium tracking-wide text-muted uppercase" for="enc-anamnesis">Anamnesis</label>
+        <span class="text-xs" [class]="count('anamnesis') > limits.anamnesis ? 'text-red-500' : 'text-muted'"
+          data-testid="counter-anamnesis">
+          {{ count('anamnesis') }}/{{ limits.anamnesis }}
+        </span>
+      </div>
+      <textarea id="enc-anamnesis" rows="7" formControlName="anamnesis" data-testid="field-anamnesis"
+        [readOnly]="fieldsLocked()" [attr.maxlength]="limits.anamnesis"
+        placeholder="Historia de la enfermedad actual, antecedentes relevantes..." [class]="textareaClass('anamnesis')"></textarea>
+      @if (isInvalid(form.controls.anamnesis)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.anamnesis) }}</span>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-medium tracking-wide text-muted uppercase" for="enc-exam">Examen físico</label>
+        <span class="text-xs" [class]="count('exam') > limits.exam ? 'text-red-500' : 'text-muted'"
+          data-testid="counter-exam">
+          {{ count('exam') }}/{{ limits.exam }}
+        </span>
+      </div>
+      <textarea id="enc-exam" rows="7" formControlName="exam" data-testid="field-exam"
+        [readOnly]="fieldsLocked()" [attr.maxlength]="limits.exam"
+        placeholder="Hallazgos del examen físico" [class]="textareaClass('exam')"></textarea>
+      @if (isInvalid(form.controls.exam)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.exam) }}</span>
+      }
+    </div>
+
+    <!-- Acciones según estado -->
+    @if (!readOnly() || canVoid()) {
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+        <div>
+          @if (canVoid()) {
+            <button type="button" data-testid="btn-void" (click)="requestVoid()" [disabled]="busy()"
+              class="flex h-10 items-center justify-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-600 transition-colors hover:border-red-400 disabled:opacity-50">
+              <i class="ti ti-ban"></i>
+              {{ voidLabel() }}
+            </button>
+          }
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          @if (!readOnly()) {
+            @if (dirty()) {
+              <span class="text-xs text-muted">Hay cambios sin guardar.</span>
+            }
+            <button type="submit" data-testid="btn-save" [disabled]="busy() || !dirty()"
+              class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+              {{ saving() ? 'Guardando...' : 'Guardar' }}
+            </button>
+          }
+          @if (canSign()) {
+            <button type="button" data-testid="btn-sign" (click)="requestSign()" [disabled]="busy() || dirty()"
+              [title]="dirty() ? 'Guardá los cambios antes de firmar' : ''"
+              class="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+              <i class="ti ti-signature"></i>
+              {{ signing() ? 'Firmando...' : 'Firmar' }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </form>
+</div>

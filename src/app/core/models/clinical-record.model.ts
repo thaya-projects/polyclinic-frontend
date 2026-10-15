@@ -3,6 +3,9 @@
 // diagnosis, prescription ni odontograma — eso son otras tablas, fuera de
 // alcance acá (y prohibido mostrarlas).
 export interface ClinicalRecord {
+  // Fase 4: el backend ya lo devuelve (ClinicalRecordDTO.Id); lo usa el alta de encounters
+  // (clinical_record_id). Opcional para no romper los usos de fase 3 que no lo necesitan.
+  id?: string;
   patient_id: string;
   blood_type: string | null;
   allergies: string | null;
@@ -12,4 +15,4 @@ export interface ClinicalRecord {
   habits: string | null;
 }
 
-export type ClinicalRecordDto = Omit<ClinicalRecord, 'patient_id'>;
+export type ClinicalRecordDto = Omit<ClinicalRecord, 'patient_id' | 'id'>;
