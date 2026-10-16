@@ -1,0 +1,25 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5 px-6 py-5">
+  <div class="grid gap-4 md:grid-cols-2">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="room-name">Nombre</label>
+      <input id="room-name" type="text" formControlName="name" placeholder="ej: Consultorio 1"
+        [class]="inputClass(form.controls.name)" />
+      @if (isInvalid(form.controls.name)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.name) }}</span>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="room-branch">Sucursal</label>
+      <select id="room-branch" formControlName="branch_id" [class]="inputClass(form.controls.branch_id)">
+        <option value="" disabled>Selecciona una sucursal</option>
+        @for (b of availableBranches(); track b.id) {
+          <option [value]="b.id">{{ b.name }}{{ b.is_active ? '' : ' (inactiva)' }}</option>
+        }
+      </select>
+      @if (isInvalid(form.controls.branch_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.branch_id) }}</span>
+      }
+    </div>
+  </div>
+</form>

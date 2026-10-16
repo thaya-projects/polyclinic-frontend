@@ -1,0 +1,33 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5 px-6 py-5">
+  <div class="grid gap-4 md:grid-cols-2">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="branch-name">Nombre</label>
+      <input id="branch-name" type="text" formControlName="name" placeholder="ej: Sede Centro"
+        [class]="inputClass(form.controls.name)" />
+      @if (isInvalid(form.controls.name)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.name) }}</span>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="branch-timezone">Zona horaria</label>
+      <input id="branch-timezone" type="text" formControlName="timezone" placeholder="America/La_Paz"
+        [class]="inputClass(form.controls.timezone)" />
+      @if (isInvalid(form.controls.timezone)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.timezone) }}</span>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="branch-address">Dirección</label>
+      <input id="branch-address" type="text" formControlName="address" placeholder="Opcional"
+        [class]="inputClass(form.controls.address)" />
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="branch-phone">Teléfono</label>
+      <input id="branch-phone" type="text" formControlName="phone" placeholder="Opcional"
+        [class]="inputClass(form.controls.phone)" />
+    </div>
+  </div>
+</form>

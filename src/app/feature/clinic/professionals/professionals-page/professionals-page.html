@@ -1,0 +1,94 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-navy">Profesionales</h2>
+      <p class="mt-1 text-sm text-muted">Doctores, especialistas y demás profesionales de la clínica.</p>
+    </div>
+    <button type="button" (click)="openCreateModal()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nuevo profesional
+    </button>
+  </div>
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+  @if (deactivateError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ deactivateError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando profesionales...
+    </div>
+  } @else {
+    <app-professionals-table [professionals]="professionals()" [specialtyNameById]="specialtyNameById()"
+      (edit)="openEdit($event)" (deactivate)="requestDeactivate($event)" />
+  }
+</div>
+
+<!-- Crear -->
+<app-modal [open]="modalMode() === 'create'" title="Nuevo profesional" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <app-professional-form #createForm [availableSpecialties]="availableSpecialties()"
+    (created)="onCreate($event)" (cancelled)="closeModal()" />
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="createForm.submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Creando...' : 'Crear profesional' }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- Editar -->
+@if (selectedProfessional(); as professional) {
+  <app-modal [open]="modalMode() === 'edit'" title="Editar profesional" size="lg" (closed)="closeModal()">
+    @if (actionError()) {
+      <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ actionError() }}
+      </div>
+    }
+    <app-professional-form #editForm [professional]="professional"
+      [availableSpecialties]="availableSpecialties()"
+      (saved)="onSaveEdit($event)" (cancelled)="closeModal()" />
+
+    <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+      <button type="button" (click)="closeModal()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="editForm.submit()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<app-confirm-dialog
+  [open]="confirmingDeactivate()"
+  title="Desactivar profesional"
+  [message]="'El profesional ' + (professionalToDeactivate()?.full_name ?? '') + ' quedará como inactivo (soft delete). Los datos no se borran.'"
+  [confirmLabel]="deactivating() ? 'Procesando...' : 'Desactivar'"
+  [tone]="deactivateTone"
+  (confirmed)="confirmDeactivate()"
+  (cancelled)="cancelDeactivate()" />

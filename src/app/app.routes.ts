@@ -60,6 +60,45 @@ export const routes: Routes = [
             .then(m => m.SubscriptionSettingsPage),
       },
       {
+        // Fase 2 T6/T7: gestión de sucursales por el propio tenant. authGuard exige token válido
+        // + app_user activo — cualquier usuario logueado (tenant user o super admin) puede
+        // acceder; el backend rechaza al super admin con 403 vía policy TenantUser.
+        path: 'branches',
+        loadComponent: () =>
+          import('./feature/clinic/branches/branches-page/branches-page').then(m => m.BranchesPage),
+        canActivate: [authGuard],
+      },
+      {
+        // Fase 2 T4/T5: especialidades del tenant.
+        path: 'specialties',
+        loadComponent: () =>
+          import('./feature/clinic/specialties/specialties-page/specialties-page')
+            .then(m => m.SpecialtiesPage),
+        canActivate: [authGuard],
+      },
+      {
+        // Fase 2 T7/T8: profesionales del tenant.
+        path: 'professionals',
+        loadComponent: () =>
+          import('./feature/clinic/professionals/professionals-page/professionals-page')
+            .then(m => m.ProfessionalsPage),
+        canActivate: [authGuard],
+      },
+      {
+        // Fase 2 Rooms T4/T5: salas por sucursal del tenant.
+        path: 'rooms',
+        loadComponent: () =>
+          import('./feature/clinic/rooms/rooms-page/rooms-page').then(m => m.RoomsPage),
+        canActivate: [authGuard],
+      },
+      {
+        // Fase 2 Horarios T6-T8: grilla semanal + excepciones por tenant.
+        path: 'schedules',
+        loadComponent: () =>
+          import('./feature/clinic/schedules/schedules-page/schedules-page').then(m => m.SchedulesPage),
+        canActivate: [authGuard],
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.

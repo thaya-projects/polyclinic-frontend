@@ -1,0 +1,48 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Sin especialidades todavía.">
+  <ng-template appDataTableCell="name" let-row>
+    <div class="flex items-center gap-3">
+      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-icon-soft text-brand">
+        <i class="ti ti-stethoscope"></i>
+      </div>
+      <span class="font-semibold text-text">{{ row.name }}</span>
+    </div>
+  </ng-template>
+
+  <ng-template appDataTableCell="code" let-row>
+    <span class="font-mono text-xs text-muted">{{ row.code }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="scope" let-row>
+    <app-status-chip
+      [label]="row.tenant_id ? 'Propia' : 'Global'"
+      [tone]="row.tenant_id ? 'wait' : 'neutral'" />
+  </ng-template>
+
+  <ng-template appDataTableCell="is_active" let-row>
+    <app-status-chip [label]="row.is_active ? 'Activa' : 'Inactiva'"
+      [tone]="row.is_active ? 'ok' : 'neutral'" />
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex items-center justify-end gap-2">
+      @if (row.tenant_id) {
+        <button type="button" (click)="edit.emit(row)" [disabled]="togglingId() === row.id"
+          class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+          Editar
+        </button>
+        <button type="button" (click)="toggleActive.emit(row)" [disabled]="togglingId() === row.id"
+          [class]="row.is_active
+            ? 'rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400 disabled:opacity-50'
+            : 'rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:border-emerald-400 disabled:opacity-50'">
+          @if (togglingId() === row.id) {
+            <i class="ti ti-loader-2 animate-spin"></i>
+          } @else {
+            {{ row.is_active ? 'Desactivar' : 'Activar' }}
+          }
+        </button>
+      } @else {
+        <span class="text-xs text-muted">Solo lectura</span>
+      }
+    </div>
+  </ng-template>
+</app-data-table>

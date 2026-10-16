@@ -1,0 +1,82 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-navy">Especialidades</h2>
+      <p class="mt-1 text-sm text-muted">Especialidades médicas que ofrece la clínica. Las globales de la plataforma son solo lectura.</p>
+    </div>
+    <button type="button" (click)="openCreateModal()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nueva especialidad
+    </button>
+  </div>
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+  @if (toggleError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ toggleError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando especialidades...
+    </div>
+  } @else {
+    <app-specialties-table [specialties]="specialties()" [togglingId]="toggling()"
+      (edit)="openEdit($event)" (toggleActive)="onToggleActive($event)" />
+  }
+</div>
+
+<!-- Crear especialidad -->
+<app-modal [open]="modalMode() === 'create'" title="Nueva especialidad" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <app-specialty-form #createForm (created)="onCreate($event)" (cancelled)="closeModal()" />
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="createForm.submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Creando...' : 'Crear especialidad' }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- Editar especialidad -->
+@if (selectedSpecialty(); as specialty) {
+  <app-modal [open]="modalMode() === 'edit'" title="Editar especialidad" size="lg" (closed)="closeModal()">
+    @if (actionError()) {
+      <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ actionError() }}
+      </div>
+    }
+    <app-specialty-form #editForm [specialty]="specialty" (saved)="onSaveEdit($event)" (cancelled)="closeModal()" />
+
+    <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+      <button type="button" (click)="closeModal()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="editForm.submit()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </app-modal>
+}
