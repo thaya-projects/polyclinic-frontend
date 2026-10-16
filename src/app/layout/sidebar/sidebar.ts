@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { SessionService } from '../../core/services/session.service';
+import { CurrentUserService } from '../../core/services/current-user.service';
 
 interface NavLeaf  { kind: 'leaf';  label: string; icon: string; route?: string; comingSoon?: boolean; }
 interface NavGroup { kind: 'group'; label: string; icon: string; children: NavLeaf[]; }
@@ -12,14 +13,24 @@ interface OpenFlyout { item: NavGroup; top: number; left: number; }
 
 const COLLAPSE_KEY = 'mc_sidebar_collapsed';
 
-// TODO: reemplazar por un nav dinámico según el rol del usuario cuando exista Auth.
-const NAV_ITEMS: NavEntry[] = [
+// Sidebar de la plataforma (super admin): solo dashboard + clínicas. Nunca
+// se le muestra el menú de clínica (ni pacientes ni agenda).
+const SUPERADMIN_NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
-  { kind: 'leaf', label: 'Tenants (Clínicas)', icon: 'building-hospital', route: '/admin/tenants' },
-  { kind: 'group', label: 'Usuarios', icon: 'users', children: [
-    { kind: 'leaf', label: 'Doctores', icon: 'stethoscope', comingSoon: true },
-    { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', comingSoon: true },
-  ]},
+  { kind: 'leaf', label: 'Clínicas', icon: 'building-hospital', route: '/admin/tenants' },
+];
+
+// Sidebar de clínica v1: mismo menú para admin/recepcion/profesional — no
+// se le oculta Pacientes a recepción.
+const CLINIC_NAV_ITEMS: NavEntry[] = [
+  { kind: 'leaf', label: 'Agenda', icon: 'calendar-event', route: '/appointments' },
+  { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', route: '/patients' },
+  { kind: 'leaf', label: 'Servicios', icon: 'stethoscope', route: '/services' },
+];
+
+// Extra solo para role.code === 'admin'.
+const CLINIC_ADMIN_EXTRA_NAV_ITEMS: NavEntry[] = [
+  { kind: 'leaf', label: 'Roles', icon: 'shield-lock', route: '/roles' },
   { kind: 'leaf', label: 'Configuración', icon: 'settings', comingSoon: true },
 ];
 
@@ -32,13 +43,22 @@ const NAV_ITEMS: NavEntry[] = [
 export class Sidebar {
   theme = inject(ThemeService);
   private session = inject(SessionService);
+  private currentUser = inject(CurrentUserService);
 
   private platformId = inject(PLATFORM_ID);
   private closeTimer?: ReturnType<typeof setTimeout>;
 
   collapsed  = signal<boolean>(this.loadCollapsed());
   openFlyout = signal<OpenFlyout | null>(null);
-  navItems   = signal<NavEntry[]>(NAV_ITEMS);
+
+  // Un solo menú por tipo de usuario — nada de dashboards distintos por
+  // cada rol de clínica, solo el extra de admin se agrega o no.
+  readonly navItems = computed<NavEntry[]>(() => {
+    if (this.currentUser.isSuperAdmin()) return SUPERADMIN_NAV_ITEMS;
+    return this.currentUser.hasRole('admin')
+      ? [...CLINIC_NAV_ITEMS, ...CLINIC_ADMIN_EXTRA_NAV_ITEMS]
+      : CLINIC_NAV_ITEMS;
+  });
 
   private collapsedGroups = signal<Set<string>>(new Set());
 

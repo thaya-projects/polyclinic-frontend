@@ -17,7 +17,7 @@ export class SessionService {
   }
 
   logout(): void {
-    const wasSuperAdmin = this.store.user()?.role === 'super_admin';
+    const wasSuperAdmin = this.store.user()?.is_superadmin ?? false;
     this.clearSession();
     this.router.navigateByUrl(wasSuperAdmin ? '/admin/login' : '/login');
   }

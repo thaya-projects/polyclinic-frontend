@@ -3,8 +3,9 @@ import { isPlatformBrowser } from '@angular/common';
 import { Observable, tap } from 'rxjs';
 import { Tenant } from '../models/tenant.model';
 import { TenantDetail, EditTenantDto } from '../models/tenant-detail.model';
+import { TenantListItem } from '../models/tenant-list-item.model';
 import { CreateTenantDto } from '../models/create-tenant.model';
-import { TenantsApi } from './tenants-api';
+import { TenantsApi, TenantStatus } from './tenants-api';
 import { httpErrorMessage } from '../../shared/utils/http-error.util';
 
 @Injectable({ providedIn: 'root' })
@@ -12,21 +13,21 @@ export class TenantsService {
   private api = inject(TenantsApi);
   private platformId = inject(PLATFORM_ID);
 
-  private readonly records = signal<TenantDetail[]>([]);
+  private readonly records = signal<TenantListItem[]>([]);
   private readonly loadingSignal = signal(false);
   private readonly errorSignal = signal<string | null>(null);
 
   readonly loading = this.loadingSignal.asReadonly();
   readonly error = this.errorSignal.asReadonly();
 
-  private toSummary(r: TenantDetail): Tenant {
+  private toSummary(r: TenantListItem): Tenant {
     return {
       id: r.id,
       name: r.name,
       slug: r.slug,
       countryCode: r.country_code,
-      plan: r.subscription.plan_id,
-      status: r.subscription.status,
+      plan: r.plan_name,
+      status: r.subscription_status,
       isActive: r.is_active,
       createdAt: r.created_at,
     };
@@ -36,10 +37,6 @@ export class TenantsService {
 
   getAll() {
     return this.allSummaries;
-  }
-
-  findDetail(id: string): TenantDetail | null {
-    return this.records().find(r => r.id === id) ?? null;
   }
 
   // GET /superadmin/tenants — no se ejecuta en el servidor (SSR): este
@@ -61,9 +58,10 @@ export class TenantsService {
   }
 
   // GET /superadmin/tenants/:id — se pide fresco (no del cache del listado)
-  // para tener siempre el detalle completo.
+  // para tener siempre el detalle completo. TenantDetail (forma aplanada) no
+  // es la misma forma que TenantListItem, así que no toca el cache de `records`.
   loadDetail(id: string): Observable<TenantDetail> {
-    return this.api.getById(id).pipe(tap(detail => this.upsertLocal(detail)));
+    return this.api.getById(id);
   }
 
   // POST /superadmin/tenants — el criterio de aceptación pide que el alta
@@ -74,20 +72,38 @@ export class TenantsService {
 
   // PATCH /superadmin/tenants/:id
   update(id: string, dto: EditTenantDto): Observable<TenantDetail> {
-    return this.api.update(id, dto).pipe(tap(updated => this.upsertLocal(updated)));
+    return this.api.update(id, dto).pipe(tap(updated => this.upsertListRow(id, updated)));
   }
 
-  // POST /superadmin/tenants/:id/suspend | /activate — actualiza el
-  // registro local con la respuesta para que el badge cambie al instante.
-  setActive(id: string, isActive: boolean): Observable<TenantDetail> {
+  // POST /superadmin/tenants/:id/suspend | /activate — el backend devuelve solo
+  // { id, is_active } (TenantStatusDTO), no el detalle completo. Actualiza únicamente ese campo
+  // en la fila local de la lista.
+  setActive(id: string, isActive: boolean): Observable<TenantStatus> {
     const call$ = isActive ? this.api.activate(id) : this.api.suspend(id);
-    return call$.pipe(tap(updated => this.upsertLocal(updated)));
+    return call$.pipe(
+      tap(status => {
+        this.records.update(list => list.map(r => (r.id === status.id ? { ...r, is_active: status.is_active } : r)));
+      }),
+    );
   }
 
-  private upsertLocal(detail: TenantDetail): void {
-    this.records.update(list => {
-      const exists = list.some(r => r.id === detail.id);
-      return exists ? list.map(r => (r.id === detail.id ? detail : r)) : [detail, ...list];
-    });
+  // Refleja en la fila de `records` los campos de un TenantDetail recién editado — conserva
+  // subscription_status/plan_name/users_count existentes (update no los toca ni los devuelve en
+  // una forma compatible con la fila de la lista).
+  private upsertListRow(id: string, detail: TenantDetail): void {
+    this.records.update(list =>
+      list.map(r =>
+        r.id === id
+          ? {
+              ...r,
+              name: detail.name,
+              slug: detail.slug,
+              country_code: detail.country_code,
+              default_currency: detail.default_currency,
+              is_active: detail.is_active,
+            }
+          : r,
+      ),
+    );
   }
 }

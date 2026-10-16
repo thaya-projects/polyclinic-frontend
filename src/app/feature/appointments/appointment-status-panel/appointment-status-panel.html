@@ -1,0 +1,39 @@
+@if (detailError()) {
+  <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+    <i class="ti ti-alert-circle"></i>
+    {{ detailError() }}
+  </div>
+}
+
+@if (detailLoading()) {
+  <div class="flex items-center justify-center gap-2 py-8 text-sm text-muted">
+    <i class="ti ti-loader-2 animate-spin"></i>
+    Cargando estado de la cita...
+  </div>
+} @else if (detail(); as appt) {
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="text-xs text-muted">Estado actual</span>
+      <span class="rounded-full bg-icon-soft px-2.5 py-1 text-xs font-semibold text-brand">
+        {{ statusLabels[currentStatus()] }}
+      </span>
+      @if (appt.confirmed_at) {
+        <span class="text-xs text-muted">Confirmada el {{ formatDate(appt.confirmed_at) }}</span>
+      }
+    </div>
+
+    @if (saveError()) {
+      <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ saveError() }}
+      </div>
+    }
+
+    <app-appointment-status-form [currentStatus]="currentStatus()" [saving]="saving()" (changed)="onStatusChanged($event)" />
+
+    <div class="flex flex-col gap-3">
+      <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Historial de estados</h4>
+      <app-appointment-status-history [entries]="historyEntries()" />
+    </div>
+  </div>
+}

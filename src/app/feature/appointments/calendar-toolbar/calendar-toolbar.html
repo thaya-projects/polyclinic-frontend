@@ -1,0 +1,48 @@
+<div class="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex flex-wrap items-center gap-2">
+    <button type="button" (click)="goPrev()" aria-label="Anterior"
+      class="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-navy transition-colors hover:border-brand hover:text-brand">
+      <i class="ti ti-chevron-left"></i>
+    </button>
+    <button type="button" (click)="goToday()"
+      class="flex h-9 items-center justify-center rounded-lg border border-border px-3 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+      Hoy
+    </button>
+    <button type="button" (click)="goNext()" aria-label="Siguiente"
+      class="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-navy transition-colors hover:border-brand hover:text-brand">
+      <i class="ti ti-chevron-right"></i>
+    </button>
+    <span class="ml-2 text-sm font-semibold text-navy capitalize">{{ rangeLabel() }}</span>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <select [value]="selectedProfessionalId()" (change)="selectProfessional($any($event.target).value)"
+      class="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text">
+      <option value="">Todos los profesionales</option>
+      @for (p of professionals(); track p.id) {
+        <option [value]="p.id">{{ p.full_name }}</option>
+      }
+    </select>
+
+    <select [value]="selectedBranchId()" (change)="selectBranch($any($event.target).value)"
+      class="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text">
+      <option value="">Todas las sucursales</option>
+      @for (b of branches(); track b.id) {
+        <option [value]="b.id">{{ b.name }}</option>
+      }
+    </select>
+
+    <div class="flex overflow-hidden rounded-lg border border-border">
+      <button type="button" (click)="setViewMode('day')"
+        class="px-3 py-1.5 text-sm font-medium transition-colors"
+        [class]="viewMode() === 'day' ? 'bg-brand text-white' : 'text-navy hover:bg-icon-soft'">
+        Día
+      </button>
+      <button type="button" (click)="setViewMode('week')"
+        class="px-3 py-1.5 text-sm font-medium transition-colors"
+        [class]="viewMode() === 'week' ? 'bg-brand text-white' : 'text-navy hover:bg-icon-soft'">
+        Semana
+      </button>
+    </div>
+  </div>
+</div>

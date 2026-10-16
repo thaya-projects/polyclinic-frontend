@@ -181,10 +181,12 @@ export class TenantsPage {
     this.togglingActive.set(true);
     this.actionError.set(null);
     this.tenantsSvc.setActive(tenant.id, !tenant.is_active).subscribe({
-      next: updated => {
+      // El backend devuelve solo { id, is_active } (TenantStatusDTO), no el detalle completo —
+      // se mergea ese único campo sobre el TenantDetail que ya estaba cargado en el modal.
+      next: status => {
         this.togglingActive.set(false);
         this.confirmingToggle.set(false);
-        this.selectedTenant.set(updated);
+        this.selectedTenant.update(current => (current ? { ...current, is_active: status.is_active } : current));
       },
       error: err => {
         this.togglingActive.set(false);
