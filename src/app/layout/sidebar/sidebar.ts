@@ -4,8 +4,15 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { SessionService } from '../../core/services/session.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
+import { FeaturesService } from '../../core/services/features.service';
+import { FeatureKey } from '../../core/models/features.model';
 
-interface NavLeaf  { kind: 'leaf';  label: string; icon: string; route?: string; comingSoon?: boolean; }
+interface NavLeaf {
+  kind: 'leaf'; label: string; icon: string; route?: string; comingSoon?: boolean;
+  // T6 FF: si viene, el sidebar oculta la entry cuando FeaturesService.enabled(key) es false.
+  // Sin key, la entry es siempre visible (menús admin como Clínicas/Planes).
+  moduleKey?: FeatureKey;
+}
 interface NavGroup { kind: 'group'; label: string; icon: string; children: NavLeaf[]; }
 type NavEntry = NavLeaf | NavGroup;
 
@@ -13,11 +20,12 @@ interface OpenFlyout { item: NavGroup; top: number; left: number; }
 
 const COLLAPSE_KEY = 'mc_sidebar_collapsed';
 
-// Sidebar de la plataforma (super admin): solo dashboard + clínicas. Nunca
-// se le muestra el menú de clínica (ni pacientes ni agenda).
+// Sidebar de la plataforma (super admin): solo lo global de la plataforma.
+// Nunca se le muestra el menú de clínica (ni pacientes ni agenda).
 const SUPERADMIN_NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
   { kind: 'leaf', label: 'Clínicas', icon: 'building-hospital', route: '/admin/tenants' },
+  { kind: 'leaf', label: 'Planes', icon: 'package', route: '/admin/plans' },
 ];
 
 // Sidebar de clínica v1: mismo menú para admin/recepcion/profesional — no
@@ -26,10 +34,21 @@ const CLINIC_NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Agenda', icon: 'calendar-event', route: '/appointments' },
   { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', route: '/patients' },
   { kind: 'leaf', label: 'Servicios', icon: 'stethoscope', route: '/services' },
+  // T6 FF (demo): entry gated por feature 'odontogram'. Aparece sólo si el
+  // tenant lo tiene activo.
+  { kind: 'leaf', label: 'Odontograma', icon: 'tooth', comingSoon: true, moduleKey: 'odontogram' },
 ];
 
-// Extra solo para role.code === 'admin'.
+// Extra solo para role.code === 'admin'. Sucursales/Especialidades/
+// Profesionales/Salas/Horarios eran de 'develop' (antes de que existiera
+// este split por rol); son configuración de la propia clínica, no de la
+// plataforma, así que van acá y no en SUPERADMIN_NAV_ITEMS.
 const CLINIC_ADMIN_EXTRA_NAV_ITEMS: NavEntry[] = [
+  { kind: 'leaf', label: 'Sucursales', icon: 'building', route: '/branches' },
+  { kind: 'leaf', label: 'Especialidades', icon: 'certificate', route: '/specialties' },
+  { kind: 'leaf', label: 'Profesionales', icon: 'stethoscope', route: '/professionals' },
+  { kind: 'leaf', label: 'Salas', icon: 'door', route: '/rooms' },
+  { kind: 'leaf', label: 'Horarios', icon: 'calendar-time', route: '/schedules' },
   { kind: 'leaf', label: 'Roles', icon: 'shield-lock', route: '/roles' },
   { kind: 'leaf', label: 'Configuración', icon: 'settings', comingSoon: true },
 ];
@@ -48,17 +67,40 @@ export class Sidebar {
   private platformId = inject(PLATFORM_ID);
   private closeTimer?: ReturnType<typeof setTimeout>;
 
+  private features = inject(FeaturesService);
+
   collapsed  = signal<boolean>(this.loadCollapsed());
   openFlyout = signal<OpenFlyout | null>(null);
 
-  // Un solo menú por tipo de usuario — nada de dashboards distintos por
-  // cada rol de clínica, solo el extra de admin se agrega o no.
+  // Menú por tipo de usuario (super admin vs clínica, con extra de admin
+  // dentro de clínica) y, encima, T6 FF filtra las entries con moduleKey
+  // según FeaturesService. Si el mapa aún no cargó (loaded=false), las
+  // entries gated quedan ocultas (default cerrado) para no filtrar por un
+  // instante y luego esconder — mejor UX esperar al primer GET
+  // /tenants/me/features.
   readonly navItems = computed<NavEntry[]>(() => {
-    if (this.currentUser.isSuperAdmin()) return SUPERADMIN_NAV_ITEMS;
-    return this.currentUser.hasRole('admin')
-      ? [...CLINIC_NAV_ITEMS, ...CLINIC_ADMIN_EXTRA_NAV_ITEMS]
-      : CLINIC_NAV_ITEMS;
+    const base = this.currentUser.isSuperAdmin()
+      ? SUPERADMIN_NAV_ITEMS
+      : this.currentUser.hasRole('admin')
+        ? [...CLINIC_NAV_ITEMS, ...CLINIC_ADMIN_EXTRA_NAV_ITEMS]
+        : CLINIC_NAV_ITEMS;
+
+    const enabled = this.features.enabledMap();
+    const loaded = this.features.loaded();
+    return base
+      .map(entry => {
+        if (entry.kind === 'group') {
+          return { ...entry, children: entry.children.filter(c => this.showLeaf(c, enabled, loaded)) };
+        }
+        return this.showLeaf(entry, enabled, loaded) ? entry : null;
+      })
+      .filter((e): e is NavEntry => e !== null && !(e.kind === 'group' && e.children.length === 0));
   });
+
+  private showLeaf(leaf: NavLeaf, enabled: Record<string, boolean>, loaded: boolean): boolean {
+    if (!leaf.moduleKey) return true;
+    return loaded && enabled[leaf.moduleKey] === true;
+  }
 
   private collapsedGroups = signal<Set<string>>(new Set());
 

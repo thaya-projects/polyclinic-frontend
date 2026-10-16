@@ -1,0 +1,92 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-navy">Sucursales</h2>
+      <p class="mt-1 text-sm text-muted">Sedes de la clínica. Cada sucursal tiene su propia zona horaria.</p>
+    </div>
+    <button type="button" (click)="openCreateModal()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nueva sucursal
+    </button>
+  </div>
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+  @if (deactivateError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ deactivateError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando sucursales...
+    </div>
+  } @else {
+    <app-branches-table [branches]="branches()"
+      (edit)="openEdit($event)" (deactivate)="requestDeactivate($event)" />
+  }
+</div>
+
+<!-- Crear sucursal -->
+<app-modal [open]="modalMode() === 'create'" title="Nueva sucursal" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <app-branch-form #createForm (created)="onCreate($event)" (cancelled)="closeModal()" />
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="createForm.submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Creando...' : 'Crear sucursal' }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- Editar sucursal -->
+@if (selectedBranch(); as branch) {
+  <app-modal [open]="modalMode() === 'edit'" title="Editar sucursal" size="lg" (closed)="closeModal()">
+    @if (actionError()) {
+      <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ actionError() }}
+      </div>
+    }
+    <app-branch-form #editForm [branch]="branch" (saved)="onSaveEdit($event)" (cancelled)="closeModal()" />
+
+    <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+      <button type="button" (click)="closeModal()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="editForm.submit()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+<!-- Confirmación desactivar -->
+<app-confirm-dialog
+  [open]="confirmingDeactivate()"
+  title="Desactivar sucursal"
+  [message]="'La sucursal ' + (branchToDeactivate()?.name ?? '') + ' quedará como inactiva (soft delete). Los datos no se borran; se puede reactivar más adelante cuando el negocio lo pida.'"
+  [confirmLabel]="deactivating() ? 'Procesando...' : 'Desactivar'"
+  [tone]="deactivateTone"
+  (confirmed)="confirmDeactivate()"
+  (cancelled)="cancelDeactivate()" />
