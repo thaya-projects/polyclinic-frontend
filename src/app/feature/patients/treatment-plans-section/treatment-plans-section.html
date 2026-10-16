@@ -1,0 +1,138 @@
+<div class="flex justify-end">
+  <button type="button" (click)="openCreate()"
+    class="flex h-9 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-xs font-medium text-white transition-colors hover:bg-brand-dark">
+    <i class="ti ti-plus"></i>
+    Nuevo plan
+  </button>
+</div>
+
+@if (listError()) {
+  <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+    <i class="ti ti-alert-circle"></i>
+    {{ listError() }}
+  </div>
+}
+
+@if (listLoading()) {
+  <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-10 text-sm text-muted">
+    <i class="ti ti-loader-2 animate-spin"></i>
+    Cargando planes de tratamiento...
+  </div>
+} @else {
+  <app-treatment-plans-table [plans]="plans()" (view)="openDetail($event)" />
+}
+
+<app-modal [open]="creating()" title="Nuevo plan de tratamiento" size="lg" (closed)="closeCreate()">
+  <app-treatment-plan-form [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
+</app-modal>
+
+<app-modal [open]="selectedPlan() !== null" title="Detalle del plan de tratamiento" size="lg" (closed)="closeDetail()">
+  @if (detailError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ detailError() }}
+    </div>
+  }
+
+  @if (selectedPlan(); as plan) {
+    @if (editing()) {
+      <app-treatment-plan-form
+        [plan]="plan"
+        [saving]="saving()"
+        [saveError]="actionError()"
+        (submitted)="onSaveEdit($event)"
+        (cancelled)="cancelEdit()" />
+    } @else {
+      <div class="flex flex-col gap-6">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-xs font-semibold tracking-wide text-muted uppercase">Estado</span>
+          <app-treatment-plan-status-badge [status]="plan.status" />
+        </div>
+
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-xs font-semibold tracking-wide text-muted uppercase">Total estimado</span>
+          <span class="text-sm font-semibold text-text">{{ formatAmount(plan.total_estimated, plan.currency) }}</span>
+          @if (detailLoading()) { <i class="ti ti-loader-2 animate-spin text-muted"></i> }
+        </div>
+
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-xs font-semibold tracking-wide text-muted uppercase">Creado</span>
+          <span class="text-sm text-text">{{ formatDate(plan.created_at) }}</span>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold tracking-wide text-muted uppercase">Notas</span>
+            <button type="button" (click)="openEdit()" class="text-xs font-medium text-brand hover:underline">
+              Editar
+            </button>
+          </div>
+          <p class="rounded-xl border border-border bg-surface p-3 text-sm whitespace-pre-line text-text">
+            {{ plan.notes || 'Sin notas.' }}
+          </p>
+        </div>
+
+        <!-- Fase 7 T3/T5: cambio de estado del plan -->
+        <section class="flex flex-col gap-3 border-t border-border pt-4">
+          <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Cambiar estado del plan</h4>
+          @if (planStatusError()) {
+            <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <i class="ti ti-alert-circle"></i>
+              {{ planStatusError() }}
+            </div>
+          }
+          <app-treatment-plan-status-form
+            [currentStatus]="plan.status"
+            [saving]="planStatusSaving()"
+            (changed)="onPlanStatusChanged($event)" />
+        </section>
+
+        <!-- Fase 7 T3/T5: items + cambio de estado + link a cita existente -->
+        <section class="flex flex-col gap-3 border-t border-border pt-4">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Items</h4>
+            @if (!addingItem()) {
+              <button type="button" (click)="openAddItem()" class="text-xs font-medium text-brand hover:underline">
+                + Agregar item
+              </button>
+            }
+          </div>
+
+          @if (itemActionError()) {
+            <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <i class="ti ti-alert-circle"></i>
+              {{ itemActionError() }}
+            </div>
+          }
+
+          @if (addingItem()) {
+            <div class="rounded-xl border border-border bg-surface p-4">
+              <app-treatment-plan-item-form (added)="onItemAdded($event)" />
+            </div>
+          }
+
+          @if (itemsError()) {
+            <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <i class="ti ti-alert-circle"></i>
+              {{ itemsError() }}
+            </div>
+          }
+
+          @if (itemsLoading()) {
+            <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-8 text-sm text-muted">
+              <i class="ti ti-loader-2 animate-spin"></i>
+              Cargando items...
+            </div>
+          } @else {
+            <app-treatment-plan-items-status-list
+              [items]="items()"
+              [appointments]="appointmentOptions()"
+              [savingItemId]="itemStatusSavingId()"
+              (changed)="onItemStatusChanged($event)"
+              (remove)="onItemRemoved($event)" />
+          }
+        </section>
+      </div>
+    }
+  }
+</app-modal>
