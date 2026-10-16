@@ -66,6 +66,12 @@ export class AppointmentsPage {
         branch_id: this.selectedBranchId() || undefined,
       });
     });
+
+    // RoomsService (ya conectado a backend real) requiere sucursal
+    // explícita — sin esto el selector de consultorio queda vacío.
+    effect(() => {
+      this.roomsSvc.loadFor(this.selectedBranchId() || null);
+    });
   }
 
   private rangeFor(viewMode: 'day' | 'week', referenceDate: Date): { from: string; to: string } {
