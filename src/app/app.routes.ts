@@ -28,6 +28,38 @@ export const routes: Routes = [
         canActivate: [authGuard, roleGuard(['super_admin'])],
       },
       {
+        path: 'admin/plans',
+        loadComponent: () =>
+          import('./feature/superadmin/plans/plans-page/plans-page').then(m => m.PlansPage),
+        canActivate: [authGuard, roleGuard(['super_admin'])],
+      },
+      {
+        // T8/T9: panel super admin de subscription de un tenant específico. No aparece en el
+        // sidebar — se llega desde el detalle del tenant o navegando directo con el id.
+        path: 'admin/tenants/:id/subscription',
+        loadComponent: () =>
+          import('./feature/superadmin/subscriptions/subscription-admin-page/subscription-admin-page')
+            .then(m => m.SubscriptionAdminPage),
+        canActivate: [authGuard, roleGuard(['super_admin'])],
+      },
+      {
+        // T7 FF: panel super admin de módulos del tenant (toggles enabled_modules).
+        path: 'admin/tenants/:id/settings',
+        loadComponent: () =>
+          import('./feature/superadmin/tenants/tenant-settings-modules-page/tenant-settings-modules-page')
+            .then(m => m.TenantSettingsModulesPage),
+        canActivate: [authGuard, roleGuard(['super_admin'])],
+      },
+      {
+        // T10: la clínica ve su plan y status. Sin cambios (los mueve el super admin desde su
+        // panel). Sin guard fuerte todavía — igual que /roles, se refuerza cuando el layout
+        // de clínica exista.
+        path: 'settings/subscription',
+        loadComponent: () =>
+          import('./feature/clinic/subscription/subscription-settings-page')
+            .then(m => m.SubscriptionSettingsPage),
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.

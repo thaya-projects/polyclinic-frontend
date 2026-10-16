@@ -3,8 +3,15 @@ import { isPlatformBrowser } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { SessionService } from '../../core/services/session.service';
+import { FeaturesService } from '../../core/services/features.service';
+import { FeatureKey } from '../../core/models/features.model';
 
-interface NavLeaf  { kind: 'leaf';  label: string; icon: string; route?: string; comingSoon?: boolean; }
+interface NavLeaf  {
+  kind: 'leaf'; label: string; icon: string; route?: string; comingSoon?: boolean;
+  // T6 FF: si viene, el sidebar oculta la entry cuando FeaturesService.enabled(key) es false.
+  // Sin key, la entry es siempre visible (menús admin como Tenants/Planes).
+  moduleKey?: FeatureKey;
+}
 interface NavGroup { kind: 'group'; label: string; icon: string; children: NavLeaf[]; }
 type NavEntry = NavLeaf | NavGroup;
 
@@ -16,10 +23,14 @@ const COLLAPSE_KEY = 'mc_sidebar_collapsed';
 const NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
   { kind: 'leaf', label: 'Tenants (Clínicas)', icon: 'building-hospital', route: '/admin/tenants' },
+  { kind: 'leaf', label: 'Planes', icon: 'package', route: '/admin/plans' },
   { kind: 'group', label: 'Usuarios', icon: 'users', children: [
     { kind: 'leaf', label: 'Doctores', icon: 'stethoscope', comingSoon: true },
     { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', comingSoon: true },
   ]},
+  // T6 FF (demo): entry gated por feature 'odontogram'. Aparece sólo si el tenant lo tiene
+  // activo. Sirve de contrato de referencia — cuando el layout de clínica exista se moverá allí.
+  { kind: 'leaf', label: 'Odontograma', icon: 'tooth', comingSoon: true, moduleKey: 'odontogram' },
   { kind: 'leaf', label: 'Configuración', icon: 'settings', comingSoon: true },
 ];
 
@@ -36,9 +47,31 @@ export class Sidebar {
   private platformId = inject(PLATFORM_ID);
   private closeTimer?: ReturnType<typeof setTimeout>;
 
+  private features = inject(FeaturesService);
+
   collapsed  = signal<boolean>(this.loadCollapsed());
   openFlyout = signal<OpenFlyout | null>(null);
-  navItems   = signal<NavEntry[]>(NAV_ITEMS);
+
+  // T6 FF: filtra entries con moduleKey según FeaturesService. Si el mapa aún no cargó
+  // (loaded=false), las entries gated quedan ocultas (default cerrado) para no filtrar por un
+  // instante y luego esconder — mejor UX esperar al primer GET /tenants/me/features.
+  readonly navItems = computed<NavEntry[]>(() => {
+    const enabled = this.features.enabledMap();
+    const loaded = this.features.loaded();
+    return NAV_ITEMS
+      .map(entry => {
+        if (entry.kind === 'group') {
+          return { ...entry, children: entry.children.filter(c => this.showLeaf(c, enabled, loaded)) };
+        }
+        return this.showLeaf(entry, enabled, loaded) ? entry : null;
+      })
+      .filter((e): e is NavEntry => e !== null && !(e.kind === 'group' && e.children.length === 0));
+  });
+
+  private showLeaf(leaf: NavLeaf, enabled: Record<string, boolean>, loaded: boolean): boolean {
+    if (!leaf.moduleKey) return true;
+    return loaded && enabled[leaf.moduleKey] === true;
+  }
 
   private collapsedGroups = signal<Set<string>>(new Set());
 
