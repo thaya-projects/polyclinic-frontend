@@ -1,4 +1,3 @@
-// Espeja RoomDTO (snake_case). tenant_id no viaja. branch_id visible.
 export interface Room {
   id: string;
   branch_id: string;

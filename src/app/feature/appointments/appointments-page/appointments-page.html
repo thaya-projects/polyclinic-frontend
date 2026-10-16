@@ -1,0 +1,72 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-navy">Agenda</h2>
+      <p class="mt-1 text-sm text-muted">Citas por profesional y sucursal.</p>
+    </div>
+    <button type="button" (click)="openCreateModal()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nueva cita
+    </button>
+  </div>
+
+  <app-calendar-toolbar
+    [professionals]="professionals()"
+    [branches]="branches()"
+    [(selectedProfessionalId)]="selectedProfessionalId"
+    [(selectedBranchId)]="selectedBranchId"
+    [(viewMode)]="viewMode"
+    [(referenceDate)]="referenceDate" />
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando agenda...
+    </div>
+  } @else {
+    <app-calendar-view [appointments]="appointments()" [viewMode]="viewMode()" [referenceDate]="referenceDate()" (select)="openEditModal($event)" />
+  }
+</div>
+
+<app-modal [open]="modalMode() !== 'none'" [title]="modalMode() === 'create' ? 'Nueva cita' : 'Editar cita'" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <app-appointment-form #apptForm
+    [branches]="branches()"
+    [professionals]="professionals()"
+    [patients]="patients()"
+    [services]="services()"
+    [rooms]="rooms()"
+    [appointment]="selectedAppointment()"
+    (submitted)="onSave($event)" />
+
+  @if (modalMode() === 'edit' && selectedAppointment(); as appointment) {
+    <div class="mt-6 border-t border-border pt-6">
+      <h3 class="mb-4 text-base font-semibold text-navy">Estado de la cita</h3>
+      <app-appointment-status-panel [appointment]="appointment" />
+    </div>
+  }
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="apptForm.submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+</app-modal>

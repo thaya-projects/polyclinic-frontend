@@ -8,7 +8,7 @@
     </div>
     <div class="flex items-center gap-2">
       <app-status-chip [label]="tenant().is_active ? 'Activo' : 'Inactivo'" [tone]="tenant().is_active ? 'ok' : 'neutral'" />
-      <app-subscription-status-badge [status]="tenant().subscription.status" />
+      <app-subscription-status-badge [status]="tenant().subscription?.status ?? null" />
     </div>
   </div>
 
@@ -22,7 +22,7 @@
       </div>
       <div>
         <p class="text-xs text-muted">Plan</p>
-        <p class="text-sm text-text capitalize">{{ tenant().subscription.plan_id }}</p>
+        <p class="text-sm text-text">{{ tenant().subscription?.plan_name ?? 'Sin plan' }}</p>
       </div>
       <div>
         <p class="text-xs text-muted">Moneda / Zona horaria</p>
@@ -36,14 +36,16 @@
         <p class="text-xs text-muted">Creado</p>
         <p class="text-sm text-text">{{ formatDate(tenant().created_at) }}</p>
       </div>
-      <div>
-        <p class="text-xs text-muted">
-          @if (tenant().subscription.status === 'trial') { Trial vence } @else { Renovación }
-        </p>
-        <p class="text-sm text-text">
-          {{ formatDate(tenant().subscription.trial_ends_at ?? tenant().subscription.current_period_end) }}
-        </p>
-      </div>
+      @if (tenant().subscription; as subscription) {
+        <div>
+          <p class="text-xs text-muted">
+            @if (subscription.status === 'trialing') { Trial vence } @else { Renovación }
+          </p>
+          <p class="text-sm text-text">
+            {{ formatDate(subscription.trial_ends_at ?? subscription.current_period_end) }}
+          </p>
+        </div>
+      }
     </div>
   </section>
 
@@ -82,7 +84,10 @@
           <p class="truncate text-sm font-medium text-text">{{ user.full_name }}</p>
           <p class="truncate text-xs text-muted">{{ user.email }}</p>
         </div>
-        <span class="rounded-full bg-icon-soft px-2.5 py-1 text-xs font-medium text-brand">{{ user.role }}</span>
+        <!-- AppUserSummaryDTO (backend) no devuelve "role" — el primer app_user de un tenant
+             siempre se crea con el rol "admin" (ver CreateTenantAsync), así que es un label fijo,
+             no un dato dinámico que no existe. -->
+        <span class="rounded-full bg-icon-soft px-2.5 py-1 text-xs font-medium text-brand">Administrador</span>
       </div>
     } @else {
       <p class="text-sm text-muted">Este tenant todavía no tiene un usuario administrador.</p>

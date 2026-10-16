@@ -14,18 +14,19 @@ export class SuperAdminAuthService {
   // POST /auth/superadmin/login — guarda tokens y sesión (usuario/tenant) en éxito (T15).
   login(dto: SuperAdminLoginDto): Observable<AuthTokenResponse> {
     return this.api.login(dto).pipe(
-      // Este endpoint es exclusivo de super admins: se fuerza el rol acá
-      // en vez de confiar en que el backend lo mande igual al valor que
-      // usa el frontend ('super_admin'). Si no coincidía exactamente, el
-      // redirect post-login (T18) y los guards de /admin/tenants fallaban
-      // en silencio y terminaban mandando al usuario al login de clínica.
+      // Este endpoint es exclusivo de super admins: se fuerza is_superadmin
+      // acá en vez de confiar en que el backend lo mande. Si no venía (o
+      // venía en false), el redirect post-login y el guard de
+      // /admin/tenants fallaban en silencio y mandaban al usuario al login
+      // de clínica.
       map(res => ({
         ...res,
         user: {
           id: res.user?.id ?? '',
           full_name: res.user?.full_name ?? '',
           email: res.user?.email ?? dto.email,
-          role: 'super_admin' as const,
+          is_superadmin: true,
+          roles: [],
         },
       })),
       tap(res => {

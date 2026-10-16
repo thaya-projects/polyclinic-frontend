@@ -1,0 +1,45 @@
+<div class="flex flex-col gap-6">
+  @for (group of groups(); track group.category?.id ?? 'uncategorized') {
+    <section class="flex flex-col gap-3">
+      <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">
+        {{ group.category?.name ?? 'Sin categoría' }}
+      </h4>
+
+      <app-data-table [columns]="columns" [rows]="rowsFor(group.services)" emptyMessage="Todavía no hay servicios en esta categoría.">
+        <ng-template appDataTableCell="code" let-row>
+          <code class="rounded bg-icon-soft px-1.5 py-0.5 text-xs text-muted">{{ row.code }}</code>
+        </ng-template>
+
+        <ng-template appDataTableCell="name" let-row>
+          <span class="font-semibold text-text">{{ row.name }}</span>
+        </ng-template>
+
+        <ng-template appDataTableCell="duration_minutes" let-row>
+          {{ row.duration_minutes }} min
+        </ng-template>
+
+        <ng-template appDataTableCell="price" let-row>
+          {{ row.currency }} {{ row.base_price }}
+        </ng-template>
+
+        <ng-template appDataTableCell="is_active" let-row>
+          <app-status-chip [label]="row.is_active ? 'Sí' : 'No'" [tone]="row.is_active ? 'ok' : 'neutral'" />
+        </ng-template>
+
+        <ng-template appDataTableCell="actions" let-row>
+          <div class="flex items-center justify-end gap-2">
+            <button type="button" (click)="edit.emit(row)"
+              class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+              Editar
+            </button>
+            <button type="button" (click)="toggleActive.emit(row)"
+              class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors"
+              [class]="row.is_active ? 'hover:border-red-400 hover:text-red-500' : 'hover:border-brand hover:text-brand'">
+              {{ row.is_active ? 'Desactivar' : 'Activar' }}
+            </button>
+          </div>
+        </ng-template>
+      </app-data-table>
+    </section>
+  }
+</div>

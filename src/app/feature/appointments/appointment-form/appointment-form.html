@@ -1,0 +1,86 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Sucursal</span>
+      <select formControlName="branch_id" [class]="inputClass(form.controls.branch_id)">
+        <option value="">Sin especificar</option>
+        @for (b of branches(); track b.id) {
+          <option [value]="b.id">{{ b.name }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Consultorio</span>
+      <select formControlName="room_id" [class]="inputClass(form.controls.room_id)">
+        <option value="">Sin especificar</option>
+        @for (r of rooms(); track r.id) {
+          <option [value]="r.id">{{ r.name }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Paciente</span>
+      <select formControlName="patient_id" [class]="inputClass(form.controls.patient_id)">
+        <option value="">Sin especificar</option>
+        @for (p of patients(); track p.id) {
+          <option [value]="p.id">{{ patientLabel(p) }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Profesional</span>
+      <select formControlName="professional_id" [class]="inputClass(form.controls.professional_id)">
+        <option value="">Sin especificar</option>
+        @for (p of professionals(); track p.id) {
+          <option [value]="p.id">{{ p.full_name }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1.5 sm:col-span-2">
+      <span class="text-xs font-medium text-muted">Servicio</span>
+      <select formControlName="service_id" [class]="inputClass(form.controls.service_id)">
+        <option value="">Sin especificar</option>
+        @for (s of services(); track s.id) {
+          <option [value]="s.id">{{ s.name }} ({{ s.duration_minutes }} min)</option>
+        }
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Inicio</span>
+      <input type="datetime-local" formControlName="starts_at" [class]="inputClass(form.controls.starts_at)" />
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Fin</span>
+      <input type="datetime-local" formControlName="ends_at" [class]="inputClass(form.controls.ends_at)" />
+    </label>
+  </div>
+
+  @if (hasDateRangeError) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      La hora de fin tiene que ser posterior a la hora de inicio.
+    </div>
+  }
+
+  <app-appointment-online-fields
+    [initialType]="appointment()?.type ?? 'in_person'"
+    [initialMeetingUrl]="appointment()?.meeting_url ?? null"
+    [initialMeetingProvider]="appointment()?.meeting_provider ?? null" />
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Motivo</span>
+    <input type="text" formControlName="reason" [class]="inputClass(form.controls.reason)" />
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Notas</span>
+    <textarea formControlName="notes" rows="2"
+      class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+  </label>
+</form>
