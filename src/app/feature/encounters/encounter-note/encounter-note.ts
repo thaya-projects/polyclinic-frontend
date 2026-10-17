@@ -21,6 +21,8 @@ type NoteField = 'chief_complaint' | 'anamnesis' | 'exam';
 // `adminVoid` (permiso clinical.void): solo lectura + "Anular (administrativo)" en open/signed.
 // Mientras hay una operación en curso (guardar/firmar/anular) los campos quedan bloqueados: lo que
 // se escribiera en ese lapso se perdería al llegar la respuesta.
+// `blocked`: hay una operación de diagnósticos en curso (cambia la version del encounter): Guardar,
+// Firmar y Anular quedan deshabilitados, pero los campos siguen editables.
 // `draft`: cambios del usuario a re-aplicar sobre el encounter recibido (409 al guardar: se recarga
 // la versión nueva pero no se pierde lo escrito).
 @Component({
@@ -43,6 +45,7 @@ export class EncounterNote {
   voiding = input(false);
   canEdit = input(true);
   adminVoid = input(false);
+  blocked = input(false);
   draft = input<EncounterNotePatch | null>(null);
   // Aviso cuando !canEdit (no es el profesional del encuentro, o su profesional está desactivado).
   readOnlyReason = input('Solo el profesional del encuentro puede editar, firmar o anular esta nota.');
@@ -62,6 +65,8 @@ export class EncounterNote {
   readonly canVoid = computed(() => (this.canEdit() || this.adminVoid()) && this.encounter().status !== 'voided');
   readonly voidLabel = computed(() => (this.canEdit() ? 'Anular' : 'Anular (administrativo)'));
   readonly busy = computed(() => this.saving() || this.signing() || this.voiding());
+  // Botones de acción: además de busy, mientras haya una operación de diagnósticos.
+  readonly actionsDisabled = computed(() => this.busy() || this.blocked());
   // Lo que bindea [readOnly] de los textareas.
   readonly fieldsLocked = computed(() => this.readOnly() || this.busy());
 
@@ -75,6 +80,13 @@ export class EncounterNote {
   private readonly values = signal({ chief_complaint: '', anamnesis: '', exam: '' });
   readonly dirty = signal(false);
 
+  // Lo que alimenta el form: sin `version`. Agregar/borrar un diagnóstico solo cambia la version del
+  // encounter, y eso no debe pisar lo que el usuario está escribiendo.
+  private readonly formSource = computed(() => this.encounter(), {
+    equal: (a, b) => a.id === b.id && a.status === b.status && a.chief_complaint === b.chief_complaint
+      && a.anamnesis === b.anamnesis && a.exam === b.exam,
+  });
+
   constructor() {
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.syncSignals());
 
@@ -82,7 +94,7 @@ export class EncounterNote {
     // la fuente de verdad es siempre la última respuesta del backend. Si hay `draft` (y la nota
     // sigue editable) se re-aplica encima y queda como cambio sin guardar.
     effect(() => {
-      const e = this.encounter();
+      const e = this.formSource();
       const draft = this.draft();
       const editable = !this.readOnly();
       this.form.reset({
@@ -116,7 +128,7 @@ export class EncounterNote {
   }
 
   submit(): void {
-    if (this.readOnly() || this.busy()) return;
+    if (this.readOnly() || this.actionsDisabled()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -138,12 +150,12 @@ export class EncounterNote {
   }
 
   requestSign(): void {
-    if (!this.canSign() || this.dirty() || this.busy()) return;
+    if (!this.canSign() || this.dirty() || this.actionsDisabled()) return;
     this.sign.emit();
   }
 
   requestVoid(): void {
-    if (!this.canVoid() || this.busy()) return;
+    if (!this.canVoid() || this.actionsDisabled()) return;
     this.voidRequested.emit();
   }
 

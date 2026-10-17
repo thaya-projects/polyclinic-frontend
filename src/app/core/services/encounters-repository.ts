@@ -6,6 +6,7 @@ import {
   VoidEncounterDto,
 } from '../models/encounter.model';
 import { PagedResult } from '../models/paged-result.model';
+import { CreateDiagnosisDto, CreatedDiagnosis, DeleteDiagnosisResult, Diagnosis } from '../models/diagnosis.model';
 import { HttpEncountersRepository } from './encounters-http.repository';
 
 // Fase 4 T6: abstracción de la fuente de datos de encounters. Las pantallas solo conocen este
@@ -38,6 +39,15 @@ export interface EncountersRepository {
   listPatients(q?: string): Observable<EncounterPartyOption[]>;
   getPatient(id: string): Observable<EncounterPartyOption>;
   listProfessionals(): Observable<(EncounterPartyOption & { active: boolean })[]>;
+
+  // Fase 4 T4/T5: diagnósticos del encounter (sin paginación). El catálogo CIE-10 va aparte
+  // (CIE10_CATALOG). Leer: misma regla que las notas (profesional activo o clinical.void; si no 403).
+  // Crear/borrar: solo el profesional del encounter, activo (403 / 422) y con el encounter open
+  // (409); código CIE-10 repetido en el encounter → 409. Ambos incrementan la version del
+  // encounter y devuelven la nueva en `encounter_version`.
+  listDiagnoses(encounterId: string): Observable<Diagnosis[]>;
+  createDiagnosis(encounterId: string, dto: CreateDiagnosisDto): Observable<CreatedDiagnosis>;
+  deleteDiagnosis(encounterId: string, diagnosisId: string): Observable<DeleteDiagnosisResult>;
 }
 
 // T7: la implementación HTTP es la default. Para correr contra el mock (demo/tests):

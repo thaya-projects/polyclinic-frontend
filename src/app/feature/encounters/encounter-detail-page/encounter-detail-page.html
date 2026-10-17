@@ -51,9 +51,27 @@
       [adminVoid]="canAdminVoid()"
       [readOnlyReason]="readOnlyReason()"
       [draft]="draft()"
+      [blocked]="diagnoses.busy()"
       (save)="onSave($event)"
       (sign)="onSign()"
       (voidRequested)="openVoid()" />
+
+    <app-encounter-diagnoses
+      [diagnoses]="diagnoses.diagnoses()"
+      [loading]="diagnoses.loading()"
+      [loadError]="diagnoses.loadError()"
+      [loadRetryable]="diagnoses.loadRetryable()"
+      [editable]="canEditDiagnoses()"
+      [creating]="diagnoses.pending() === 'create'"
+      [busy]="diagnoses.busy() || pending() !== null"
+      [deletingId]="diagnoses.deletingId()"
+      [error]="diagnoses.actionError()"
+      [createdSeq]="diagnoses.createdSeq()"
+      [searchCie10]="diagnoses.searchCie10"
+      (create)="onCreateDiagnosis($event)"
+      (remove)="onRemoveDiagnosis($event)"
+      (retry)="diagnoses.load()" />
+
   } @else if (loading()) {
     <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
       <i class="ti ti-loader-2 animate-spin"></i>

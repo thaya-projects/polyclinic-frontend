@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { EncountersApi } from './encounters-api';
+import { DiagnosesApi } from './diagnoses-api';
 import { ClinicalRecordApi } from './clinical-record-api';
 import { PatientsApi } from './patients-api';
 import { ProfessionalsApi } from './professionals-api';
@@ -13,6 +14,7 @@ import {
 } from '../models/encounter.model';
 import { PagedResult } from '../models/paged-result.model';
 import { Patient } from '../models/patient.model';
+import { CreateDiagnosisDto, CreatedDiagnosis, DeleteDiagnosisResult, Diagnosis } from '../models/diagnosis.model';
 
 // Tope de /tenants/patients (MaxPageSize del backend) — alcanza para el select del alta.
 const PATIENT_OPTIONS_LIMIT = 100;
@@ -21,6 +23,7 @@ const PATIENT_OPTIONS_LIMIT = 100;
 @Injectable({ providedIn: 'root' })
 export class HttpEncountersRepository implements EncountersRepository {
   private api = inject(EncountersApi);
+  private diagnosesApi = inject(DiagnosesApi);
   private clinicalRecordApi = inject(ClinicalRecordApi);
   private patientsApi = inject(PatientsApi);
   private professionalsApi = inject(ProfessionalsApi);
@@ -87,6 +90,18 @@ export class HttpEncountersRepository implements EncountersRepository {
         id: p.id, name: p.full_name, label: p.full_name, user_id: p.user_id, active: p.is_active,
       }))),
     );
+  }
+
+  listDiagnoses(encounterId: string): Observable<Diagnosis[]> {
+    return this.diagnosesApi.list(encounterId);
+  }
+
+  createDiagnosis(encounterId: string, dto: CreateDiagnosisDto): Observable<CreatedDiagnosis> {
+    return this.diagnosesApi.create(encounterId, dto);
+  }
+
+  deleteDiagnosis(encounterId: string, diagnosisId: string): Observable<DeleteDiagnosisResult> {
+    return this.diagnosesApi.delete(encounterId, diagnosisId);
   }
 }
 

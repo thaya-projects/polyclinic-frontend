@@ -7,6 +7,10 @@ import {
   ENCOUNTER_LIMITS, SignEncounterDto, UpdateEncounterDto, VoidEncounterDto,
 } from '../core/models/encounter.model';
 import { PagedResult } from '../core/models/paged-result.model';
+import {
+  CreateDiagnosisDto, CreatedDiagnosis, DIAGNOSIS_LIMITS, DeleteDiagnosisResult, Diagnosis,
+} from '../core/models/diagnosis.model';
+import { CIE10_CODE_FORMAT, CIE10_CODE_MAX_LENGTH, MOCK_CIE10, argumentError } from './cie10-mock.catalog';
 
 export const MOCK_CURRENT_USER_ID = 'mock-user-1';
 
@@ -54,6 +58,27 @@ function httpError(status: number, detail: string): Observable<never> {
   return throwError(() => new HttpErrorResponse({ status, error: { detail } }));
 }
 
+function seedDiagnoses(): Diagnosis[] {
+  return [
+    {
+      id: 'dx-1', encounter_id: 'enc-1', cie10_code: 'R51', description: 'Cefalea', is_definitive: false,
+      created_at: '2026-10-10T14:20:00Z',
+    },
+    {
+      id: 'dx-2', encounter_id: 'enc-2', cie10_code: 'Z00.0', description: 'Examen médico general', is_definitive: true,
+      created_at: '2026-10-08T10:50:00Z',
+    },
+    {
+      id: 'dx-3', encounter_id: 'enc-2', cie10_code: null, description: 'Sobrepeso leve, control en 6 meses',
+      is_definitive: true, created_at: '2026-10-08T10:55:00Z',
+    },
+  ];
+}
+
+// Diagnosis.AddOperation / RemoveOperation del backend (completan los mensajes de 403/409).
+const ADD_DIAGNOSES = 'add diagnoses to';
+const REMOVE_DIAGNOSES = 'remove diagnoses from';
+
 const MOCK_SPECIALTIES: { id: string; active: boolean }[] = [
   { id: 'spec-1', active: true },
   { id: 'spec-2', active: false },
@@ -69,6 +94,13 @@ const MOCK_SPECIALTIES: { id: string; active: boolean }[] = [
 //           paciente (422) → largos (422)
 //   update/sign: 404 → 403 → inactivo (422) → version requerida (422) → version vieja (409) → estado
 //                (409) (update además: clinical_data null / largos → 422)
+//   diagnósticos (DiagnosisService): list 403 (misma regla que las lecturas) → 404;
+//     create: 404 → 403 → inactivo (422) → no open (409) → formato de código (422) → código fuera
+//             del catálogo (422) → description (422) → código repetido en el encounter (409);
+//     delete: 404 encounter → 403 → inactivo (422) → 404 diagnosis → no open (409).
+//     Alta y baja incrementan la version del encounter y la devuelven en encounter_version.
+//   El catálogo CIE-10 es MockCie10Catalog (cie10-mock.catalog.ts).
+// Las ArgumentException del backend llevan el sufijo " (Parameter 'x')" en el detail (argumentError).
 //   void: 404 → autorización (con clinical.void se saltea: anulación administrativa de cualquier
 //         profesional, incluso inactivo o sin user; si no, 403 → inactivo 422) → reason (422) →
 //         version requerida (422) → version vieja (409) → ya anulado (409)
@@ -79,6 +111,7 @@ export class MockEncountersRepository implements EncountersRepository {
   private professionals: ProfessionalOption[] = seedProfessionals();
   private userId: string | null = MOCK_CURRENT_USER_ID;
   private permissions: string[] = [];
+  private diagnoses: Diagnosis[] = seedDiagnoses();
   private nextId = 100;
 
   // Helpers para tests/demo: identidad y permisos de la "sesión".
@@ -125,7 +158,7 @@ export class MockEncountersRepository implements EncountersRepository {
 
   create(dto: CreateEncounterDto): Observable<Encounter> {
     for (const field of ['patient_id', 'clinical_record_id', 'professional_id'] as const) {
-      if (!dto[field]) return httpError(422, `${field} is required.`);
+      if (!dto[field]) return argumentError(`${field} is required.`, field);
     }
     if (!MOCK_PATIENTS.some(p => p.id === dto.patient_id)) {
       return httpError(404, `Patient with id '${dto.patient_id}' was not found.`);
@@ -178,7 +211,7 @@ export class MockEncountersRepository implements EncountersRepository {
     const guard = this.authorizeChange(found, 'update')
       ?? this.checkVersion(found, dto?.version) ?? this.ensureOpen(found, 'update');
     if (guard) return guard;
-    if ('clinical_data' in dto && dto.clinical_data === null) return httpError(422, 'clinical_data cannot be null.');
+    if ('clinical_data' in dto && dto.clinical_data === null) return argumentError('clinical_data cannot be null.', 'clinical_data');
     const invalid = this.validateNote(dto);
     if (invalid) return invalid;
     const { version: _version, ...fields } = dto;
@@ -207,9 +240,9 @@ export class MockEncountersRepository implements EncountersRepository {
       if (auth) return auth;
     }
     const reason = (dto?.reason ?? '').trim();
-    if (!reason) return httpError(422, 'reason is required.');
+    if (!reason) return argumentError('reason is required.', 'reason');
     if (reason.length > ENCOUNTER_LIMITS.void_reason) {
-      return httpError(422, `reason cannot exceed ${ENCOUNTER_LIMITS.void_reason} characters.`);
+      return argumentError(`reason cannot exceed ${ENCOUNTER_LIMITS.void_reason} characters.`, 'reason');
     }
     const versionError = this.checkVersion(found, dto.version);
     if (versionError) return versionError;
@@ -238,6 +271,73 @@ export class MockEncountersRepository implements EncountersRepository {
 
   listProfessionals(): Observable<ProfessionalOption[]> {
     return of(this.professionals);
+  }
+
+  listDiagnoses(encounterId: string): Observable<Diagnosis[]> {
+    if (!this.canRead()) return httpError(403, 'Forbidden.');
+    if (!this.find(encounterId)) return httpError(404, `Encounter with id '${encounterId}' was not found.`);
+    return of(this.diagnoses
+      .filter(d => d.encounter_id === encounterId)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .map(d => ({ ...d })));
+  }
+
+  createDiagnosis(encounterId: string, dto: CreateDiagnosisDto): Observable<CreatedDiagnosis> {
+    const found = this.find(encounterId);
+    if (!found) return httpError(404, `Encounter with id '${encounterId}' was not found.`);
+    const guard = this.authorizeChange(found, ADD_DIAGNOSES) ?? this.ensureOpen(found, ADD_DIAGNOSES);
+    if (guard) return guard;
+
+    const rawCode = dto?.cie10_code?.trim().toUpperCase() || null;
+    let catalogDescription: string | null = null;
+    if (rawCode) {
+      if (rawCode.length > CIE10_CODE_MAX_LENGTH || !CIE10_CODE_FORMAT.test(rawCode)) {
+        return argumentError(`cie10_code '${rawCode}' is not a valid ICD-10 code.`, 'cie10_code');
+      }
+      const entry = MOCK_CIE10.find(c => c.code === rawCode);
+      if (!entry) return httpError(422, `cie10_code '${rawCode}' does not exist in the CIE-10 catalog.`);
+      catalogDescription = entry.description;
+    }
+    const description = dto?.description?.trim() || catalogDescription;
+    if (!description) {
+      return argumentError('description is required when cie10_code is not provided.', 'description');
+    }
+    if (description.length > DIAGNOSIS_LIMITS.description) {
+      return argumentError(`description cannot exceed ${DIAGNOSIS_LIMITS.description} characters.`, 'description');
+    }
+    if (description.includes('\0')) {
+      return argumentError('description cannot contain the null character (U+0000).', 'description');
+    }
+    // DiagnosisDuplicateCodeException (después de validar el body, como DiagnosisService).
+    if (rawCode && this.diagnoses.some(d => d.encounter_id === encounterId && d.cie10_code === rawCode)) {
+      return httpError(409, `Encounter '${encounterId}' already has a diagnosis with cie10_code '${rawCode}'.`);
+    }
+    const diagnosis: Diagnosis = {
+      id: `dx-${this.nextId++}`,
+      encounter_id: encounterId,
+      cie10_code: rawCode,
+      description,
+      is_definitive: dto?.is_definitive ?? false,
+      created_at: new Date().toISOString(),
+    };
+    this.diagnoses = [...this.diagnoses, diagnosis];
+    const updated = this.replace({ ...found, version: found.version + 1 });
+    return of({ ...diagnosis, encounter_version: updated.version });
+  }
+
+  deleteDiagnosis(encounterId: string, diagnosisId: string): Observable<DeleteDiagnosisResult> {
+    const found = this.find(encounterId);
+    if (!found) return httpError(404, `Encounter with id '${encounterId}' was not found.`);
+    const auth = this.authorizeChange(found, REMOVE_DIAGNOSES);
+    if (auth) return auth;
+    if (!this.diagnoses.some(d => d.id === diagnosisId && d.encounter_id === encounterId)) {
+      return httpError(404, `Diagnosis with id '${diagnosisId}' was not found.`);
+    }
+    const notOpen = this.ensureOpen(found, REMOVE_DIAGNOSES);
+    if (notOpen) return notOpen;
+    this.diagnoses = this.diagnoses.filter(d => d.id !== diagnosisId);
+    const updated = this.replace({ ...found, version: found.version + 1 });
+    return of({ encounter_version: updated.version });
   }
 
   private find(id: string): Encounter | undefined {
@@ -279,7 +379,7 @@ export class MockEncountersRepository implements EncountersRepository {
 
   // 422 sin version → 409 version vieja.
   private checkVersion(encounter: Encounter, version: number | undefined): Observable<never> | null {
-    if (typeof version !== 'number') return httpError(422, 'version is required.');
+    if (typeof version !== 'number') return argumentError('version is required.', 'version');
     if (version !== encounter.version) {
       return httpError(409, 'The resource was modified by another request. Reload and try again.');
     }
@@ -295,7 +395,7 @@ export class MockEncountersRepository implements EncountersRepository {
   private validateNote(dto: Pick<UpdateEncounterDto, 'chief_complaint' | 'anamnesis' | 'exam'>): Observable<never> | null {
     for (const field of ['chief_complaint', 'anamnesis', 'exam'] as const) {
       if ((dto[field]?.length ?? 0) > ENCOUNTER_LIMITS[field]) {
-        return httpError(422, `${field} cannot exceed ${ENCOUNTER_LIMITS[field]} characters.`);
+        return argumentError(`${field} cannot exceed ${ENCOUNTER_LIMITS[field]} characters.`, field);
       }
     }
     return null;

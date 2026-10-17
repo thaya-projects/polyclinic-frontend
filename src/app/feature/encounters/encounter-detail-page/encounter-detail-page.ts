@@ -6,6 +6,8 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, Observable, Subject, catchError, combineLatest, distinctUntilChanged, filter, map, of, switchMap } from 'rxjs';
 import { EncounterNote } from '../encounter-note/encounter-note';
+import { EncounterDiagnoses } from '../encounter-diagnoses/encounter-diagnoses';
+import { EncounterDiagnosesStore } from '../encounter-diagnoses/encounter-diagnoses.store';
 import { VoidEncounterDialog } from '../void-encounter-dialog/void-encounter-dialog';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-repository';
@@ -14,6 +16,7 @@ import { PageTitleService } from '../../../core/services/page-title.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthStore } from '../../../core/services/auth-store.service';
 import { Encounter, EncounterNotePatch } from '../../../core/models/encounter.model';
+import { CreateDiagnosisDto } from '../../../core/models/diagnosis.model';
 import {
   ADMIN_VOID_ONLY_MESSAGE, ENCOUNTERS_ACCESS_DENIED_MESSAGE, ENCOUNTER_CONFLICT_MESSAGE,
   ENCOUNTER_DRAFT_CONFLICT_MESSAGE, ENCOUNTER_FORBIDDEN_MESSAGE,
@@ -47,9 +50,19 @@ type LoadResult = { id: string; encounter: Encounter } | { id: string; error: un
 //   403 → "Solo el profesional del encuentro puede editar, firmar o anular esta nota." (inline).
 //   422 → mensaje del backend traducido (dentro del diálogo si fue al anular).
 //   otro error al cargar → aviso con Reintentar.
+//
+// Diagnósticos (T4/T5): sección propia debajo de la nota; su estado vive en EncounterDiagnosesStore
+// (provisto acá). Editable solo con `canEdit` y el encounter open.
+//   - Alta/baja incrementan la version del encounter: se aplica en memoria (sin recargar) para que
+//     el próximo Guardar/Firmar/Anular no dé un 409 falso.
+//   - Un 409 de estado al agregar/eliminar (firmado/anulado en otro lado) recarga el encounter → la
+//     sección pasa a solo lectura. El 409 de código repetido no recarga.
+//   - Operaciones mutuamente excluyentes: con una de diagnósticos en curso no se puede guardar,
+//     firmar ni anular, y viceversa.
 @Component({
   selector: 'app-encounter-detail-page',
-  imports: [EncounterNote, VoidEncounterDialog, ConfirmDialog, RouterLink],
+  imports: [EncounterNote, EncounterDiagnoses, VoidEncounterDialog, ConfirmDialog, RouterLink],
+  providers: [EncounterDiagnosesStore],
   templateUrl: './encounter-detail-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -62,6 +75,7 @@ export class EncounterDetailPage {
   private platformId = inject(PLATFORM_ID);
   private destroyRef = inject(DestroyRef);
   readonly lookups = inject(EncounterLookupsService);
+  readonly diagnoses = inject(EncounterDiagnosesStore);
 
   private note = viewChild(EncounterNote);
 
@@ -95,6 +109,10 @@ export class EncounterDetailPage {
     const mine = this.lookups.currentProfessional();
     return !!e && !!mine && e.professional_id === mine.id;
   });
+
+  // Diagnósticos: mismo `canEdit` que la nota + encounter open (si no, solo el listado).
+  readonly canEditDiagnoses = computed(() => this.canEdit() && this.encounter()?.status === 'open');
+  private readonly encounterId = computed(() => this.encounter()?.id ?? null);
 
   // Anulación administrativa (clinical.void) para quien no es el profesional habilitado del encounter.
   readonly canAdminVoid = computed(() => {
@@ -140,6 +158,19 @@ export class EncounterDetailPage {
       untracked(() => this.lookups.ensurePatients([patientId]));
     });
 
+    // Diagnósticos: se cargan una vez por encounter mostrado (no en cada firma/guardado).
+    effect(() => {
+      const encounterId = this.encounterId();
+      untracked(() => this.diagnoses.setEncounter(encounterId));
+    });
+    // 409 al agregar/eliminar: el encounter ya no está open → recargarlo (la sección pasa a solo
+    // lectura). El mensaje lo muestra la propia sección.
+    this.diagnoses.conflict$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload());
+    this.diagnoses.encounterNotFound$.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(message => this.goToListWithNotice(message));
+    this.diagnoses.encounterVersion$.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(change => this.applyVersion(change.encounterId, change.version));
+
     this.load$.pipe(
       switchMap(id => this.repo.getById(id).pipe(
         map((encounter): LoadResult => ({ id, encounter })),
@@ -180,18 +211,28 @@ export class EncounterDetailPage {
   // B1: la guarda va antes de construir el request (con HTTP no saldría, pero con otras fuentes sí).
   onSave(patch: EncounterNotePatch): void {
     const version = this.currentVersion();
-    if (version === null || this.pending()) return;
+    if (version === null || this.pending() || this.diagnoses.busy()) return;
     this.run('save', this.repo.update(this.id, { ...patch, version }), 'Nota guardada.', patch);
   }
 
   onSign(): void {
     const version = this.currentVersion();
-    if (version === null || this.pending()) return;
+    if (version === null || this.pending() || this.diagnoses.busy()) return;
     this.run('sign', this.repo.sign(this.id, { version }), 'Nota firmada.');
   }
 
+  onCreateDiagnosis(dto: CreateDiagnosisDto): void {
+    if (!this.canEditDiagnoses() || this.pending()) return;
+    this.diagnoses.create(dto);
+  }
+
+  onRemoveDiagnosis(diagnosisId: string): void {
+    if (!this.canEditDiagnoses() || this.pending()) return;
+    this.diagnoses.remove(diagnosisId);
+  }
+
   openVoid(): void {
-    if (this.pending()) return;
+    if (this.pending() || this.diagnoses.busy()) return;
     this.voidError.set(null);
     this.voidOpen.set(true);
   }
@@ -204,7 +245,7 @@ export class EncounterDetailPage {
 
   onVoid(reason: string): void {
     const version = this.currentVersion();
-    if (version === null || this.pending()) return;
+    if (version === null || this.pending() || this.diagnoses.busy()) return;
     this.voidError.set(null);
     this.run('void', this.repo.void(this.id, { reason, version }), 'Encuentro anulado.');
   }
@@ -302,6 +343,12 @@ export class EncounterDetailPage {
           this.actionError.set(message);
         }
     }
+  }
+
+  // Alta/baja de un diagnóstico: nueva version del encounter, sin recargar.
+  private applyVersion(encounterId: string, version: number): void {
+    const current = this.encounter();
+    if (current && current.id === encounterId && current.id === this.id) this.encounter.set({ ...current, version });
   }
 
   private goToListWithNotice(message: string): void {

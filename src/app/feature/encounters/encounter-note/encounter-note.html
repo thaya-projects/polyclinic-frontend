@@ -107,7 +107,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <div>
           @if (canVoid()) {
-            <button type="button" data-testid="btn-void" (click)="requestVoid()" [disabled]="busy()"
+            <button type="button" data-testid="btn-void" (click)="requestVoid()" [disabled]="actionsDisabled()"
               class="flex h-10 items-center justify-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-600 transition-colors hover:border-red-400 disabled:opacity-50">
               <i class="ti ti-ban"></i>
               {{ voidLabel() }}
@@ -119,13 +119,13 @@
             @if (dirty()) {
               <span class="text-xs text-muted">Hay cambios sin guardar.</span>
             }
-            <button type="submit" data-testid="btn-save" [disabled]="busy() || !dirty()"
+            <button type="submit" data-testid="btn-save" [disabled]="actionsDisabled() || !dirty()"
               class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
               {{ saving() ? 'Guardando...' : 'Guardar' }}
             </button>
           }
           @if (canSign()) {
-            <button type="button" data-testid="btn-sign" (click)="requestSign()" [disabled]="busy() || dirty()"
+            <button type="button" data-testid="btn-sign" (click)="requestSign()" [disabled]="actionsDisabled() || dirty()"
               [title]="dirty() ? 'Guardá los cambios antes de firmar' : ''"
               class="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
               <i class="ti ti-signature"></i>

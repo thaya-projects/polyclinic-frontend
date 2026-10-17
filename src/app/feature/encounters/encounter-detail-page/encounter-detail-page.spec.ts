@@ -4,6 +4,8 @@ import { Router, convertToParamMap, provideRouter, ActivatedRoute } from '@angul
 import { BehaviorSubject, Subject, firstValueFrom, of, throwError } from 'rxjs';
 import { EncounterDetailPage } from './encounter-detail-page';
 import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-repository';
+import { CIE10_CATALOG } from '../../../core/services/cie10-catalog';
+import { MockCie10Catalog } from '../../../testing/cie10-mock.catalog';
 import { MOCK_CURRENT_USER_ID, MockEncountersRepository } from '../../../testing/encounters-mock.repository';
 import { ToastService } from '../../../core/services/toast.service';
 import { Encounter } from '../../../core/models/encounter.model';
@@ -57,6 +59,7 @@ describe('EncounterDetailPage (mock repository)', () => {
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { paramMap: params$.asObservable() } },
         { provide: ENCOUNTERS_REPOSITORY, useClass: MockEncountersRepository },
+        { provide: CIE10_CATALOG, useClass: MockCie10Catalog },
       ],
     }).compileComponents();
     repo = TestBed.inject(ENCOUNTERS_REPOSITORY) as MockEncountersRepository;
