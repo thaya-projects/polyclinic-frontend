@@ -1,0 +1,44 @@
+<div [formGroup]="group()" class="flex flex-col gap-3">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <!-- Medicamento (obligatorio) -->
+    <div class="flex flex-col gap-1.5 sm:col-span-2">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId('medication')">
+        Medicamento <span aria-hidden="true" class="text-red-500">*</span>
+      </label>
+      <input [id]="fieldId('medication')" type="text" formControlName="medication" data-testid="item-medication"
+        [attr.maxlength]="limits.medication" [readOnly]="busy()" placeholder="ej: Amoxicilina"
+        aria-required="true" [attr.aria-invalid]="showError('medication')"
+        [attr.aria-describedby]="describedBy('medication')"
+        [class]="inputClass('medication')" />
+      @if (showError('medication')) {
+        <span role="alert" [id]="fieldId('medication-error')" class="text-xs text-red-500" data-testid="item-medication-error">{{ errorText('medication') }}</span>
+      }
+    </div>
+
+    @for (field of shortFields; track field.name) {
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId(field.name)">{{ field.label }} (opcional)</label>
+        <input [id]="fieldId(field.name)" type="text" [formControlName]="field.name" [attr.data-testid]="'item-' + field.name"
+          [attr.maxlength]="limits.presentation" [readOnly]="busy()" [placeholder]="field.placeholder"
+          [attr.aria-invalid]="showError(field.name)" [attr.aria-describedby]="describedBy(field.name)"
+          [class]="inputClass(field.name)" />
+        @if (showError(field.name)) {
+          <span role="alert" [id]="fieldId(field.name + '-error')" class="text-xs text-red-500" [attr.data-testid]="'item-' + field.name + '-error'">{{ errorText(field.name) }}</span>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Indicaciones -->
+  <div class="flex flex-col gap-1.5">
+    <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId('instructions')">Indicaciones (opcional)</label>
+    <textarea [id]="fieldId('instructions')" rows="2" formControlName="instructions" data-testid="item-instructions"
+      [attr.maxlength]="limits.instructions" [readOnly]="busy()"
+      [attr.aria-invalid]="showError('instructions')" [attr.aria-describedby]="describedBy('instructions')"
+      class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:ring-3 focus:outline-none"
+      [class]="showError('instructions') ? 'border-red-400 focus:border-red-400 focus:ring-red-400/18' : 'border-border focus:border-brand focus:ring-brand/18'"></textarea>
+    @if (showError('instructions')) {
+      <span role="alert" [id]="fieldId('instructions-error')" class="text-xs text-red-500" data-testid="item-instructions-error">{{ errorText('instructions') }}</span>
+    }
+  </div>
+</div>

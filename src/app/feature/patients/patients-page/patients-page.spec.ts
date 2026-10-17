@@ -63,6 +63,20 @@ describe('PatientsPage: botones de encuentros', () => {
     expect(navigate).toHaveBeenCalledWith(['/patients', 'pat-1', 'measurements']);
   });
 
+  it('"Recetas" junto a "Signos vitales": habilitado y navega a /patients/:id/prescriptions', async () => {
+    await openDetail();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    expect(q('patient-prescriptions')?.disabled).toBe(false);
+    q('patient-prescriptions')!.click();
+    expect(navigate).toHaveBeenCalledWith(['/patients', 'pat-1', 'prescriptions']);
+  });
+
+  it('admin con clinical.void sin profesional: ve "Recetas"', async () => {
+    repo.setCurrentUser('admin-user', ['clinical.void']);
+    await openDetail();
+    expect(q('patient-prescriptions')?.disabled).toBe(false);
+  });
+
   it('admin con clinical.void sin profesional: ve "Signos vitales"', async () => {
     repo.setCurrentUser('admin-user', ['clinical.void']);
     await openDetail();
@@ -75,6 +89,7 @@ describe('PatientsPage: botones de encuentros', () => {
     expect(q('patient-encounters')).toBeNull();
     expect(q('patient-new-encounter')).toBeNull();
     expect(q('patient-measurements')).toBeNull();
+    expect(q('patient-prescriptions')).toBeNull();
   });
 
   it('admin con clinical.void sin profesional: ve Encuentros, "Nueva nota" deshabilitada', async () => {

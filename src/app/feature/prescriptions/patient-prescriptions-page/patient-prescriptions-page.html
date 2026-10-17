@@ -1,0 +1,117 @@
+<div class="flex flex-col gap-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <a routerLink="/patients" class="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand">
+        <i class="ti ti-arrow-left" aria-hidden="true"></i>
+        Pacientes
+      </a>
+      <h2 class="mt-1 text-2xl font-bold text-navy">Recetas</h2>
+      @if (patientName()) {
+        <p class="mt-1 text-sm text-muted" data-testid="patient-name">{{ patientName() }}</p>
+      }
+    </div>
+    @if (accessView() === 'allowed' && !patientMissing()) {
+      <div class="flex flex-col items-end gap-1">
+        <button type="button" (click)="openCreate()" data-testid="btn-new-standalone"
+          [disabled]="!canCreate()" [attr.aria-describedby]="createDisabledReason() ? 'create-disabled-reason' : null"
+          class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand">
+          <i class="ti ti-file-plus" aria-hidden="true"></i>
+          Nueva receta suelta
+        </button>
+        @if (createDisabledReason(); as reason) {
+          <span id="create-disabled-reason" class="text-xs text-muted" data-testid="create-disabled-reason">{{ reason }}</span>
+        }
+      </div>
+    }
+  </div>
+
+  @if (accessView() === 'loading') {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-loading">
+      <i class="ti ti-loader-2 animate-spin" aria-hidden="true"></i>
+      Cargando…
+    </div>
+  } @else if (accessView() === 'error') {
+    <div role="alert" class="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 py-10 text-sm text-red-600" data-testid="access-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle" aria-hidden="true"></i>{{ lookups.professionalsError() }}</span>
+      <button type="button" (click)="lookups.loadProfessionals()" data-testid="access-retry"
+        class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+        Reintentar
+      </button>
+    </div>
+  } @else if (accessView() === 'denied') {
+    <div role="alert" class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-denied">
+      <i class="ti ti-lock" aria-hidden="true"></i>
+      {{ accessDeniedMessage }}
+    </div>
+  } @else if (patientMissing()) {
+    <div role="alert" class="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 py-14 text-sm text-red-600" data-testid="patient-not-found">
+      <i class="ti ti-alert-circle" aria-hidden="true"></i>
+      {{ patientNotFoundMessage }}
+    </div>
+  } @else {
+    @if (store.loadError(); as error) {
+      <div role="alert" class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="list-error">
+        <span class="flex items-center gap-2"><i class="ti ti-alert-circle" aria-hidden="true"></i>{{ error }}</span>
+        @if (store.loadRetryable()) {
+          <button type="button" (click)="store.load()" data-testid="list-retry"
+            class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+            Reintentar
+          </button>
+        }
+      </div>
+    }
+
+    @if (store.loading() && store.items().length === 0) {
+      <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+        <i class="ti ti-loader-2 animate-spin" aria-hidden="true"></i>
+        Cargando recetas...
+      </div>
+    } @else {
+      <app-prescriptions-list
+        [prescriptions]="store.items()"
+        [locale]="store.locale()"
+        [professionalNames]="lookups.professionalNameById()"
+        [showEncounterLink]="true"
+        [addItemReasons]="addItemReasons()"
+        [busy]="store.busy()"
+        [addingItemTo]="store.addingItemTo()"
+        [itemError]="store.itemError()"
+        [itemAddedSeq]="store.itemAddedSeq()"
+        [headingLevel]="3"
+        emptyMessage="Sin recetas emitidas."
+        (addItem)="onAddItem($event)" />
+
+      <app-pagination [page]="store.page()" (pageChange)="setPage($event)" [pageSize]="pageSize" [total]="store.total()" />
+    }
+  }
+</div>
+
+<!-- Alta de receta suelta -->
+<app-modal [open]="createOpen()" title="Nueva receta suelta" size="xl" (closed)="closeCreate()">
+  @if (store.actionError()) {
+    <div role="alert" class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="create-error">
+      <i class="ti ti-alert-circle" aria-hidden="true"></i>
+      {{ store.actionError() }}
+    </div>
+  }
+  @if (createOpen()) {
+    <p class="mb-4 text-xs text-muted">La receta se emite sin encuentro. Podrás agregarle medicamentos durante las 24 h siguientes.</p>
+    <app-prescription-form
+      [busy]="store.busy()"
+      [saving]="store.saving()"
+      [createdSeq]="store.createdSeq()"
+      [showSubmit]="false"
+      (submitted)="onCreate($event)" />
+  }
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeCreate()" [disabled]="store.busy()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submitCreate()" [disabled]="store.busy()" data-testid="btn-save-prescription"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ store.saving() ? 'Emitiendo...' : 'Emitir receta' }}
+    </button>
+  </div>
+</app-modal>

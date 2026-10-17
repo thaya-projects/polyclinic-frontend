@@ -10,6 +10,9 @@ import { EncounterDiagnoses } from '../encounter-diagnoses/encounter-diagnoses';
 import { EncounterDiagnosesStore } from '../encounter-diagnoses/encounter-diagnoses.store';
 import { EncounterMeasurements } from '../encounter-measurements/encounter-measurements';
 import { MeasurementsStore } from '../../measurements/measurements.store';
+import { EncounterPrescriptions } from '../encounter-prescriptions/encounter-prescriptions';
+import { PrescriptionsStore } from '../../prescriptions/prescriptions.store';
+import { PrescriptionItemRequest } from '../../prescriptions/prescriptions-list/prescriptions-list';
 import { VoidEncounterDialog } from '../void-encounter-dialog/void-encounter-dialog';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-repository';
@@ -20,6 +23,7 @@ import { AuthStore } from '../../../core/services/auth-store.service';
 import { Encounter, EncounterNotePatch } from '../../../core/models/encounter.model';
 import { CreateDiagnosisDto } from '../../../core/models/diagnosis.model';
 import { CreateMeasurementDto } from '../../../core/models/measurement.model';
+import { CreatePrescriptionDto, PRESCRIPTION_LIMITS } from '../../../core/models/prescription.model';
 import {
   ADMIN_VOID_ONLY_MESSAGE, ENCOUNTERS_ACCESS_DENIED_MESSAGE, ENCOUNTER_CONFLICT_MESSAGE,
   ENCOUNTER_DRAFT_CONFLICT_MESSAGE, ENCOUNTER_FORBIDDEN_MESSAGE,
@@ -72,10 +76,19 @@ type LoadResult = { id: string; encounter: Encounter } | { id: string; error: un
 // precargado y su `encounter_version` se aplica en memoria; un 409 recarga el encounter (→ solo
 // lectura); un 404 del encounter vuelve al listado. Bloqueo cruzado: con una operación de nota,
 // diagnósticos o mediciones en curso, las otras dos quedan deshabilitadas (`sectionsBusy`).
+//
+// Recetas (Recetas T4/T5): sección debajo de "Signos vitales" con las recetas de este encounter; su
+// estado vive en PrescriptionsStore (provisto acá, scope paciente + encounter). Mismas reglas:
+// editable con `canEditDiagnoses` ("Nueva receta" y "Agregar medicamento"), `encounter_version` de
+// cada alta (receta o ítem) se aplica en memoria; un 409 recarga el encounter (→ solo lectura); un
+// 404 del encounter vuelve al listado. Entra en el bloqueo cruzado (`sectionsBusy`).
 @Component({
   selector: 'app-encounter-detail-page',
-  imports: [EncounterNote, EncounterDiagnoses, EncounterMeasurements, VoidEncounterDialog, ConfirmDialog, RouterLink],
-  providers: [EncounterDiagnosesStore, MeasurementsStore],
+  imports: [
+    EncounterNote, EncounterDiagnoses, EncounterMeasurements, EncounterPrescriptions, VoidEncounterDialog, ConfirmDialog,
+    RouterLink,
+  ],
+  providers: [EncounterDiagnosesStore, MeasurementsStore, PrescriptionsStore],
   templateUrl: './encounter-detail-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -90,6 +103,7 @@ export class EncounterDetailPage {
   readonly lookups = inject(EncounterLookupsService);
   readonly diagnoses = inject(EncounterDiagnosesStore);
   readonly measurements = inject(MeasurementsStore);
+  readonly prescriptions = inject(PrescriptionsStore);
 
   private note = viewChild(EncounterNote);
 
@@ -128,8 +142,18 @@ export class EncounterDetailPage {
   readonly canEditDiagnoses = computed(() => this.canEdit() && this.encounter()?.status === 'open');
   private readonly encounterId = computed(() => this.encounter()?.id ?? null);
   private readonly encounterPatientId = computed(() => this.encounter()?.patient_id ?? null);
-  // Operación de diagnósticos o de signos vitales en curso (cambia la version del encounter).
-  readonly sectionsBusy = computed(() => this.diagnoses.busy() || this.measurements.busy());
+  // Operación de diagnósticos, signos vitales o recetas en curso (cambia la version del encounter).
+  readonly sectionsBusy = computed(() => this.diagnoses.busy() || this.measurements.busy() || this.prescriptions.busy());
+
+  // "Agregar medicamento" por receta (solo con la sección editable): habilitado salvo que la receta
+  // ya tenga 50 ítems o el backend la haya bloqueado (409).
+  readonly prescriptionAddItemReasons = computed<Record<string, string | null>>(() => {
+    const locked = this.prescriptions.lockedReasons();
+    return Object.fromEntries(this.prescriptions.items().map(p => [p.id,
+      locked[p.id] ?? (p.items.length >= PRESCRIPTION_LIMITS.maxItems
+        ? `La receta alcanzó el máximo de ${PRESCRIPTION_LIMITS.maxItems} medicamentos.`
+        : null)]));
+  });
 
   // Anulación administrativa (clinical.void) para quien no es el profesional habilitado del encounter.
   readonly canAdminVoid = computed(() => {
@@ -201,6 +225,18 @@ export class EncounterDetailPage {
     this.measurements.encounterVersion$.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(change => this.applyVersion(change.encounterId, change.version));
 
+    // Recetas: las de este encounter (sin paginación; se cargan una vez por encounter).
+    effect(() => {
+      const encounterId = this.encounterId();
+      const patientId = this.encounterPatientId();
+      untracked(() => this.prescriptions.setScope(encounterId && patientId ? { patientId, encounterId } : null));
+    });
+    this.prescriptions.conflict$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload());
+    this.prescriptions.encounterNotFound$.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(message => this.goToListWithNotice(message));
+    this.prescriptions.encounterVersion$.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(change => this.applyVersion(change.encounterId, change.version));
+
     this.load$.pipe(
       switchMap(id => this.repo.getById(id).pipe(
         map((encounter): LoadResult => ({ id, encounter })),
@@ -252,12 +288,12 @@ export class EncounterDetailPage {
   }
 
   onCreateDiagnosis(dto: CreateDiagnosisDto): void {
-    if (!this.canEditDiagnoses() || this.pending() || this.measurements.busy()) return;
+    if (!this.canEditDiagnoses() || this.pending() || this.measurements.busy() || this.prescriptions.busy()) return;
     this.diagnoses.create(dto);
   }
 
   onRemoveDiagnosis(diagnosisId: string): void {
-    if (!this.canEditDiagnoses() || this.pending() || this.measurements.busy()) return;
+    if (!this.canEditDiagnoses() || this.pending() || this.measurements.busy() || this.prescriptions.busy()) return;
     this.diagnoses.remove(diagnosisId);
   }
 
@@ -266,6 +302,18 @@ export class EncounterDetailPage {
     const encounterId = this.encounterId();
     if (!encounterId || !this.canEditDiagnoses() || this.pending() || this.sectionsBusy()) return;
     this.measurements.create({ ...dto, encounter_id: encounterId });
+  }
+
+  // La receta va siempre al encounter mostrado (el store usa su scope).
+  onCreatePrescription(dto: CreatePrescriptionDto): void {
+    if (!this.encounterId() || !this.canEditDiagnoses() || this.pending() || this.sectionsBusy()) return;
+    this.prescriptions.create(dto);
+  }
+
+  onAddPrescriptionItem(request: PrescriptionItemRequest): void {
+    if (!this.encounterId() || !this.canEditDiagnoses() || this.pending() || this.sectionsBusy()) return;
+    if (this.prescriptionAddItemReasons()[request.prescriptionId] !== null) return;
+    this.prescriptions.addItem(request.prescriptionId, request.dto);
   }
 
   openVoid(): void {

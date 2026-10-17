@@ -9,6 +9,8 @@ import { CIE10_CATALOG } from '../../../core/services/cie10-catalog';
 import { MockCie10Catalog } from '../../../testing/cie10-mock.catalog';
 import { MockEncountersRepository } from '../../../testing/encounters-mock.repository';
 import { MockMeasurementsRepository } from '../../../testing/measurements-mock.repository';
+import { PRESCRIPTIONS_REPOSITORY } from '../../../core/services/prescriptions-repository';
+import { MockPrescriptionsRepository } from '../../../testing/prescriptions-mock.repository';
 import { CreatedMeasurement } from '../../../core/models/measurement.model';
 import { CreatedDiagnosis } from '../../../core/models/diagnosis.model';
 import { Encounter } from '../../../core/models/encounter.model';
@@ -64,6 +66,7 @@ describe('EncounterDetailPage: signos vitales (mock repositories)', () => {
         { provide: ActivatedRoute, useValue: { paramMap: params$.asObservable() } },
         { provide: ENCOUNTERS_REPOSITORY, useClass: MockEncountersRepository },
         { provide: MEASUREMENTS_REPOSITORY, useClass: MockMeasurementsRepository },
+        { provide: PRESCRIPTIONS_REPOSITORY, useClass: MockPrescriptionsRepository },
         { provide: CIE10_CATALOG, useClass: MockCie10Catalog },
       ],
     }).compileComponents();

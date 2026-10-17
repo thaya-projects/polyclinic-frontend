@@ -90,6 +90,26 @@
       (create)="onCreateMeasurement($event)"
       (retry)="measurements.load()"
       (retryTypes)="measurements.loadTypes()" />
+
+    <app-encounter-prescriptions
+      [prescriptions]="prescriptions.items()"
+      [locale]="prescriptions.locale()"
+      [professionalNames]="lookups.professionalNameById()"
+      [loading]="prescriptions.loading()"
+      [loadError]="prescriptions.loadError()"
+      [loadRetryable]="prescriptions.loadRetryable()"
+      [editable]="canEditDiagnoses()"
+      [saving]="prescriptions.saving()"
+      [busy]="sectionsBusy() || pending() !== null"
+      [error]="prescriptions.actionError()"
+      [createdSeq]="prescriptions.createdSeq()"
+      [addItemReasons]="prescriptionAddItemReasons()"
+      [addingItemTo]="prescriptions.addingItemTo()"
+      [itemError]="prescriptions.itemError()"
+      [itemAddedSeq]="prescriptions.itemAddedSeq()"
+      (create)="onCreatePrescription($event)"
+      (addItem)="onAddPrescriptionItem($event)"
+      (retry)="prescriptions.load()" />
   } @else if (loading()) {
     <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
       <i class="ti ti-loader-2 animate-spin"></i>

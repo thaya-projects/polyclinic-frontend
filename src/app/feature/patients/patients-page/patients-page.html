@@ -88,6 +88,12 @@
           <i class="ti ti-heartbeat"></i>
           Signos vitales
         </button>
+        <button type="button" (click)="goToPrescriptions(patient)" data-testid="patient-prescriptions"
+          [disabled]="!!encountersButtonDisabledReason()" [title]="encountersButtonDisabledReason() ?? ''"
+          class="flex h-10 items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-navy">
+          <i class="ti ti-prescription"></i>
+          Recetas
+        </button>
         <button type="button" (click)="goToEncounters(patient, true)" data-testid="patient-new-encounter"
           [disabled]="!!newEncounterDisabledReason(patient)" [title]="newEncounterDisabledReason(patient) ?? ''"
           class="flex h-10 items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-navy">
