@@ -130,6 +130,12 @@ export const routes: Routes = [
         loadComponent: () => import('./feature/services/services-page/services-page').then(m => m.ServicesPage),
         canActivate: [authGuard, clinicGuard],
       },
+      {
+        // Fase 8: facturación del tenant.
+        path: 'invoices',
+        loadComponent: () => import('./feature/invoices/invoices-page/invoices-page').then(m => m.InvoicesPage),
+        canActivate: [authGuard, clinicGuard],
+      },
     ],
   },
 ];

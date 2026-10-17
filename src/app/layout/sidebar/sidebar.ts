@@ -37,6 +37,8 @@ const CLINIC_NAV_ITEMS: NavEntry[] = [
   // T6 FF (demo): entry gated por feature 'odontogram'. Aparece sólo si el
   // tenant lo tiene activo.
   { kind: 'leaf', label: 'Odontograma', icon: 'tooth', comingSoon: true, moduleKey: 'odontogram' },
+  // Fase 8: gated por feature 'invoicing' — mismo criterio que Odontograma.
+  { kind: 'leaf', label: 'Facturas', icon: 'file-invoice', route: '/invoices', moduleKey: 'invoicing' },
 ];
 
 // Extra solo para role.code === 'admin'. Sucursales/Especialidades/
