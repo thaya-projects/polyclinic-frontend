@@ -1,0 +1,55 @@
+<div class="flex flex-col gap-6">
+  <form [formGroup]="form" class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Notas</span>
+      <textarea formControlName="notes" rows="2"
+        class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+    </label>
+
+    <label class="flex flex-col gap-1.5 sm:w-60">
+      <span class="text-xs font-medium text-muted">Moneda (opcional)</span>
+      <select formControlName="currency" [class]="inputClass(form.controls.currency)">
+        <option value="">Usar la del tenant</option>
+        @for (currency of currencies; track currency) {
+          <option [value]="currency">{{ currency }}</option>
+        }
+      </select>
+    </label>
+  </form>
+
+  <!-- Alta de items solo en modo "crear" — en edición los items se
+       manejan desde el detalle del plan (T3), todavía no conectados a
+       HTTP (eso es T5), así que acá no se ofrece tocarlos de nuevo. -->
+  @if (!plan()) {
+    <section class="flex flex-col gap-3">
+      <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Agregar item</h4>
+      <app-treatment-plan-item-form (added)="onItemAdded($event)" />
+    </section>
+
+    <section class="flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Items del plan</h4>
+        <span class="text-sm font-bold text-navy">Total estimado: {{ totalPreview().toFixed(2) }}</span>
+      </div>
+      <app-treatment-plan-items-preview [items]="items()" (remove)="onItemRemoved($event)" />
+    </section>
+  }
+
+  @if (saveError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ saveError() }}
+    </div>
+  }
+
+  <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
+    <button type="button" (click)="cancel()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : (plan() ? 'Guardar cambios' : 'Guardar plan') }}
+    </button>
+  </div>
+</div>

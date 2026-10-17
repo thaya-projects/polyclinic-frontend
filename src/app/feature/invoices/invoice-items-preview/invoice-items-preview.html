@@ -1,0 +1,25 @@
+@if (items().length === 0) {
+  <p class="rounded-xl border border-dashed border-border bg-surface py-6 text-center text-sm text-muted">
+    Todavía no agregaste items.
+  </p>
+} @else {
+  <div class="flex flex-col gap-2">
+    @for (item of items(); track item.tempId) {
+      <div class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+        <div class="flex min-w-0 flex-col">
+          <span class="truncate text-sm font-medium text-text">{{ item.dto.description }}</span>
+          <span class="text-xs text-muted">{{ item.dto.quantity }} × {{ item.dto.unit_price.toFixed(2) }}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-semibold text-text">{{ subtotal(item.dto).toFixed(2) }}</span>
+          @if (!readonly()) {
+            <button type="button" (click)="remove.emit(item.tempId)"
+              class="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-navy transition-colors hover:border-red-400 hover:text-red-500">
+              Quitar
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}

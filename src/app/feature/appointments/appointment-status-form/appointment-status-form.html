@@ -1,0 +1,33 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Nuevo estado</span>
+    <select formControlName="to_status" [class]="inputClass(form.controls.to_status)">
+      <option value="" disabled>Seleccioná un estado</option>
+      @for (status of statusOptions(); track status) {
+        <option [value]="status">{{ statusLabels[status] }}</option>
+      }
+    </select>
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Nota</span>
+    <input type="text" formControlName="note" placeholder="Opcional" [class]="inputClass(form.controls.note)" />
+  </label>
+
+  @if (showCancelledReason()) {
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Motivo de cancelación</span>
+      <input type="text" formControlName="cancelled_reason" [class]="inputClass(form.controls.cancelled_reason)" />
+      @if (hasCancelledReasonError) {
+        <span class="text-xs text-red-500">Es obligatorio indicar el motivo para cancelar la cita.</span>
+      }
+    </label>
+  }
+
+  <div class="flex justify-end">
+    <button type="submit" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Actualizando...' : 'Actualizar estado' }}
+    </button>
+  </div>
+</form>

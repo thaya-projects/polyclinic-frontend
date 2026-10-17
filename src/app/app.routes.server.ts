@@ -24,6 +24,16 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
+    // Fase 4 T3: signos vitales de un paciente — ruta con parámetro, mismo criterio.
+    path: 'patients/:patientId/measurements',
+    renderMode: RenderMode.Client,
+  },
+  {
+    // Fase 4 Recetas: recetas de un paciente — ruta con parámetro, mismo criterio.
+    path: 'patients/:patientId/prescriptions',
+    renderMode: RenderMode.Client,
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender,
   },

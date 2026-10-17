@@ -4,6 +4,10 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { BehaviorSubject, Subject, firstValueFrom, throwError } from 'rxjs';
 import { EncounterDetailPage } from './encounter-detail-page';
 import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-repository';
+import { MEASUREMENTS_REPOSITORY } from '../../../core/services/measurements-repository';
+import { MockMeasurementsRepository } from '../../../testing/measurements-mock.repository';
+import { PRESCRIPTIONS_REPOSITORY } from '../../../core/services/prescriptions-repository';
+import { MockPrescriptionsRepository } from '../../../testing/prescriptions-mock.repository';
 import { CIE10_CATALOG } from '../../../core/services/cie10-catalog';
 import { MockCie10Catalog } from '../../../testing/cie10-mock.catalog';
 import { MOCK_CURRENT_USER_ID, MockEncountersRepository } from '../../../testing/encounters-mock.repository';
@@ -53,6 +57,8 @@ describe('EncounterDetailPage: diagnósticos (mock repository)', () => {
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { paramMap: params$.asObservable() } },
         { provide: ENCOUNTERS_REPOSITORY, useClass: MockEncountersRepository },
+        { provide: MEASUREMENTS_REPOSITORY, useClass: MockMeasurementsRepository },
+        { provide: PRESCRIPTIONS_REPOSITORY, useClass: MockPrescriptionsRepository },
         { provide: CIE10_CATALOG, useClass: MockCie10Catalog },
       ],
     }).compileComponents();

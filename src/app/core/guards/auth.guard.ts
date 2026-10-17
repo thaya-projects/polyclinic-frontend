@@ -5,8 +5,8 @@ import { AuthTokenService } from '../services/auth-token.service';
 import { AuthStore } from '../services/auth-store.service';
 import { MeService } from '../services/me.service';
 
-// T17: guard de autenticación puro (sin rol — eso lo sigue resolviendo
-// roleGuard) para cualquier ruta privada.
+// Guard de autenticación puro (sin distinguir superadmin/clínica — eso lo
+// resuelven superadminGuard/clinicGuard) para cualquier ruta privada.
 export const authGuard: CanActivateFn = () => {
   const tokens = inject(AuthTokenService);
   const store = inject(AuthStore);

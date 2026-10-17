@@ -64,7 +64,7 @@ const FIELD_LABEL: Record<string, string> = {
 // B4: mensajes conocidos del backend (inglés, con GUIDs) → español. Lo que no matchea devuelve
 // null y quien llama usa un genérico en español: nunca se muestra el texto crudo del backend.
 // Orden: lo específico antes que los genéricos "(\w+) cannot exceed" / "(\w+) is required".
-type KnownMessage = { pattern: RegExp; translate: (m: RegExpMatchArray) => string };
+export type KnownMessage = { pattern: RegExp; translate: (m: RegExpMatchArray) => string };
 
 // Diagnósticos / CIE-10 (Polyclinic.Domain: Cie10CodeNotFoundException, Cie10Code, Cie10SearchQuery,
 // Diagnosis.Create, DiagnosisDuplicateCodeException, EncounterClosedForChangesException y los
@@ -155,7 +155,7 @@ export function translateEncounterBackendMessage(message: string, context: Known
 
 // ProblemDetails ({ detail }) desde ExceptionHandlingMiddleware, { errors } del model binding o
 // { message }. Se traduce cada mensaje; si alguno no se reconoce → null (genérico).
-function backendMessages(err: HttpErrorResponse): string[] {
+export function backendMessages(err: HttpErrorResponse): string[] {
   const body = err.error;
   if (!body || typeof body !== 'object') return [];
   const raw: string[] = [];

@@ -68,4 +68,10 @@
     <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Contactos</h4>
     <app-patient-contacts [patientId]="patient().id" />
   </section>
+
+  <!-- Fase 7 T1: planes de tratamiento (solo lectura — alta/edición es T2, cambio de estado es T3) -->
+  <section class="flex flex-col gap-3">
+    <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Planes de tratamiento</h4>
+    <app-treatment-plans-section [patientId]="patient().id" />
+  </section>
 </div>

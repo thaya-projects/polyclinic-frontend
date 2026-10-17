@@ -1,0 +1,34 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="No se encontraron facturas.">
+  <ng-template appDataTableCell="invoice_number" let-row>
+    @if (row.invoice_number) {
+      <span class="font-semibold text-text">{{ row.invoice_number }}</span>
+    } @else {
+      <span class="text-xs text-muted italic">Sin emitir</span>
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="patient_name" let-row>
+    {{ row.patient_name }}
+  </ng-template>
+
+  <ng-template appDataTableCell="status" let-row>
+    <app-invoice-status-badge [status]="row.status" />
+  </ng-template>
+
+  <ng-template appDataTableCell="total" let-row>
+    <span class="font-semibold text-text">{{ formatAmount(row.total, row.currency) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="issued_at" let-row>
+    <span class="text-muted">{{ formatDate(row.issued_at) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex justify-end">
+      <button type="button" (click)="view.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        Ver
+      </button>
+    </div>
+  </ng-template>
+</app-data-table>

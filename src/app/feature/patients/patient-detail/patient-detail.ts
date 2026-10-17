@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { StatusChip } from '../../../shared/components/status-chip/status-chip';
 import { PatientContacts } from '../patient-contacts/patient-contacts';
 import { ClinicalRecordSection } from '../clinical-record-section/clinical-record-section';
+import { TreatmentPlansSection } from '../treatment-plans-section/treatment-plans-section';
 import { Patient } from '../../../core/models/patient.model';
 import { documentTypeLabel, sexLabel } from '../../../core/constants/patient-options.const';
 
 @Component({
   selector: 'app-patient-detail',
-  imports: [StatusChip, PatientContacts, ClinicalRecordSection],
+  imports: [StatusChip, PatientContacts, ClinicalRecordSection, TreatmentPlansSection],
   templateUrl: './patient-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

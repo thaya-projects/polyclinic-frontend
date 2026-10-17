@@ -1,0 +1,132 @@
+@if (readonlyMode()) {
+  <!-- Factura ya no es borrador — solo lectura (criterio de aceptación T2) -->
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <p class="text-xs text-muted">Paciente</p>
+        <p class="text-sm text-text">
+          {{ patients().find(p => p.id === invoice()!.patient_id)?.first_name }}
+          {{ patients().find(p => p.id === invoice()!.patient_id)?.last_name }}
+        </p>
+      </div>
+      <div>
+        <p class="text-xs text-muted">Sucursal</p>
+        <p class="text-sm text-text">{{ branches().find(b => b.id === invoice()!.branch_id)?.name || '—' }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted">Impuesto</p>
+        <p class="text-sm text-text">{{ invoice()!.tax.toFixed(2) }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted">Moneda</p>
+        <p class="text-sm text-text">{{ invoice()!.currency }}</p>
+      </div>
+    </div>
+    <div>
+      <p class="text-xs text-muted">Notas</p>
+      <p class="rounded-xl border border-border bg-surface p-3 text-sm whitespace-pre-line text-text">
+        {{ invoice()!.notes || 'Sin notas.' }}
+      </p>
+    </div>
+  </div>
+} @else {
+  <div class="flex flex-col gap-6">
+    <form [formGroup]="form" class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted">Paciente</span>
+          <select formControlName="patient_id" [class]="inputClass(form.controls.patient_id)">
+            <option value="" disabled>Seleccioná un paciente</option>
+            @for (p of patients(); track p.id) {
+              <option [value]="p.id">{{ p.first_name }} {{ p.last_name }}</option>
+            }
+          </select>
+          @if (isInvalid(form.controls.patient_id)) {
+            <span class="text-xs text-red-500">{{ errorMessage(form.controls.patient_id) }}</span>
+          }
+        </label>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted">Sucursal (opcional)</span>
+          <select formControlName="branch_id" [class]="inputClass(form.controls.branch_id)">
+            <option value="">Sin sucursal</option>
+            @for (b of branches(); track b.id) {
+              <option [value]="b.id">{{ b.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted">Impuesto</span>
+          <input type="number" min="0" step="0.01" formControlName="tax" [class]="inputClass(form.controls.tax)" />
+          @if (isInvalid(form.controls.tax)) {
+            <span class="text-xs text-red-500">{{ errorMessage(form.controls.tax) }}</span>
+          }
+        </label>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted">Moneda (opcional)</span>
+          <select formControlName="currency" [class]="inputClass(form.controls.currency)">
+            <option value="">Usar la del tenant</option>
+            @for (currency of currencies; track currency) {
+              <option [value]="currency">{{ currency }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Notas</span>
+        <textarea formControlName="notes" rows="2"
+          class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+      </label>
+    </form>
+
+    <!-- Items solo al crear — en edición de un borrador ya existente se
+         manejan desde su propia sección en el detalle. -->
+    @if (!invoice()) {
+      <section class="flex flex-col gap-3">
+        <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Agregar item</h4>
+        <app-invoice-item-form [patientId]="currentPatientId()" (added)="onItemAdded($event)" />
+      </section>
+
+      <section class="flex flex-col gap-3">
+        <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Items de la factura</h4>
+        <app-invoice-items-preview [items]="items()" (remove)="onItemRemoved($event)" />
+      </section>
+
+      <div class="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 text-sm">
+        <div class="flex justify-between text-muted">
+          <span>Subtotal</span>
+          <span>{{ subtotalPreview().toFixed(2) }}</span>
+        </div>
+        <div class="flex justify-between text-muted">
+          <span>Impuesto</span>
+          <span>{{ (totalPreview() - subtotalPreview()).toFixed(2) }}</span>
+        </div>
+        <div class="flex justify-between font-bold text-navy">
+          <span>Total estimado</span>
+          <span>{{ totalPreview().toFixed(2) }}</span>
+        </div>
+      </div>
+    }
+
+    @if (saveError()) {
+      <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ saveError() }}
+      </div>
+    }
+
+    <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
+      <button type="button" (click)="cancel()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="submit()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : (invoice() ? 'Guardar cambios' : 'Guardar borrador') }}
+      </button>
+    </div>
+  </div>
+}

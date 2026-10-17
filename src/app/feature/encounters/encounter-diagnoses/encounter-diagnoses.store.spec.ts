@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, throwError } from 'rxjs';
-import { EncounterDiagnosesStore, EncounterVersionChange } from './encounter-diagnoses.store';
+import { EncounterDiagnosesStore } from './encounter-diagnoses.store';
+import { EncounterVersionChange } from '../../../core/models/encounter.model';
 import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-repository';
 import { CIE10_CATALOG } from '../../../core/services/cie10-catalog';
 import { MockEncountersRepository } from '../../../testing/encounters-mock.repository';

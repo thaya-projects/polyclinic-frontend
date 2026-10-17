@@ -194,6 +194,20 @@ export class PatientsPage {
     this.router.navigate(['/patients', patient.id, 'odontogram']);
   }
 
+  // Fase 4 T3: signos vitales del paciente. Mismo acceso que "Encuentros".
+  goToMeasurements(patient: Patient): void {
+    if (this.encountersButtonDisabledReason() || !this.showEncounterButtons()) return;
+    this.closeModal();
+    this.router.navigate(['/patients', patient.id, 'measurements']);
+  }
+
+  // Fase 4 Recetas T4: recetas del paciente. Mismo acceso que "Encuentros" y "Signos vitales".
+  goToPrescriptions(patient: Patient): void {
+    if (this.encountersButtonDisabledReason() || !this.showEncounterButtons()) return;
+    this.closeModal();
+    this.router.navigate(['/patients', patient.id, 'prescriptions']);
+  }
+
   requestDeactivate(patient: Patient): void {
     this.patientToDeactivate.set(patient);
     this.deactivateError.set(null);

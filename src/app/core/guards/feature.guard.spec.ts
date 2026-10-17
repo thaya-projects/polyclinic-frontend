@@ -40,7 +40,7 @@ describe('featureEnabledGuard + fallback "Módulo no habilitado"', () => {
     TestBed.inject(AuthTokenService).save({ access_token: 't' } as never);
     TestBed.inject(AuthStore).setSession({
       access_token: 't',
-      user: { id: 'u-1', full_name: 'Laura', email: 'l@x.com', role: 'app_user' as never },
+      user: { id: 'u-1', full_name: 'Laura', email: 'l@x.com', is_superadmin: false, roles: [] },
       tenant: { id: 'ten-1', name: 'Clínica', slug: 'clinica' },
     });
   });

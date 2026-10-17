@@ -3,27 +3,24 @@ import { DataTable } from '../../../../shared/components/data-table/data-table';
 import { DataTableColumn } from '../../../../shared/components/data-table/data-table-column.model';
 import { DataTableCellDirective } from '../../../../shared/components/data-table/data-table-cell.directive';
 import { StatusChip, StatusChipTone } from '../../../../shared/components/status-chip/status-chip';
-import { Tenant, TenantPlan, TenantStatus } from '../../../../core/models/tenant.model';
+import { Tenant, TenantStatus } from '../../../../core/models/tenant.model';
 
-const PLAN_LABEL: Record<TenantPlan, string> = {
-  free: 'Free',
-  starter: 'Starter',
-  pro: 'Pro',
-  enterprise: 'Enterprise',
-};
-
+// Refleja Domain.Enums.SubscriptionStatus (backend) — status puede ser null si el tenant no
+// tiene ninguna subscription todavía.
 const STATUS_LABEL: Record<TenantStatus, string> = {
-  active: 'Activo',
-  trial: 'Trial',
-  suspended: 'Suspendido',
-  cancelled: 'Cancelado',
+  trialing: 'Trial',
+  active: 'Activa',
+  past_due: 'Pago vencido',
+  canceled: 'Cancelada',
+  unpaid: 'Impaga',
 };
 
 const STATUS_TONE: Record<TenantStatus, StatusChipTone> = {
+  trialing: 'wait',
   active: 'ok',
-  trial: 'wait',
-  suspended: 'neutral',
-  cancelled: 'neutral',
+  past_due: 'neutral',
+  canceled: 'neutral',
+  unpaid: 'neutral',
 };
 
 @Component({
@@ -52,16 +49,18 @@ export class TenantsTable {
     { key: 'actions', label: '', align: 'right', width: '90px' },
   ];
 
-  planLabel(plan: TenantPlan): string {
-    return PLAN_LABEL[plan];
+  // plan es texto libre del backend (plan_name de la subscription real, no un enum fijo) — se
+  // muestra tal cual, sin mapeo de labels.
+  planLabel(plan: string | null): string {
+    return plan ?? 'Sin plan';
   }
 
-  statusLabel(status: TenantStatus): string {
-    return STATUS_LABEL[status];
+  statusLabel(status: TenantStatus | null): string {
+    return status ? STATUS_LABEL[status] : 'Sin subscripción';
   }
 
-  statusTone(status: TenantStatus): StatusChipTone {
-    return STATUS_TONE[status];
+  statusTone(status: TenantStatus | null): StatusChipTone {
+    return status ? STATUS_TONE[status] : 'neutral';
   }
 
   formatDate(iso: string): string {

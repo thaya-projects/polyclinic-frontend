@@ -11,48 +11,11 @@ import {
   CreateDiagnosisDto, CreatedDiagnosis, DIAGNOSIS_LIMITS, DeleteDiagnosisResult, Diagnosis,
 } from '../core/models/diagnosis.model';
 import { CIE10_CODE_FORMAT, CIE10_CODE_MAX_LENGTH, MOCK_CIE10, argumentError } from './cie10-mock.catalog';
+import { MOCK_PATIENTS, ProfessionalOption, injectClinicalBackend } from './mock-clinical-backend';
 
-export const MOCK_CURRENT_USER_ID = 'mock-user-1';
-
-type ProfessionalOption = EncounterPartyOption & { active: boolean };
-
-const MOCK_PATIENTS: EncounterPartyOption[] = [
-  { id: 'pat-1', name: 'Ana Gómez', label: 'Ana Gómez — 30111222' },
-  { id: 'pat-2', name: 'Luis Pérez', label: 'Luis Pérez — 28444555' },
-];
-
-function seedProfessionals(): ProfessionalOption[] {
-  return [
-    { id: 'prof-1', name: 'Dra. Laura Méndez', label: 'Dra. Laura Méndez', user_id: MOCK_CURRENT_USER_ID, active: true },
-    { id: 'prof-2', name: 'Dr. Carlos Ruiz', label: 'Dr. Carlos Ruiz', user_id: 'mock-user-2', active: true },
-  ];
-}
-
-function seed(): Encounter[] {
-  const base = {
-    appointment_id: null, specialty_id: null, form_template_id: null, clinical_data: {},
-    signed_at: null, signed_by: null, voided_at: null, voided_by: null, void_reason: null, version: 1,
-  };
-  return [
-    {
-      ...base, id: 'enc-1', clinical_record_id: 'cr-pat-1', patient_id: 'pat-1', professional_id: 'prof-1',
-      encounter_date: '2026-10-10T14:00:00Z', created_at: '2026-10-10T14:00:00Z', status: 'open',
-      chief_complaint: 'Cefalea de 3 días', anamnesis: 'Refiere dolor frontal...', exam: 'TA 120/80',
-    },
-    {
-      ...base, id: 'enc-2', clinical_record_id: 'cr-pat-2', patient_id: 'pat-2', professional_id: 'prof-1',
-      encounter_date: '2026-10-08T10:30:00Z', created_at: '2026-10-08T10:30:00Z', status: 'signed',
-      chief_complaint: 'Control anual', anamnesis: 'Sin novedades.', exam: 'Normal.',
-      signed_at: '2026-10-08T11:00:00Z', signed_by: MOCK_CURRENT_USER_ID, version: 2,
-    },
-    {
-      // De otro profesional: el usuario del mock lo ve de solo lectura.
-      ...base, id: 'enc-3', clinical_record_id: 'cr-pat-1', patient_id: 'pat-1', professional_id: 'prof-2',
-      encounter_date: '2026-10-05T09:00:00Z', created_at: '2026-10-05T09:00:00Z', status: 'open',
-      chief_complaint: 'Dolor lumbar', anamnesis: null, exam: null,
-    },
-  ];
-}
+// Sesión, profesionales, pacientes y encounters viven en MockClinicalBackend (compartido con
+// MockMeasurementsRepository); acá se re-exporta lo que ya usaban los tests.
+export { MOCK_CURRENT_USER_ID } from './mock-clinical-backend';
 
 function httpError(status: number, detail: string): Observable<never> {
   return throwError(() => new HttpErrorResponse({ status, error: { detail } }));
@@ -107,12 +70,19 @@ const MOCK_SPECIALTIES: { id: string; active: boolean }[] = [
 // Cada escritura OK incrementa version. Sin delays (los tests no necesitan timers falsos).
 @Injectable()
 export class MockEncountersRepository implements EncountersRepository {
-  private encounters: Encounter[] = seed();
-  private professionals: ProfessionalOption[] = seedProfessionals();
-  private userId: string | null = MOCK_CURRENT_USER_ID;
-  private permissions: string[] = [];
+  private backend = injectClinicalBackend();
   private diagnoses: Diagnosis[] = seedDiagnoses();
   private nextId = 100;
+
+  // Estado del "backend" compartido (ver MockClinicalBackend).
+  private get encounters(): Encounter[] { return this.backend.encounters; }
+  private set encounters(value: Encounter[]) { this.backend.encounters = value; }
+  private get professionals(): ProfessionalOption[] { return this.backend.professionals; }
+  private set professionals(value: ProfessionalOption[]) { this.backend.professionals = value; }
+  private get userId(): string | null { return this.backend.userId; }
+  private set userId(value: string | null) { this.backend.userId = value; }
+  private get permissions(): string[] { return this.backend.permissions; }
+  private set permissions(value: string[]) { this.backend.permissions = value; }
 
   // Helpers para tests/demo: identidad y permisos de la "sesión".
   setCurrentUser(userId: string | null, permissions: string[] = []): void {
@@ -356,8 +326,7 @@ export class MockEncountersRepository implements EncountersRepository {
 
   // Lecturas: profesional activo vinculado al usuario, o clinical.void.
   private canRead(): boolean {
-    if (this.permissions.includes(CLINICAL_VOID_PERMISSION)) return true;
-    return this.professionals.some(p => p.user_id !== null && p.user_id === this.userId && p.active);
+    return this.backend.canReadClinical();
   }
 
   // 403 (no es el usuario del profesional) → 422 (profesional inactivo).

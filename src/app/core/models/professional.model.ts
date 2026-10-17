@@ -1,4 +1,3 @@
-// Espeja ProfessionalDTO (snake_case). tenant_id no viaja. Nunca incluye password_hash.
 export interface Professional {
   id: string;
   user_id: string | null;

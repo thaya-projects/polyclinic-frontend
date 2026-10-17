@@ -42,13 +42,6 @@
         </div>
       }
 
-      @if (successMessage()) {
-        <div class="mb-4 flex items-center gap-2 rounded-xl border border-border bg-chip-ok-bg px-4 py-3 text-sm text-chip-ok-fg">
-          <i class="ti ti-circle-check"></i>
-          {{ successMessage() }}
-        </div>
-      }
-
       <app-login-form [loading]="loading()" (submitted)="onSubmit($event)" />
     </div>
   </div>

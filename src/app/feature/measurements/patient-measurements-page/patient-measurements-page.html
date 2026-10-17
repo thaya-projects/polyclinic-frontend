@@ -1,0 +1,153 @@
+<div class="flex flex-col gap-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <a routerLink="/patients" class="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand">
+        <i class="ti ti-arrow-left"></i>
+        Pacientes
+      </a>
+      <h2 class="mt-1 text-2xl font-bold text-navy">Signos vitales</h2>
+      @if (patientName()) {
+        <p class="mt-1 text-sm text-muted" data-testid="patient-name">{{ patientName() }}</p>
+      }
+    </div>
+    @if (accessView() === 'allowed' && !patientMissing()) {
+      <div class="flex flex-col items-end gap-1">
+        <button type="button" (click)="openCreate()" data-testid="btn-new-measurement"
+          [disabled]="!canRegister()" [title]="registerDisabledReason() ?? ''"
+          class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand">
+          <i class="ti ti-plus"></i>
+          Registrar medición
+        </button>
+        @if (registerDisabledReason(); as reason) {
+          <span class="text-xs text-muted" data-testid="register-disabled-reason">{{ reason }}</span>
+        }
+      </div>
+    }
+  </div>
+
+  @if (accessView() === 'loading') {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-loading">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando…
+    </div>
+  } @else if (accessView() === 'error') {
+    <div role="alert" class="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 py-10 text-sm text-red-600" data-testid="access-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ lookups.professionalsError() }}</span>
+      <button type="button" (click)="lookups.loadProfessionals()" data-testid="access-retry"
+        class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+        Reintentar
+      </button>
+    </div>
+  } @else if (accessView() === 'denied') {
+    <div role="alert" class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-denied">
+      <i class="ti ti-lock"></i>
+      {{ accessDeniedMessage }}
+    </div>
+  } @else if (patientMissing()) {
+    <div role="alert" class="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 py-14 text-sm text-red-600" data-testid="patient-not-found">
+      <i class="ti ti-alert-circle"></i>
+      {{ patientNotFoundMessage }}
+    </div>
+  } @else {
+
+  @if (store.loadError(); as error) {
+    <div role="alert" class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="list-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ error }}</span>
+      @if (store.loadRetryable()) {
+        <button type="button" (click)="store.load()" data-testid="list-retry"
+          class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+          Reintentar
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Filtro por tipo -->
+  @if (customFilterError(); as filterError) {
+    <span role="alert" id="filter-custom-type-error" class="text-xs text-red-600" data-testid="filter-custom-type-error">{{ filterError }}</span>
+  }
+  <div class="flex flex-wrap items-center gap-3">
+    <select aria-label="Filtrar por tipo" data-testid="filter-type" [value]="selectedFilterOption()"
+      (change)="onFilterSelect($any($event.target).value)" [class]="selectClass + ' min-w-56'">
+      <option value="" [selected]="selectedFilterOption() === ''">Todos los tipos</option>
+      @for (t of store.types(); track t.type) {
+        <option [value]="t.type" [selected]="t.type === selectedFilterOption()">{{ typeLabel(t.type) }}</option>
+      }
+      <option [value]="otherFilter" [selected]="selectedFilterOption() === otherFilter">Otro (código)…</option>
+    </select>
+    @if (selectedFilterOption() === otherFilter) {
+      <form class="flex items-center gap-2" (submit)="$event.preventDefault(); applyCustomFilter(customFilter.value)">
+        <input #customFilter type="text" data-testid="filter-custom-type" aria-label="Código del tipo a filtrar"
+          placeholder="ej: waist_circumference" maxlength="50"
+          [value]="store.types().some(t => t.type === store.typeFilter()) ? '' : store.typeFilter()"
+          [attr.aria-invalid]="!!customFilterError()" [attr.aria-describedby]="customFilterError() ? 'filter-custom-type-error' : null"
+          [class]="selectClass + ' min-w-56'" />
+        <button type="submit" data-testid="filter-custom-apply"
+          class="flex h-11 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+          Filtrar
+        </button>
+      </form>
+    }
+    @if (store.typeFilter() || selectedFilterOption()) {
+      <button type="button" (click)="clearTypeFilter()" data-testid="filter-clear" class="text-xs font-medium text-muted underline-offset-2 hover:text-brand hover:underline">
+        Limpiar filtro
+      </button>
+    }
+    @if (store.typesError(); as typesError) {
+      <span role="alert" class="flex items-center gap-2 text-xs text-red-600" data-testid="types-error">
+        {{ typesError }}
+        <button type="button" (click)="store.loadTypes()" class="font-medium underline underline-offset-2 hover:text-red-700">Reintentar</button>
+      </span>
+    }
+  </div>
+
+  @if (store.loading() && store.items().length === 0) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando signos vitales...
+    </div>
+  } @else {
+    <app-measurements-table [measurements]="store.items()" [locale]="store.locale()"
+      [emptyMessage]="store.typeFilter() ? 'Sin mediciones de ese tipo.' : 'Sin mediciones registradas.'" />
+
+    <app-pagination [page]="store.page()" (pageChange)="setPage($event)" [pageSize]="pageSize" [total]="store.total()" />
+  }
+  }
+</div>
+
+<!-- Alta de medición -->
+<app-modal [open]="createOpen()" title="Registrar medición" size="lg" (closed)="closeCreate()">
+  @if (store.actionError()) {
+    <div role="alert" class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="create-error">
+      <i class="ti ti-alert-circle"></i>
+      {{ store.actionError() }}
+    </div>
+  }
+  @if (createOpen()) {
+    @if (store.typesError(); as typesError) {
+      <div role="alert" class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600" data-testid="create-types-error">
+        <span>{{ typesError }} Podés registrar un tipo con "Otro…".</span>
+        <button type="button" (click)="store.loadTypes()" class="font-medium underline underline-offset-2 hover:text-red-700">Reintentar</button>
+      </div>
+    }
+    <app-measurement-form
+      [types]="store.types()"
+      [locale]="store.locale()"
+      [busy]="store.busy()"
+      [saving]="store.saving()"
+      [createdSeq]="store.createdSeq()"
+      [showSubmit]="false"
+      (submitted)="onCreate($event)" />
+  }
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeCreate()" [disabled]="store.busy()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submitCreate()" [disabled]="store.busy()" data-testid="btn-save-measurement"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ store.saving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+</app-modal>

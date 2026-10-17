@@ -1,0 +1,22 @@
+<div [formGroup]="form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Tipo de cita</span>
+    <select formControlName="type" [class]="inputClass(form.controls.type)">
+      @for (type of typeOptions; track type) {
+        <option [value]="type">{{ typeLabels[type] }}</option>
+      }
+    </select>
+  </label>
+
+  @if (showMeetingFields()) {
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Proveedor de videollamada</span>
+      <input type="text" formControlName="meeting_provider" placeholder="ej. Zoom, Meet..." [class]="inputClass(form.controls.meeting_provider)" />
+    </label>
+
+    <label class="flex flex-col gap-1.5 sm:col-span-2">
+      <span class="text-xs font-medium text-muted">Link de la reunión</span>
+      <input type="text" formControlName="meeting_url" placeholder="Opcional" [class]="inputClass(form.controls.meeting_url)" />
+    </label>
+  }
+</div>

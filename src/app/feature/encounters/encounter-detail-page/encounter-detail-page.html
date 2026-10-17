@@ -59,7 +59,7 @@
       [adminVoid]="canAdminVoid()"
       [readOnlyReason]="readOnlyReason()"
       [draft]="draft()"
-      [blocked]="diagnoses.busy()"
+      [blocked]="sectionsBusy()"
       (save)="onSave($event)"
       (sign)="onSign()"
       (voidRequested)="openVoid()" />
@@ -71,7 +71,7 @@
       [loadRetryable]="diagnoses.loadRetryable()"
       [editable]="canEditDiagnoses()"
       [creating]="diagnoses.pending() === 'create'"
-      [busy]="diagnoses.busy() || pending() !== null"
+      [busy]="sectionsBusy() || pending() !== null"
       [deletingId]="diagnoses.deletingId()"
       [error]="diagnoses.actionError()"
       [createdSeq]="diagnoses.createdSeq()"
@@ -80,6 +80,44 @@
       (remove)="onRemoveDiagnosis($event)"
       (retry)="diagnoses.load()" />
 
+    <app-encounter-measurements
+      [encounterId]="e.id"
+      [measurements]="measurements.items()"
+      [total]="measurements.total()"
+      [types]="measurements.types()"
+      [typesError]="measurements.typesError()"
+      [locale]="measurements.locale()"
+      [loading]="measurements.loading()"
+      [loadError]="measurements.loadError()"
+      [loadRetryable]="measurements.loadRetryable()"
+      [editable]="canEditDiagnoses()"
+      [saving]="measurements.saving()"
+      [busy]="sectionsBusy() || pending() !== null"
+      [error]="measurements.actionError()"
+      [createdSeq]="measurements.createdSeq()"
+      (create)="onCreateMeasurement($event)"
+      (retry)="measurements.load()"
+      (retryTypes)="measurements.loadTypes()" />
+
+    <app-encounter-prescriptions
+      [prescriptions]="prescriptions.items()"
+      [locale]="prescriptions.locale()"
+      [professionalNames]="lookups.professionalNameById()"
+      [loading]="prescriptions.loading()"
+      [loadError]="prescriptions.loadError()"
+      [loadRetryable]="prescriptions.loadRetryable()"
+      [editable]="canEditDiagnoses()"
+      [saving]="prescriptions.saving()"
+      [busy]="sectionsBusy() || pending() !== null"
+      [error]="prescriptions.actionError()"
+      [createdSeq]="prescriptions.createdSeq()"
+      [addItemReasons]="prescriptionAddItemReasons()"
+      [addingItemTo]="prescriptions.addingItemTo()"
+      [itemError]="prescriptions.itemError()"
+      [itemAddedSeq]="prescriptions.itemAddedSeq()"
+      (create)="onCreatePrescription($event)"
+      (addItem)="onAddPrescriptionItem($event)"
+      (retry)="prescriptions.load()" />
   } @else if (loading()) {
     <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
       <i class="ti ti-loader-2 animate-spin"></i>

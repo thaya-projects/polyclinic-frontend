@@ -1,0 +1,20 @@
+@if (payments().length === 0) {
+  <p class="rounded-xl border border-dashed border-border bg-surface py-6 text-center text-sm text-muted">
+    Todavía no se registraron pagos.
+  </p>
+} @else {
+  <div class="flex flex-col gap-2">
+    @for (payment of payments(); track payment.id) {
+      <div class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+        <div class="flex min-w-0 flex-col">
+          <span class="text-sm font-medium text-text">{{ methodLabels[payment.method] }}</span>
+          <span class="text-xs text-muted">
+            {{ formatDate(payment.paid_at) }}
+            @if (payment.reference) { · {{ payment.reference }} }
+          </span>
+        </div>
+        <span class="text-sm font-semibold text-text">{{ payment.amount.toFixed(2) }}</span>
+      </div>
+    }
+  </div>
+}

@@ -1,6 +1,7 @@
 import { Route, Routes } from '@angular/router';
 import { Shell } from './layout/shell/shell';
-import { roleGuard } from './core/guards/role.guard';
+import { superadminGuard } from './core/guards/superadmin.guard';
+import { clinicGuard } from './core/guards/clinic.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { featureEnabledGuard } from './core/guards/feature.guard';
@@ -45,13 +46,13 @@ export const routes: Routes = [
         path: 'admin/tenants',
         loadComponent: () =>
           import('./feature/superadmin/tenants/tenants-page/tenants-page').then(m => m.TenantsPage),
-        canActivate: [authGuard, roleGuard(['super_admin'])],
+        canActivate: [authGuard, superadminGuard],
       },
       {
         path: 'admin/plans',
         loadComponent: () =>
           import('./feature/superadmin/plans/plans-page/plans-page').then(m => m.PlansPage),
-        canActivate: [authGuard, roleGuard(['super_admin'])],
+        canActivate: [authGuard, superadminGuard],
       },
       {
         // T8/T9: panel super admin de subscription de un tenant específico. No aparece en el
@@ -60,7 +61,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./feature/superadmin/subscriptions/subscription-admin-page/subscription-admin-page')
             .then(m => m.SubscriptionAdminPage),
-        canActivate: [authGuard, roleGuard(['super_admin'])],
+        canActivate: [authGuard, superadminGuard],
       },
       {
         // T7 FF: panel super admin de módulos del tenant (toggles enabled_modules).
@@ -68,7 +69,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./feature/superadmin/tenants/tenant-settings-modules-page/tenant-settings-modules-page')
             .then(m => m.TenantSettingsModulesPage),
-        canActivate: [authGuard, roleGuard(['super_admin'])],
+        canActivate: [authGuard, superadminGuard],
       },
       {
         // T10: la clínica ve su plan y status. Sin cambios (los mueve el super admin desde su
@@ -124,14 +125,14 @@ export const routes: Routes = [
         path: 'encounters',
         loadComponent: () =>
           import('./feature/encounters/encounters-page/encounters-page').then(m => m.EncountersPage),
-        canActivate: [authGuard],
+        canActivate: [authGuard, clinicGuard],
       },
       {
         path: 'encounters/:id',
         loadComponent: () =>
           import('./feature/encounters/encounter-detail-page/encounter-detail-page')
             .then(m => m.EncounterDetailPage),
-        canActivate: [authGuard],
+        canActivate: [authGuard, clinicGuard],
         // B6: si la nota tiene cambios sin guardar, pregunta antes de salir.
         canDeactivate: [(page: { canLeave(): boolean | Promise<boolean> }) => page.canLeave()],
       },
@@ -162,22 +163,61 @@ export const routes: Routes = [
         },
       ]),
       {
-        // T12: sin guard a propósito — todavía no hay panel de clínica
-        // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
-        // exista ese panel.
+        // Sin guard a propósito — todavía no se definió si hace falta
+        // restringir esto a role.code === 'admin' a nivel de ruta (hoy
+        // solo se oculta el link en el sidebar para quien no es admin).
         path: 'roles',
         loadComponent: () => import('./feature/roles/roles-page/roles-page').then(m => m.RolesPage),
       },
       {
-        // T14: mismo criterio que T12 (sin guard, panel de clínica no existe todavía).
+        // Mismo criterio que 'roles' (sin guard de ruta todavía).
         path: 'user-roles',
         loadComponent: () =>
           import('./feature/roles/user-roles-page/user-roles-page').then(m => m.UserRolesPage),
       },
       {
-        // T6 (fase 3, pacientes): mismo criterio que roles/user-roles.
+        // Home de clínica: cualquier usuario de clínica (admin/recepcion/
+        // profesional/sin rol) aterriza acá después de loguearse.
+        path: 'appointments',
+        loadComponent: () =>
+          import('./feature/appointments/appointments-page/appointments-page').then(m => m.AppointmentsPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        // Fase 4 T3/T4: signos vitales del paciente. Se llega desde la ficha ("Signos vitales").
+        // Mismo criterio que encounters: authGuard; el acceso clínico lo decide la pantalla
+        // (profesional activo o clinical.void) y el backend.
+        path: 'patients/:patientId/measurements',
+        loadComponent: () =>
+          import('./feature/measurements/patient-measurements-page/patient-measurements-page')
+            .then(m => m.PatientMeasurementsPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        // Fase 4 Recetas T4/T5: recetas del paciente (con y sin encuentro). Se llega desde la ficha
+        // ("Recetas"). Mismo criterio que signos vitales: authGuard; el acceso clínico lo decide la
+        // pantalla (profesional activo o clinical.void) y el backend.
+        path: 'patients/:patientId/prescriptions',
+        loadComponent: () =>
+          import('./feature/prescriptions/patient-prescriptions-page/patient-prescriptions-page')
+            .then(m => m.PatientPrescriptionsPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
         path: 'patients',
         loadComponent: () => import('./feature/patients/patients-page/patients-page').then(m => m.PatientsPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        path: 'services',
+        loadComponent: () => import('./feature/services/services-page/services-page').then(m => m.ServicesPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        // Fase 8: facturación del tenant.
+        path: 'invoices',
+        loadComponent: () => import('./feature/invoices/invoices-page/invoices-page').then(m => m.InvoicesPage),
+        canActivate: [authGuard, clinicGuard],
       },
     ],
   },
