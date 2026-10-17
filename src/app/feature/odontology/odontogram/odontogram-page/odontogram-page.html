@@ -85,11 +85,30 @@
       </span>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-      <div class="rounded-xl border border-border bg-surface p-4">
-        <app-odontogram-chart [dentition]="o.dentition" [selectedTooth]="selectedTooth()" (toothSelected)="selectTooth($event)" />
+    @if (teethError()) {
+      <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" role="alert"
+        data-testid="teeth-error">
+        <i class="ti ti-alert-circle"></i>
+        <span class="flex-1">{{ teethError() }}</span>
+        <button type="button" (click)="reloadMarks()" class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium hover:border-red-400">
+          Reintentar
+        </button>
       </div>
-      <app-selected-tooth-panel [tooth]="selectedTooth()" (cleared)="clearSelection()" />
+    }
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <app-odontogram-chart [dentition]="o.dentition" [selectedTooth]="selectedTooth()" [selectedSurface]="selectedSurface()"
+          [paint]="paint()" (toothSelected)="selectTooth($event)" (faceSelected)="selectFace($event)" />
+      </div>
+      <app-selected-tooth-panel [tooth]="selectedTooth()" (cleared)="clearSelection()">
+        @if (selectedTooth(); as fdi) {
+          <app-tooth-conditions-panel toothActions [odontogramId]="o.id" [dentition]="o.dentition" [tooth]="fdi"
+            [surface]="selectedSurface()" [catalog]="catalog()" [items]="teeth()"
+            (added)="onToothConditionAdded($event)" (updated)="onToothConditionUpdated($event)"
+            (removed)="onToothConditionRemoved($event)" (stale)="loadTeeth()" />
+        }
+      </app-selected-tooth-panel>
     </div>
   }
 </div>

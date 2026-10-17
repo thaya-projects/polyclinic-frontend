@@ -1,0 +1,18 @@
+<div class="flex flex-col gap-4" data-testid="tooth-conditions-panel">
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600" role="alert"
+      data-testid="tooth-conditions-error">
+      <i class="ti ti-alert-circle"></i>
+      <span class="flex-1">{{ error() }}</span>
+    </div>
+  }
+
+  <app-tooth-condition-list [items]="toothItems()" [catalog]="catalog()" [editingId]="editing()?.id ?? null"
+    [disabled]="saving()" (edit)="startEdit($event)" (remove)="remove($event)" />
+
+  <div class="border-t border-border pt-3">
+    <app-tooth-condition-form [tooth]="tooth()" [dentition]="dentition()" [catalog]="catalog()"
+      [presetSurface]="surface()" [item]="editing()" [saving]="saving()"
+      (created)="create($event)" (saved)="save($event)" (cancelled)="cancelEdit()" />
+  </div>
+</div>

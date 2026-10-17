@@ -45,4 +45,38 @@ describe('OdontogramChart', () => {
     expect(el().querySelector('[data-testid="tooth-36"]')!.getAttribute('aria-pressed')).toBe('true');
     expect(el().querySelector('[data-testid="tooth-11"]')!.getAttribute('aria-pressed')).toBe('false');
   });
+
+  it('pinta caras con el color de su condición: whole de fondo, caras encima y cervical como contorno', () => {
+    render('permanente');
+    fixture.componentRef.setInput('paint', {
+      16: { faces: { center: '#E53935' } },
+      36: { whole: '#FBC02D', cervical: '#00ACC1', faces: { top: '#1E88E5' } },
+    });
+    fixture.detectChanges();
+    const fill = (id: string) => el().querySelector(`[data-testid="${id}"]`)!.getAttribute('fill');
+    expect(fill('face-16-center')).toBe('#E53935');
+    expect(fill('face-16-top')).toBe('none');
+    expect(fill('face-36-top')).toBe('#1E88E5');
+    expect(fill('face-36-left')).toBe('#FBC02D');
+    expect(el().querySelector('[data-testid="cervical-36"]')!.getAttribute('stroke')).toBe('#00ACC1');
+    expect(el().querySelector('[data-testid="cervical-16"]')).toBeNull();
+  });
+
+  it('click en una cara emite pieza + surface clínica (no la pieza sola) y la resalta', () => {
+    render('permanente');
+    const faces: unknown[] = [];
+    const teethEmitted: number[] = [];
+    fixture.componentInstance.faceSelected.subscribe(f => faces.push(f));
+    fixture.componentInstance.toothSelected.subscribe(n => teethEmitted.push(n));
+    el().querySelector('[data-testid="face-16-right"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    el().querySelector('[data-testid="face-31-center"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(faces).toEqual([{ fdi: 16, surface: 'mesial' }, { fdi: 31, surface: 'incisal' }]);
+    expect(teethEmitted).toEqual([]);
+
+    fixture.componentRef.setInput('selectedTooth', 16);
+    fixture.componentRef.setInput('selectedSurface', 'mesial');
+    fixture.detectChanges();
+    expect(el().querySelector('[data-testid="face-16-right"]')!.getAttribute('stroke-width')).toBe('3');
+    expect(el().querySelector('[data-testid="face-16-left"]')!.getAttribute('stroke-width')).toBe('1.5');
+  });
 });

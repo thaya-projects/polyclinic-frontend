@@ -4,6 +4,10 @@ import { BehaviorSubject } from 'rxjs';
 import { OdontogramPage } from './odontogram-page';
 import { ODONTOGRAM_REPOSITORY } from '../../../../core/services/odontogram-repository';
 import { MockOdontogramRepository } from '../../../../testing/odontogram-mock.repository';
+import { DENTAL_CONDITIONS_REPOSITORY } from '../../../../core/services/dental-conditions-repository';
+import { MockDentalConditionsRepository } from '../../../../testing/dental-conditions-mock.repository';
+import { TOOTH_CONDITIONS_REPOSITORY } from '../../../../core/services/tooth-conditions-repository';
+import { MockToothConditionsRepository } from '../../../../testing/tooth-conditions-mock.repository';
 import { firstValueFrom } from 'rxjs';
 import {
   ODONTOGRAM_CONFLICT_MESSAGE, ODONTOGRAM_DISABLED_MESSAGE,
@@ -13,6 +17,7 @@ import {
 describe('OdontogramPage', () => {
   let fixture: ComponentFixture<OdontogramPage>;
   let repo: MockOdontogramRepository;
+  let teethRepo: MockToothConditionsRepository;
   let params: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let routeStub: { paramMap: unknown; snapshot: { queryParamMap: ReturnType<typeof convertToParamMap> } };
 
@@ -37,9 +42,12 @@ describe('OdontogramPage', () => {
         provideRouter([]),
         { provide: ActivatedRoute, useValue: routeStub },
         { provide: ODONTOGRAM_REPOSITORY, useClass: MockOdontogramRepository },
+        { provide: DENTAL_CONDITIONS_REPOSITORY, useClass: MockDentalConditionsRepository },
+        { provide: TOOTH_CONDITIONS_REPOSITORY, useClass: MockToothConditionsRepository },
       ],
     });
     repo = TestBed.inject(ODONTOGRAM_REPOSITORY) as MockOdontogramRepository;
+    teethRepo = TestBed.inject(TOOTH_CONDITIONS_REPOSITORY) as MockToothConditionsRepository;
   });
 
   it('muestra paciente, dentición, "Actual" y la fecha del snapshot', async () => {
@@ -166,5 +174,119 @@ describe('OdontogramPage', () => {
     expect(page.createOpen()).toBe(false);
     expect(q('module-disabled')?.textContent).toContain(ODONTOGRAM_DISABLED_MESSAGE);
     expect(q('new-odontogram')).toBeNull();
+  });
+
+  // ── T5: marcar pieza (condiciones por pieza, repositorio mock) ─────────────────────────────────
+  const fill = (testId: string) => q(testId)!.getAttribute('fill');
+
+  function choose(testId: string, value: string): void {
+    const select = q(testId) as HTMLSelectElement;
+    select.value = value;
+    select.dispatchEvent(new Event('change'));
+  }
+
+  it('la grilla pinta las condiciones ya marcadas con el default_color del catálogo', async () => {
+    await render('pat-1');
+    expect(fill('face-16-center')).toBe('#E53935'); // caries oclusal
+    expect(fill('face-16-top')).toBe('none');
+    expect(fill('face-36-top')).toBe('#FBC02D'); // corona, pieza completa
+    expect(fill('face-36-center')).toBe('#FBC02D');
+  });
+
+  it('el panel de la pieza (slot toothActions) lista sus condiciones', async () => {
+    await render('pat-1');
+    q('tooth-36')!.click();
+    fixture.detectChanges();
+    const panel = q('selected-tooth-panel')!;
+    expect(panel.querySelector('[data-testid="tooth-conditions-panel"]')).not.toBeNull();
+    expect(q('tooth-condition-tc-2')!.textContent).toContain('Corona');
+    expect(q('tooth-condition-tc-2')!.textContent).toContain('Corona de porcelana');
+    expect(q('tooth-condition-tc-1')).toBeNull(); // es de la 16
+  });
+
+  it('marcar: agrega al listado y repinta la grilla sin recargar', async () => {
+    await render('pat-1');
+    const list = vi.spyOn(teethRepo, 'list');
+    q('tooth-11')!.click();
+    fixture.detectChanges();
+    expect(q('tooth-condition-empty')).not.toBeNull();
+
+    choose('condition-select', 'dc-own-1');
+    choose('state-select', 'planificado');
+    q('tooth-condition-submit')!.click();
+    fixture.detectChanges();
+
+    expect(q('tooth-condition-empty')).toBeNull();
+    expect(q('tooth-condition-list')!.textContent).toContain('Sellante');
+    expect(q('tooth-condition-list')!.textContent).toContain('Planificado');
+    expect(fill('face-11-top')).toBe('#00ACC1');
+    expect(list).not.toHaveBeenCalled();
+    expect(await firstValueFrom(teethRepo.list('odo-2'))).toContainEqual(
+      expect.objectContaining({ tooth_fdi: 11, condition_id: 'dc-own-1', surface: 'whole', state: 'planificado' }));
+  });
+
+  it('click en una cara: selecciona la pieza y preselecciona esa cara en el formulario', async () => {
+    await render('pat-1');
+    q('face-21-left')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    expect(q('selected-tooth-number')?.textContent).toContain('21');
+    expect((q('surface-select') as HTMLSelectElement).value).toBe('mesial');
+
+    choose('condition-select', 'dc-1');
+    q('tooth-condition-submit')!.click();
+    fixture.detectChanges();
+    expect(fill('face-21-left')).toBe('#E53935');
+    expect(fill('face-21-right')).toBe('none');
+  });
+
+  it('editar desde el listado: cambia la condición y la grilla toma el nuevo color', async () => {
+    await render('pat-1');
+    q('tooth-36')!.click();
+    fixture.detectChanges();
+    (q('tooth-condition-tc-2')!.querySelector('[data-testid="edit"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect((q('condition-select') as HTMLSelectElement).value).toBe('dc-3');
+
+    choose('condition-select', 'dc-2');
+    q('tooth-condition-submit')!.click();
+    fixture.detectChanges();
+    expect(q('tooth-condition-tc-2')!.textContent).toContain('Obturación');
+    expect(fill('face-36-top')).toBe('#1E88E5');
+  });
+
+  it('eliminar desde el listado (con confirmación): la quita y despinta la pieza', async () => {
+    await render('pat-1');
+    q('tooth-46')!.click();
+    fixture.detectChanges();
+    expect(fill('face-46-top')).toBe('#757575');
+    q('remove')!.click();
+    fixture.detectChanges();
+    q('remove-confirm')!.click();
+    fixture.detectChanges();
+    expect(q('tooth-condition-empty')).not.toBeNull();
+    expect(fill('face-46-top')).toBe('none');
+  });
+
+  it('mixta: permite marcar piezas temporales', async () => {
+    await render('pat-3');
+    q('tooth-85')!.click();
+    fixture.detectChanges();
+    expect(q('fdi-error')).toBeNull();
+    choose('condition-select', 'dc-1');
+    q('tooth-condition-submit')!.click();
+    fixture.detectChanges();
+    expect(fill('face-85-center')).toBe('#E53935');
+  });
+
+  it('error al marcar (módulo apagado): avisa en el panel y no cambia la grilla', async () => {
+    await render('pat-1');
+    q('tooth-11')!.click();
+    fixture.detectChanges();
+    teethRepo.setOdontogramEnabled(false);
+    choose('condition-select', 'dc-1');
+    q('tooth-condition-submit')!.click();
+    fixture.detectChanges();
+    expect(q('tooth-conditions-error')?.textContent).toContain(ODONTOGRAM_DISABLED_MESSAGE);
+    expect(fill('face-11-top')).toBe('none');
   });
 });

@@ -44,6 +44,9 @@ export const ODONTOGRAM_PATIENT_NOT_FOUND_MESSAGE = 'El paciente no existe o ya 
 export const ODONTOGRAM_NOT_FOUND_MESSAGE = 'El odontograma no existe o ya no está disponible.';
 export const ODONTOGRAM_VALIDATION_MESSAGE = 'Revisá los datos ingresados e intentá de nuevo.';
 export const ODONTOGRAM_LOAD_ERROR_MESSAGE = 'No se pudo cargar el odontograma.';
+export const TOOTH_CONDITION_NOT_FOUND_MESSAGE = 'La condición marcada ya no existe. Se recargó la pieza.';
+export const TOOTH_CONDITION_WRITE_FORBIDDEN_MESSAGE =
+  'Solo un profesional activo puede marcar condiciones en el odontograma.';
 export const ODONTOGRAM_SESSION_EXPIRED_MESSAGE = 'Tu sesión expiró. Iniciá sesión de nuevo.';
 
 type KnownMessage = { pattern: RegExp; translate: () => string };
@@ -54,6 +57,7 @@ const NOT_FOUND_MESSAGES: KnownMessage[] = [
   { pattern: /^ClinicalRecord with id '.*' was not found\.?$/i,
     translate: () => 'No se encontró la historia clínica del paciente.' },
   { pattern: /^Encounter with id '.*' was not found\.?$/i, translate: () => 'El encuentro indicado no existe.' },
+  { pattern: /^ToothCondition with id '.*' was not found\.?$/i, translate: () => TOOTH_CONDITION_NOT_FOUND_MESSAGE },
 ];
 
 // OdontogramService / Odontogram.Create.
@@ -66,6 +70,12 @@ const VALIDATION_MESSAGES: KnownMessage[] = [
     translate: () => 'El encuentro indicado no corresponde a este paciente.' },
   { pattern: /^dentition must be one of: permanente, temporal, mixta\.?$/i,
     translate: () => 'La dentición debe ser permanente, temporal o mixta.' },
+  // Condiciones por pieza (/tenants/odontograms/{id}/teeth).
+  { pattern: /^Tooth \d+ is not valid for dentition '.*'\.?$/i,
+    translate: () => 'La pieza no corresponde a la dentición del odontograma.' },
+  { pattern: /^condition_id (is required|cannot be empty)\.?$/i, translate: () => 'Elegí una condición del catálogo.' },
+  { pattern: /^surface must be one of: .*$/i, translate: () => 'La cara elegida no es válida.' },
+  { pattern: /^state must be one of: .*$/i, translate: () => 'El estado elegido no es válido.' },
 ];
 
 function detailOf(err: HttpErrorResponse): string {

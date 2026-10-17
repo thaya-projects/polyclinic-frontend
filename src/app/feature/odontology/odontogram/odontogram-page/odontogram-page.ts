@@ -3,19 +3,27 @@ import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subject, catchError, of, switchMap, throwError } from 'rxjs';
-import { OdontogramChart } from '../odontogram-chart/odontogram-chart';
+import { OdontogramChart, ToothFaceSelection } from '../odontogram-chart/odontogram-chart';
 import { SelectedToothPanel } from '../selected-tooth-panel/selected-tooth-panel';
 import { PatientPicker } from '../patient-picker/patient-picker';
+import { ToothConditionsPanel } from '../tooth-conditions-panel/tooth-conditions-panel';
 import { StatusChip } from '../../../../shared/components/status-chip/status-chip';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { ODONTOGRAM_REPOSITORY } from '../../../../core/services/odontogram-repository';
+import { TOOTH_CONDITIONS_REPOSITORY } from '../../../../core/services/tooth-conditions-repository';
+import { DENTAL_CONDITIONS_REPOSITORY } from '../../../../core/services/dental-conditions-repository';
+import { DentalCondition } from '../../../../core/models/dental-condition.model';
+import { ToothCondition, ToothSurface, buildOdontogramPaint } from '../../../../core/models/tooth-condition.model';
 import {
   DENTITION_OPTIONS, Dentition, Odontogram, OdontogramPatientOption, dentitionLabel,
 } from '../../../../core/models/odontogram.model';
 import {
   ODONTOGRAM_LOAD_ERROR_MESSAGE, OdontogramError, odontogramError,
 } from '../../../../shared/utils/odontogram-error.util';
+
+const TEETH_LOAD_ERROR_MESSAGE = 'No se pudieron cargar las condiciones marcadas del odontograma.';
+const CATALOG_LOAD_ERROR_MESSAGE = 'No se pudo cargar el catálogo de condiciones dentales.';
 
 const NO_CLINICAL_RECORD_MESSAGE =
   'No se pudo obtener la historia clínica del paciente. Completala desde la ficha del paciente e intentá de nuevo.';
@@ -32,14 +40,23 @@ const NO_CLINICAL_RECORD_MESSAGE =
 //   404 sin current → estado vacío con CTA "Crear odontograma".
 //   403 módulo apagado → estado bloqueado (también si se apaga con el modal abierto).
 //   409 (carrera del current) → cierra el modal, avisa y recarga.
+//
+// T5 "marcar pieza": con el odontograma cargado se piden sus condiciones marcadas
+// (TOOTH_CONDITIONS_REPOSITORY) y el catálogo dental (DENTAL_CONDITIONS_REPOSITORY, globales + propias).
+// La página es dueña de esa lista: el panel de la pieza (ToothConditionsPanel, en el slot
+// [toothActions]) hace las altas / ediciones / bajas y emite el resultado; la grilla se repinta con el
+// default_color de cada condición sin recargar. Click en una cara de la grilla → pieza + cara
+// preseleccionada en el formulario.
 @Component({
   selector: 'app-odontogram-page',
-  imports: [OdontogramChart, SelectedToothPanel, PatientPicker, StatusChip, Modal, RouterLink],
+  imports: [OdontogramChart, SelectedToothPanel, ToothConditionsPanel, PatientPicker, StatusChip, Modal, RouterLink],
   templateUrl: './odontogram-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OdontogramPage {
   private repo = inject(ODONTOGRAM_REPOSITORY);
+  private teethRepo = inject(TOOTH_CONDITIONS_REPOSITORY);
+  private catalogRepo = inject(DENTAL_CONDITIONS_REPOSITORY);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
@@ -60,6 +77,17 @@ export class OdontogramPage {
   readonly noCurrent = signal(false);
 
   readonly selectedTooth = signal<number | null>(null);
+  // Cara elegida en la grilla (preselecciona la surface del formulario). null = pieza completa.
+  readonly selectedSurface = signal<ToothSurface | null>(null);
+
+  // Condiciones marcadas del odontograma y catálogo dental (para el selector y los colores).
+  readonly teeth = signal<ToothCondition[]>([]);
+  readonly catalog = signal<DentalCondition[]>([]);
+  readonly teethError = signal<string | null>(null);
+  readonly paint = computed(() => {
+    const colors = new Map(this.catalog().map(c => [c.id, c.default_color]));
+    return buildOdontogramPaint(this.teeth(), id => colors.get(id));
+  });
 
   // Alta de odontograma nuevo.
   readonly dentitionOptions = DENTITION_OPTIONS;
@@ -97,7 +125,7 @@ export class OdontogramPage {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       this.patientId.set(params.get('patientId'));
       this.encounterId.set(this.route.snapshot.queryParamMap.get('encounter_id'));
-      this.selectedTooth.set(null);
+      this.clearSelection();
       this.notice.set(null);
       this.closeCreate();
       if (this.patientId()) this.load();
@@ -123,10 +151,12 @@ export class OdontogramPage {
         if (this.patientId() !== patientId) return;
         this.odontogram.set(odontogram);
         this.loading.set(false);
+        this.reloadMarks();
       },
       error: (err: unknown) => {
         if (this.patientId() !== patientId) return;
         this.odontogram.set(null);
+        this.teeth.set([]);
         this.loading.set(false);
         const error = this.classify(err, ODONTOGRAM_LOAD_ERROR_MESSAGE, 'read');
         if (error.kind === 'no_current') {
@@ -137,6 +167,49 @@ export class OdontogramPage {
         this.loadError.set(error.message);
       },
     });
+  }
+
+  // Condiciones marcadas del odontograma mostrado. Un error no bloquea la grilla: se avisa aparte.
+  loadTeeth(): void {
+    const odontogram = this.odontogram();
+    if (!odontogram) return;
+    this.teethError.set(null);
+    this.teethRepo.list(odontogram.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => { if (this.odontogram()?.id === odontogram.id) this.teeth.set(list); },
+      error: (err: unknown) => {
+        if (this.odontogram()?.id !== odontogram.id) return;
+        this.teeth.set([]);
+        this.teethError.set(this.classify(err, TEETH_LOAD_ERROR_MESSAGE, 'read').message);
+      },
+    });
+  }
+
+  // Reintento desde el aviso: condiciones marcadas y catálogo.
+  reloadMarks(): void {
+    this.loadTeeth();
+    this.loadCatalog();
+  }
+
+  private loadCatalog(): void {
+    this.catalogRepo.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => this.catalog.set(list),
+      error: (err: unknown) => {
+        this.catalog.set([]);
+        this.teethError.set(this.classify(err, CATALOG_LOAD_ERROR_MESSAGE, 'read').message);
+      },
+    });
+  }
+
+  onToothConditionAdded(item: ToothCondition): void {
+    this.teeth.update(list => [...list, item]);
+  }
+
+  onToothConditionUpdated(item: ToothCondition): void {
+    this.teeth.update(list => list.map(i => (i.id === item.id ? item : i)));
+  }
+
+  onToothConditionRemoved(id: string): void {
+    this.teeth.update(list => list.filter(i => i.id !== id));
   }
 
   searchPatients(q: string): void {
@@ -153,10 +226,22 @@ export class OdontogramPage {
   selectTooth(fdi: number): void {
     // Click sobre la pieza ya seleccionada la deselecciona.
     this.selectedTooth.update(current => (current === fdi ? null : fdi));
+    this.selectedSurface.set(null);
+  }
+
+  // Click en una cara: selecciona la pieza con esa cara; repetir la misma cara deselecciona.
+  selectFace({ fdi, surface }: ToothFaceSelection): void {
+    if (this.selectedTooth() === fdi && this.selectedSurface() === surface) {
+      this.clearSelection();
+      return;
+    }
+    this.selectedTooth.set(fdi);
+    this.selectedSurface.set(surface);
   }
 
   clearSelection(): void {
     this.selectedTooth.set(null);
+    this.selectedSurface.set(null);
   }
 
   openCreate(): void {
@@ -195,7 +280,7 @@ export class OdontogramPage {
       next: () => {
         this.creating.set(false);
         this.closeCreate();
-        this.selectedTooth.set(null);
+        this.clearSelection();
         if (previous?.is_current) {
           this.notice.set(`El odontograma anterior quedó como histórico del ${this.formatDate(previous.snapshot_date)}.`);
         }
