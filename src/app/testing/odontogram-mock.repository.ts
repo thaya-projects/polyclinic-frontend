@@ -6,6 +6,7 @@ import {
   CreateOdontogramDto, Dentition, Odontogram, OdontogramPatientOption,
 } from '../core/models/odontogram.model';
 import { argumentError } from './cie10-mock.catalog';
+import { moduleDisabledError } from './module-problem';
 
 export const MOCK_ODONTOGRAM_PATIENTS: OdontogramPatientOption[] = [
   { id: 'pat-1', name: 'Ana Gómez', label: 'Ana Gómez — 30111222' },
@@ -28,6 +29,11 @@ function seed(): Odontogram[] {
   ];
 }
 
+export interface MockOdontogramEncounter {
+  clinical_record_id: string;
+  status: 'open' | 'signed' | 'voided';
+}
+
 const DENTITIONS: readonly Dentition[] = ['permanente', 'temporal', 'mixta'];
 
 function httpError(status: number, detail: string): Observable<never> {
@@ -38,10 +44,12 @@ function httpError(status: number, detail: string): Observable<never> {
 //   getCurrent: paciente inexistente → 404 Patient; sin current → 404 "has no current odontogram".
 //   getById: inexistente → 404.
 //   create: 404 patient → 422 clinical_record_id faltante → 404 clinical record → 422 de otro
-//           paciente → dentition inválida 422 → desplaza el current (is_current = false) y crea el
-//           nuevo current con snapshot_date = ahora. dentition ausente = permanente.
-//   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 sin body, como
-//   OdontogramFeatureGuardMiddleware.
+//           paciente → encounter registrado (registerEncounter): 422 de otra historia clínica →
+//           409 firmado / anulado → dentition inválida 422 → desplaza el current (is_current = false)
+//           y crea el nuevo current con snapshot_date = ahora. dentition ausente = permanente.
+//           Un encounter_id no registrado se acepta (abierto, de la misma historia clínica).
+//   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 ProblemDetails de
+//   ModuleDisabledException (code "module_disabled").
 //   simulateCurrentConflict(): el próximo create → 409 (otro request ganó la carrera del current).
 // Sin delays (los tests no necesitan timers falsos).
 @Injectable()
@@ -50,10 +58,16 @@ export class MockOdontogramRepository implements OdontogramRepository {
   private nextId = 100;
   private moduleEnabled = true;
   private conflictNext = false;
+  private encounters = new Map<string, MockOdontogramEncounter>();
 
   // Helper para tests/demo: prende o apaga el módulo "odontogram" del tenant.
   setOdontogramEnabled(enabled: boolean): void {
     this.moduleEnabled = enabled;
+  }
+
+  // Helper para tests/demo: registra un encounter con su historia clínica y estado.
+  registerEncounter(id: string, encounter: MockOdontogramEncounter): void {
+    this.encounters.set(id, encounter);
   }
 
   simulateCurrentConflict(): void {
@@ -88,6 +102,16 @@ export class MockOdontogramRepository implements OdontogramRepository {
     }
     if (recordPatient !== patientId) {
       return httpError(422, `Clinical record '${recordId}' does not belong to patient '${patientId}'.`);
+    }
+    const encounter = dto.encounter_id ? this.encounters.get(dto.encounter_id) : undefined;
+    if (dto.encounter_id && encounter) {
+      if (encounter.clinical_record_id !== recordId) {
+        return httpError(422,
+          `Encounter '${dto.encounter_id}' does not belong to clinical record '${recordId}'.`);
+      }
+      if (encounter.status !== 'open') {
+        return httpError(409, `Cannot attach odontograms to an encounter with status '${encounter.status}'.`);
+      }
     }
     const dentition = dto.dentition ?? 'permanente';
     if (!DENTITIONS.includes(dentition)) {
@@ -133,7 +157,7 @@ function patientNotFound(id: string): Observable<never> {
   return httpError(404, `Patient with id '${id}' was not found.`);
 }
 
-// El middleware corta antes de ExceptionHandlingMiddleware: 403 sin ProblemDetails.
+// Módulo apagado: 403 ProblemDetails real de ModuleDisabledException (code module_disabled).
 function moduleDisabled(): Observable<never> {
-  return throwError(() => new HttpErrorResponse({ status: 403, error: null }));
+  return moduleDisabledError();
 }

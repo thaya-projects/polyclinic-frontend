@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
+import { moduleDisabledError } from './module-problem';
 import type { ToothConditionsRepository } from '../core/services/tooth-conditions-repository';
 import { Dentition } from '../core/models/odontogram.model';
 import {
@@ -43,7 +44,8 @@ function httpError(status: number, detail: string): Observable<never> {
 //   update: 404 (inexistente o de otro odontograma) → PATCH parcial; note null = quitar. tooth_fdi inmutable.
 //   remove: 404 → borra.
 //   markHistoric(id): create / update / remove en ese odontograma → 409 (odontograma histórico).
-//   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 sin body.
+//   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 ProblemDetails de
+//   ModuleDisabledException (code "module_disabled").
 // La dentición se conoce para los odontogramas sembrados y los registrados con registerOdontogram();
 // para un id desconocido (p. ej. uno real del backend en la demo) se acepta cualquier FDI válido
 // (mixta). El front valida igual la dentición antes de llamar.
@@ -146,7 +148,8 @@ function notFound(id: string): Observable<never> {
 }
 
 function historic(odontogramId: string): Observable<never> {
-  return httpError(409, `Odontogram '${odontogramId}' is not current; tooth conditions can only be changed on the current odontogram.`);
+  return httpError(409,
+    `Odontogram '${odontogramId}' is a historical snapshot (not current); its tooth conditions cannot be changed.`);
 }
 
 function invalidSurface(): Observable<never> {
@@ -162,7 +165,7 @@ function normalizeNote(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-// El middleware corta antes de ExceptionHandlingMiddleware: 403 sin ProblemDetails.
+// Módulo apagado: 403 ProblemDetails real de ModuleDisabledException (code module_disabled).
 function moduleDisabled(): Observable<never> {
-  return throwError(() => new HttpErrorResponse({ status: 403, error: null }));
+  return moduleDisabledError();
 }

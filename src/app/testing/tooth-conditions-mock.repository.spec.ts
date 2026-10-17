@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { MOCK_TOOTH_CONDITION_USER_ID, MockToothConditionsRepository } from './tooth-conditions-mock.repository';
 import { ToothSurface } from '../core/models/tooth-condition.model';
+import { moduleDisabledProblem } from './module-problem';
 
 async function errorOf(p: Promise<unknown>): Promise<HttpErrorResponse> {
   try {
@@ -86,7 +87,7 @@ describe('MockToothConditionsRepository', () => {
     expect((await firstValueFrom(repo.list('odo-2'))).map(i => i.id)).toEqual(['tc-2', 'tc-3']);
   });
 
-  it('módulo odontogram apagado: toda llamada → 403 sin body', async () => {
+  it('módulo odontogram apagado: toda llamada → 403 ProblemDetails de ModuleDisabledException', async () => {
     repo.setOdontogramEnabled(false);
     expect(repo.odontogramEnabled()).toBe(false);
     const calls: Observable<unknown>[] = [
@@ -96,7 +97,9 @@ describe('MockToothConditionsRepository', () => {
     for (const call of calls) {
       const err = await errorOf(firstValueFrom(call));
       expect(err.status).toBe(403);
-      expect(err.error).toBeNull();
+      expect(err.error).toEqual(moduleDisabledProblem());
+      expect(err.error.code).toBe('module_disabled');
+      expect(err.error.detail).toBe('The odontogram module is not enabled for this tenant.');
     }
   });
 
@@ -107,7 +110,10 @@ describe('MockToothConditionsRepository', () => {
       repo.update('odo-2', 'tc-1', { state: 'realizado' }),
       repo.remove('odo-2', 'tc-1'),
     ]) {
-      expect((await errorOf(firstValueFrom(call as Observable<unknown>))).status).toBe(409);
+      const err = await errorOf(firstValueFrom(call as Observable<unknown>));
+      expect(err.status).toBe(409);
+      expect(err.error.detail)
+        .toBe("Odontogram 'odo-2' is a historical snapshot (not current); its tooth conditions cannot be changed.");
     }
     await expect(firstValueFrom(repo.list('odo-2'))).resolves.toHaveLength(3);
   });

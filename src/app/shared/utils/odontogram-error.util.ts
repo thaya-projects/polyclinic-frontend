@@ -1,6 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { normalizeBackendMessage } from './encounters-error.util';
-import { ODONTOGRAM_DISABLED_MESSAGE, hasProblemDetail, isModuleDisabledProblem } from './module-disabled.util';
+import {
+  ODONTOGRAM_DISABLED_MESSAGE, ODONTOGRAM_MODULE_KEY, hasProblemDetail, isModuleDisabledProblem,
+} from './module-disabled.util';
 
 export { ODONTOGRAM_DISABLED_MESSAGE } from './module-disabled.util';
 
@@ -12,23 +14,27 @@ export { ODONTOGRAM_DISABLED_MESSAGE } from './module-disabled.util';
 //   - "Patient '...' has no current odontogram." → `no_current`: no es un error, es el estado vacío.
 //   - Patient / Odontogram / ClinicalRecord / Encounter "with id '...' was not found." → `not_found`.
 //
-// 403 tiene tres causas:
-//   - módulo "odontogram" apagado → ProblemDetails de ModuleDisabledException (o, antes de ese cambio
-//     del backend, sin body desde OdontogramFeatureGuardMiddleware).
+// 403 tiene cuatro causas:
+//   - módulo "odontogram" apagado → ProblemDetails de ModuleDisabledException: code "module_disabled",
+//     module "odontogram", detail "The odontogram module is not enabled for this tenant.".
+//   - sin tenant / usuario inactivo → ProblemDetails de ModuleRequiresTenantUserException ("The
+//     odontogram module is only available to active users of a tenant.", sin code) → forbidden.
 //   - sin ClinicalRead / ClinicalWrite (policy) → sin body.
 //   - ForbiddenException del dominio → ProblemDetails con otro detail.
 // Si el body identifica el módulo apagado, manda; si trae otro ProblemDetails, es falta de permiso;
 // sin body se usa el estado del módulo conocido por la sesión (`odontogramEnabled`): en lecturas un
-// 403 sin body con estado desconocido se atribuye al módulo (igual que el catálogo dental). El
-// ProblemDetails real es "El módulo de odontología no está habilitado para este tenant.".
+// 403 sin body con estado desconocido se atribuye al módulo (igual que el catálogo dental).
 //
 // 409 depende del recurso:
-//   - odontograma (alta) → `conflict`: otro request dejó un current nuevo (carrera).
-//   - condiciones por pieza (/tenants/odontograms/{id}/teeth) → `historic`: se intentó escribir en un
-//     odontograma que ya no es el current (is_current = false).
+//   - odontograma (alta):
+//       "Cannot attach odontograms to an encounter with status 'signed'|'voided'." → `encounter_closed`.
+//       cualquier otro (OdontogramCurrentConflictException: otro request dejó un current nuevo) → `conflict`.
+//   - condiciones por pieza (/tenants/odontograms/{id}/teeth; orden backend 404 → 409 → 422):
+//       "Odontogram '...' is a historical snapshot (not current); ..." → `historic`.
+//       cualquier otro 409 → `conflict` genérico (se recarga la pieza).
 export type OdontogramErrorKind =
   | 'unauthorized' | 'feature_disabled' | 'forbidden' | 'no_current' | 'not_found' | 'conflict' | 'historic'
-  | 'validation' | 'other';
+  | 'encounter_closed' | 'validation' | 'other';
 
 export interface OdontogramErrorContext {
   operation?: 'read' | 'write';
@@ -56,6 +62,11 @@ export const TOOTH_CONDITION_NOT_FOUND_MESSAGE = 'La condición marcada ya no ex
 export const TOOTH_CONDITION_WRITE_FORBIDDEN_MESSAGE =
   'Solo un profesional activo puede marcar condiciones en el odontograma.';
 export const TOOTH_CONDITION_HISTORIC_MESSAGE = 'Este odontograma es histórico; creá uno nuevo o volvé al actual';
+export const TOOTH_CONDITION_CONFLICT_MESSAGE =
+  'Otro cambio se cruzó con esta operación. Se recargó la pieza; intentá de nuevo.';
+export const ODONTOGRAM_ENCOUNTER_SIGNED_MESSAGE = 'El encuentro está firmado; no se puede asociar el odontograma.';
+export const ODONTOGRAM_ENCOUNTER_VOIDED_MESSAGE = 'El encuentro está anulado; no se puede asociar el odontograma.';
+export const ODONTOGRAM_ENCOUNTER_CLOSED_MESSAGE = 'El encuentro ya no está abierto; no se puede asociar el odontograma.';
 export const ODONTOGRAM_SESSION_EXPIRED_MESSAGE = 'Tu sesión expiró. Iniciá sesión de nuevo.';
 
 type KnownMessage = { pattern: RegExp; translate: (match: RegExpMatchArray) => string };
@@ -78,6 +89,9 @@ const VALIDATION_MESSAGES: KnownMessage[] = [
     translate: () => 'La historia clínica no corresponde a este paciente.' },
   { pattern: /^Encounter '.*' does not belong to patient '.*'\.?$/i,
     translate: () => 'El encuentro indicado no corresponde a este paciente.' },
+  // OdontogramEncounterClinicalRecordMismatchException.
+  { pattern: /^Encounter '.*' does not belong to clinical record '.*'\.?$/i,
+    translate: () => 'El encuentro indicado no corresponde a la historia clínica del paciente.' },
   { pattern: /^dentition must be one of: permanente, temporal, mixta\.?$/i,
     translate: () => 'La dentición debe ser permanente, temporal o mixta.' },
   // Condiciones por pieza (/tenants/odontograms/{id}/teeth): ToothFdi, ToothCondition,
@@ -113,7 +127,7 @@ function forbiddenError(err: HttpErrorResponse, context: OdontogramErrorContext)
   const forbidden: OdontogramError = context.operation === 'write'
     ? { kind: 'forbidden', message: ODONTOGRAM_WRITE_FORBIDDEN_MESSAGE }
     : { kind: 'forbidden', message: ODONTOGRAM_READ_FORBIDDEN_MESSAGE };
-  if (isModuleDisabledProblem(err.error)) return { kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE };
+  if (isModuleDisabledProblem(err.error, ODONTOGRAM_MODULE_KEY)) return { kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE };
   if (hasProblemDetail(err.error)) return forbidden;
   const enabled = context.odontogramEnabled ?? null;
   if (enabled === false || (context.operation !== 'write' && enabled === null)) {
@@ -128,6 +142,26 @@ function notFoundError(err: HttpErrorResponse): OdontogramError {
   return { kind: 'not_found', message: translate(detail, NOT_FOUND_MESSAGES) ?? ODONTOGRAM_NOT_FOUND_MESSAGE };
 }
 
+const HISTORIC_DETAIL = /\bhistorical snapshot\b|\bnot current\b/i;
+const ENCOUNTER_CLOSED_DETAIL = /^Cannot attach odontograms to an encounter with status '([a-z_]+)'\.?$/i;
+
+function conflictError(err: HttpErrorResponse, context: OdontogramErrorContext): OdontogramError {
+  const detail = detailOf(err);
+  if (context.resource === 'tooth_condition') {
+    return HISTORIC_DETAIL.test(detail)
+      ? { kind: 'historic', message: TOOTH_CONDITION_HISTORIC_MESSAGE }
+      : { kind: 'conflict', message: TOOTH_CONDITION_CONFLICT_MESSAGE };
+  }
+  const closed = detail.match(ENCOUNTER_CLOSED_DETAIL);
+  if (closed) {
+    const status = closed[1].toLowerCase();
+    const message = status === 'signed' ? ODONTOGRAM_ENCOUNTER_SIGNED_MESSAGE
+      : status === 'voided' ? ODONTOGRAM_ENCOUNTER_VOIDED_MESSAGE : ODONTOGRAM_ENCOUNTER_CLOSED_MESSAGE;
+    return { kind: 'encounter_closed', message };
+  }
+  return { kind: 'conflict', message: ODONTOGRAM_CONFLICT_MESSAGE };
+}
+
 export function odontogramError(
   err: unknown,
   fallback = 'No se pudo completar la operación.',
@@ -138,9 +172,7 @@ export function odontogramError(
     case 401: return { kind: 'unauthorized', message: ODONTOGRAM_SESSION_EXPIRED_MESSAGE };
     case 403: return forbiddenError(err, context);
     case 404: return notFoundError(err);
-    case 409: return context.resource === 'tooth_condition'
-      ? { kind: 'historic', message: TOOTH_CONDITION_HISTORIC_MESSAGE }
-      : { kind: 'conflict', message: ODONTOGRAM_CONFLICT_MESSAGE };
+    case 409: return conflictError(err, context);
     case 422: return {
       kind: 'validation', message: translate(detailOf(err), VALIDATION_MESSAGES) ?? ODONTOGRAM_VALIDATION_MESSAGE,
     };

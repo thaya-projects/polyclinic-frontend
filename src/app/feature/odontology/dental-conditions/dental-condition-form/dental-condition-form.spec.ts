@@ -48,6 +48,40 @@ describe('DentalConditionForm', () => {
     expect(created).toEqual([]);
   });
 
+  it('alta: name > 100 o category > 50 (recortados) no emite y muestra el máximo', () => {
+    render();
+    form.form.setValue({ code: 'ok', name: 'n'.repeat(101), category: '', default_color: '' });
+    form.submit();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Máximo 100 caracteres.');
+    form.form.setValue({ code: 'ok', name: 'X', category: 'c'.repeat(51), default_color: '' });
+    form.submit();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Máximo 50 caracteres.');
+    expect(created).toEqual([]);
+  });
+
+  it('alta: name de 100 y category de 50 (con espacios alrededor) son válidos', () => {
+    render();
+    form.form.setValue({ code: 'ok', name: ` ${'n'.repeat(100)} `, category: ` ${'c'.repeat(50)} `, default_color: '' });
+    form.submit();
+    expect(created).toEqual([{ code: 'ok', name: 'n'.repeat(100), category: 'c'.repeat(50) }]);
+  });
+
+  it('inputs con maxlength de name 100 y category 50', () => {
+    render();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('#dental-condition-name')?.getAttribute('maxlength')).toBe('100');
+    expect(el.querySelector('#dental-condition-category')?.getAttribute('maxlength')).toBe('50');
+  });
+
+  it('edición: name > 100 no emite', () => {
+    render(OWN);
+    form.form.patchValue({ name: 'n'.repeat(101) });
+    form.submit();
+    expect(saved).toEqual([]);
+  });
+
   it('alta: emite sin tenant_id ni campos vacíos; color en mayúsculas', () => {
     render();
     form.form.setValue({ code: ' fractura ', name: ' Fractura ', category: '', default_color: '#ab12cd' });

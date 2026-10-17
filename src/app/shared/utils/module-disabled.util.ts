@@ -1,14 +1,18 @@
 // Fase 6: detección del 403 "módulo apagado" (feature flag por tenant).
 //
-// Hoy OdontogramFeatureGuardMiddleware corta con 403 SIN body, indistinguible del 403 de una policy
-// sin permiso; el backend va a pasar a responder ProblemDetails (ModuleDisabledException). Para no
-// depender del texto exacto se acepta cualquiera de estas señales en el body:
-//   - `type` / `code` / `error_code` que contengan "module_disabled" / "module-disabled" / "ModuleDisabled".
-//   - `title` o `detail` que hablen de un módulo deshabilitado / no habilitado ("Module 'odontogram' is
-//     disabled ...", "... module is not enabled for this tenant", "Módulo no habilitado").
+// El backend responde ProblemDetails de ModuleDisabledException con un código estable:
+//   { "status": 403, "detail": "The odontogram module is not enabled for this tenant.",
+//     "code": "module_disabled", "module": "odontogram", ... }
+// Se detecta primero por `code === "module_disabled"` (y `module`, si quien llama indica cuál espera).
+// Como respaldo se aceptan otras señales en el body (`type` / `code` / `error_code` tipo
+// "module-disabled", o `title` / `detail` que hablen de un módulo deshabilitado / no habilitado).
+// El 403 de ModuleRequiresTenantUserException ("The odontogram module is only available to active
+// users of a tenant.", sin code) NO es módulo apagado: es falta de acceso del usuario.
 // Si el body no trae nada de eso, quien llama cae al respaldo de siempre: el estado del módulo que
 // conoce la sesión (FeaturesService / repo.odontogramEnabled()).
 
+export const MODULE_DISABLED_CODE_VALUE = 'module_disabled';
+export const ODONTOGRAM_MODULE_KEY = 'odontogram';
 const MODULE_DISABLED_CODE = /module[_-]?disabled/i;
 const MODULE_DISABLED_TEXT = [
   /\bmodule\b.*\b(disabled|not enabled)\b/i,
@@ -23,9 +27,13 @@ function str(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-export function isModuleDisabledProblem(body: unknown): boolean {
+export function isModuleDisabledProblem(body: unknown, module?: string): boolean {
   if (!body || typeof body !== 'object') return false;
   const problem = body as Record<string, unknown>;
+  if (problem['code'] === MODULE_DISABLED_CODE_VALUE) {
+    const reported = problem['module'];
+    return !module || typeof reported !== 'string' || reported === module;
+  }
   if ([problem['type'], problem['code'], problem['error_code']].some(v => MODULE_DISABLED_CODE.test(str(v)))) {
     return true;
   }

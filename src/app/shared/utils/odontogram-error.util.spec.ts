@@ -3,8 +3,10 @@ import {
   ODONTOGRAM_CONFLICT_MESSAGE, ODONTOGRAM_DISABLED_MESSAGE, ODONTOGRAM_NO_CURRENT_MESSAGE,
   ODONTOGRAM_PATIENT_NOT_FOUND_MESSAGE, ODONTOGRAM_READ_FORBIDDEN_MESSAGE, ODONTOGRAM_VALIDATION_MESSAGE,
   ODONTOGRAM_NOT_FOUND_MESSAGE, ODONTOGRAM_WRITE_FORBIDDEN_MESSAGE, TOOTH_CONDITION_HISTORIC_MESSAGE,
-  TOOTH_CONDITION_NOT_FOUND_MESSAGE, odontogramError,
+  TOOTH_CONDITION_NOT_FOUND_MESSAGE, TOOTH_CONDITION_CONFLICT_MESSAGE, ODONTOGRAM_ENCOUNTER_SIGNED_MESSAGE,
+  ODONTOGRAM_ENCOUNTER_VOIDED_MESSAGE, odontogramError,
 } from './odontogram-error.util';
+import { moduleDisabledProblem, moduleRequiresTenantUserProblem } from '../../testing/module-problem';
 
 const httpErr = (status: number, error: unknown = null) => new HttpErrorResponse({ status, error });
 
@@ -21,6 +23,20 @@ describe('odontogramError', () => {
       .toBe('No se encontró la historia clínica del paciente.');
     expect(odontogramError(httpErr(404, { detail: "Encounter with id 'x' was not found." })).message)
       .toBe('El encuentro indicado no existe.');
+  });
+
+  it('409 encounter firmado / anulado → encounter_closed (distinto del conflicto de current)', () => {
+    expect(odontogramError(httpErr(409, { detail: "Cannot attach odontograms to an encounter with status 'signed'." })))
+      .toEqual({ kind: 'encounter_closed', message: ODONTOGRAM_ENCOUNTER_SIGNED_MESSAGE });
+    expect(odontogramError(httpErr(409, { detail: "Cannot attach odontograms to an encounter with status 'voided'." })))
+      .toEqual({ kind: 'encounter_closed', message: ODONTOGRAM_ENCOUNTER_VOIDED_MESSAGE });
+    expect(ODONTOGRAM_ENCOUNTER_SIGNED_MESSAGE).toBe('El encuentro está firmado; no se puede asociar el odontograma.');
+    expect(ODONTOGRAM_ENCOUNTER_VOIDED_MESSAGE).toBe('El encuentro está anulado; no se puede asociar el odontograma.');
+  });
+
+  it('422 encounter de otra historia clínica → texto propio', () => {
+    expect(odontogramError(httpErr(422, { detail: "Encounter 'e' does not belong to clinical record 'c'." })))
+      .toEqual({ kind: 'validation', message: 'El encuentro indicado no corresponde a la historia clínica del paciente.' });
   });
 
   it('409 → conflict (carrera del current)', () => {
@@ -116,16 +132,27 @@ describe('odontogramError: condiciones por pieza (/teeth)', () => {
       .toEqual({ kind: 'not_found', message: TOOTH_CONDITION_NOT_FOUND_MESSAGE });
   });
 
-  it('409 en /teeth → historic (odontograma no current); en el alta de odontograma sigue siendo conflict', () => {
-    expect(msg(409, 'Odontogram is not current.')).toEqual({ kind: 'historic', message: TOOTH_CONDITION_HISTORIC_MESSAGE });
-    expect(odontogramError(httpErr(409), 'x', ctx).kind).toBe('historic');
+  it('409 en /teeth "historical snapshot" → historic; otro 409 en /teeth → conflict genérico', () => {
+    expect(msg(409, "Odontogram 'o' is a historical snapshot (not current); its tooth conditions cannot be changed."))
+      .toEqual({ kind: 'historic', message: TOOTH_CONDITION_HISTORIC_MESSAGE });
+    expect(msg(409, 'Odontogram is not current.').kind).toBe('historic');
+    expect(msg(409, 'The resource was modified by another request.'))
+      .toEqual({ kind: 'conflict', message: TOOTH_CONDITION_CONFLICT_MESSAGE });
+    expect(odontogramError(httpErr(409), 'x', ctx))
+      .toEqual({ kind: 'conflict', message: TOOTH_CONDITION_CONFLICT_MESSAGE });
     expect(odontogramError(httpErr(409, { detail: 'x' }), 'x', { operation: 'write' }).kind).toBe('conflict');
   });
 
-  it('403 ProblemDetails real de ModuleDisabledException → feature_disabled', () => {
-    const body = { title: 'Forbidden', status: 403, detail: 'El módulo de odontología no está habilitado para este tenant.' };
-    expect(odontogramError(httpErr(403, body), 'x', ctx))
+  it('403 ProblemDetails real de ModuleDisabledException (code module_disabled) → feature_disabled', () => {
+    expect(odontogramError(httpErr(403, moduleDisabledProblem()), 'x', ctx))
       .toEqual({ kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE });
+  });
+
+  it('403 "solo usuarios activos de un tenant" → forbidden, no módulo apagado (aunque el estado sea desconocido)', () => {
+    const body = moduleRequiresTenantUserProblem();
+    expect(odontogramError(httpErr(403, body), 'x', ctx).kind).toBe('forbidden');
+    expect(odontogramError(httpErr(403, body), 'x', { operation: 'read', odontogramEnabled: null }))
+      .toEqual({ kind: 'forbidden', message: ODONTOGRAM_READ_FORBIDDEN_MESSAGE });
   });
 
   it('403 otro ProblemDetails → forbidden; 401 → unauthorized', () => {

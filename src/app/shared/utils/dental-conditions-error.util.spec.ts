@@ -4,6 +4,7 @@ import {
   DENTAL_CONDITION_NOT_FOUND_MESSAGE, DENTAL_CONDITION_VALIDATION_MESSAGE, DENTAL_CONDITIONS_LIST_FORBIDDEN_MESSAGE,
   ODONTOGRAM_DISABLED_MESSAGE, SESSION_EXPIRED_MESSAGE, dentalConditionError,
 } from './dental-conditions-error.util';
+import { moduleDisabledProblem, moduleRequiresTenantUserProblem } from '../../testing/module-problem';
 
 const httpErr = (status: number, error: unknown = null) => new HttpErrorResponse({ status, error });
 
@@ -80,7 +81,40 @@ describe('dentalConditionError: 403 del módulo odontogram apagado', () => {
       .toBe('global_not_editable');
   });
 
-  it('ProblemDetails del módulo apagado (ModuleDisabledException) gana aunque la sesión lo crea prendido', () => {
+  it('ProblemDetails real de ModuleDisabledException (code module_disabled) → feature_disabled', () => {
+    for (const operation of ['list', 'write'] as const) {
+      expect(dentalConditionError(httpErr(403, moduleDisabledProblem()), 'x', { operation, odontogramEnabled: true }))
+        .toEqual({ kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE });
+    }
+  });
+
+  it('403 "solo usuarios activos de un tenant" → forbidden, no módulo apagado', () => {
+    const err = httpErr(403, moduleRequiresTenantUserProblem());
+    expect(dentalConditionError(err, 'x', { operation: 'list', odontogramEnabled: null }))
+      .toEqual({ kind: 'forbidden', message: DENTAL_CONDITIONS_LIST_FORBIDDEN_MESSAGE });
+    expect(dentalConditionError(err, 'x', { operation: 'write', odontogramEnabled: null }))
+      .toEqual({ kind: 'forbidden', message: DENTAL_CONDITION_FORBIDDEN_MESSAGE });
+  });
+
+  it('409 con los textos reales (tenant y global) → duplicate_code', () => {
+    for (const detail of [
+      "A dental condition with code 'caries' already exists for tenant '3f2a'.",
+      "A global dental condition with code 'caries' already exists.",
+    ]) {
+      expect(dentalConditionError(httpErr(409, { detail }))).toEqual({
+        kind: 'duplicate_code', message: DENTAL_CONDITION_DUPLICATE_CODE_MESSAGE,
+      });
+    }
+  });
+
+  it('422 de largos de name / category (DentalCondition) → traducido', () => {
+    expect(dentalConditionError(httpErr(422, { detail: "Name cannot exceed 100 characters. (Parameter 'name')" })).message)
+      .toBe('El nombre no puede superar los 100 caracteres.');
+    expect(dentalConditionError(httpErr(422, { detail: "Category cannot exceed 50 characters. (Parameter 'category')" })).message)
+      .toBe('La categoría no puede superar los 50 caracteres.');
+  });
+
+  it('ProblemDetails del módulo apagado (respaldo por texto) gana aunque la sesión lo crea prendido', () => {
     const err = httpErr(403, { title: 'Forbidden', detail: "Module 'odontogram' is not enabled for this tenant." });
     expect(dentalConditionError(err, 'x', { operation: 'write', odontogramEnabled: true }))
       .toEqual({ kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE });

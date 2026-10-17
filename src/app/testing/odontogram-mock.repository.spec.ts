@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { MockOdontogramRepository } from './odontogram-mock.repository';
+import { moduleDisabledProblem } from './module-problem';
 
 async function errorOf(p: Promise<unknown>): Promise<HttpErrorResponse> {
   try {
@@ -64,7 +65,26 @@ describe('MockOdontogramRepository', () => {
     expect((await firstValueFrom(repo.getCurrent('pat-1'))).id).toBe('odo-2');
   });
 
-  it('módulo odontogram apagado: toda llamada → 403 sin body', async () => {
+  it('create con encounter firmado / anulado → 409; de otra historia clínica → 422', async () => {
+    repo.registerEncounter('enc-signed', { clinical_record_id: 'cr-pat-1', status: 'signed' });
+    repo.registerEncounter('enc-voided', { clinical_record_id: 'cr-pat-1', status: 'voided' });
+    repo.registerEncounter('enc-other', { clinical_record_id: 'cr-pat-3', status: 'open' });
+    repo.registerEncounter('enc-open', { clinical_record_id: 'cr-pat-1', status: 'open' });
+
+    const signed = await errorOf(firstValueFrom(repo.create('pat-1', { clinical_record_id: 'cr-pat-1', encounter_id: 'enc-signed' })));
+    expect(signed.status).toBe(409);
+    expect(signed.error.detail).toBe("Cannot attach odontograms to an encounter with status 'signed'.");
+    const voided = await errorOf(firstValueFrom(repo.create('pat-1', { clinical_record_id: 'cr-pat-1', encounter_id: 'enc-voided' })));
+    expect(voided.error.detail).toBe("Cannot attach odontograms to an encounter with status 'voided'.");
+    const other = await errorOf(firstValueFrom(repo.create('pat-1', { clinical_record_id: 'cr-pat-1', encounter_id: 'enc-other' })));
+    expect(other.status).toBe(422);
+    expect(other.error.detail).toBe("Encounter 'enc-other' does not belong to clinical record 'cr-pat-1'.");
+
+    const created = await firstValueFrom(repo.create('pat-1', { clinical_record_id: 'cr-pat-1', encounter_id: 'enc-open' }));
+    expect(created.encounter_id).toBe('enc-open');
+  });
+
+  it('módulo odontogram apagado: toda llamada → 403 ProblemDetails de ModuleDisabledException', async () => {
     repo.setOdontogramEnabled(false);
     expect(repo.odontogramEnabled()).toBe(false);
     const calls: Observable<unknown>[] = [
@@ -73,7 +93,9 @@ describe('MockOdontogramRepository', () => {
     for (const call of calls) {
       const err = await errorOf(firstValueFrom(call));
       expect(err.status).toBe(403);
-      expect(err.error).toBeNull();
+      expect(err.error).toEqual(moduleDisabledProblem());
+      expect(err.error.code).toBe('module_disabled');
+      expect(err.error.detail).toBe('The odontogram module is not enabled for this tenant.');
     }
   });
 });

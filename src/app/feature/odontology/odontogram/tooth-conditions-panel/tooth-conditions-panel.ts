@@ -18,10 +18,11 @@ import {
 // de la pieza seleccionada: lista sus condiciones (de `items`, todas las del odontograma) y hace las
 // altas / ediciones / bajas vía TOOTH_CONDITIONS_REPOSITORY (mock o HTTP). No guarda la lista: emite
 // el resultado (added / updated / removed) y la página actualiza su estado, con lo que la grilla se
-// repinta sin recargar. 404 (ya no existe) → emite `stale` para que la página recargue.
+// repinta sin recargar. 404 (ya no existe) u otro 409 que no sea "histórico" → emite `stale` para que
+// la página recargue.
 //
 // T6: odontograma histórico (`readOnly`, is_current = false) → solo el listado: sin formulario ni
-// editar / eliminar. Si igual llega un 409 (el odontograma dejó de ser current mientras se editaba)
+// editar / eliminar. Si igual llega el 409 "historical snapshot" (dejó de ser current mientras se editaba)
 // se muestra el aviso y se emite `historic` para que la página recargue el current.
 @Component({
   selector: 'app-tooth-conditions-panel',
@@ -132,7 +133,7 @@ export class ToothConditionsPanel {
       operation: 'write', odontogramEnabled: this.repo.odontogramEnabled(), resource: 'tooth_condition',
     });
     this.error.set(kind === 'forbidden' ? TOOTH_CONDITION_WRITE_FORBIDDEN_MESSAGE : message);
-    if (kind === 'not_found') {
+    if (kind === 'not_found' || kind === 'conflict') {
       this.editing.set(null);
       this.stale.emit();
     }

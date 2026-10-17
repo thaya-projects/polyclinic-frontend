@@ -15,7 +15,7 @@
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-medium text-muted uppercase tracking-wide" for="dental-condition-name">Nombre</label>
       <input id="dental-condition-name" type="text" formControlName="name" placeholder="ej: Fractura coronaria"
-        [class]="inputClass(form.controls.name)" />
+        [attr.maxlength]="nameMaxLength" [class]="inputClass(form.controls.name)" />
       @if (isInvalid(form.controls.name)) {
         <span class="text-xs text-red-500">{{ errorMessage(form.controls.name) }}</span>
       }
@@ -24,7 +24,10 @@
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-medium text-muted uppercase tracking-wide" for="dental-condition-category">Categoría</label>
       <input id="dental-condition-category" type="text" formControlName="category" list="dental-condition-categories"
-        placeholder="ej: patologia" [class]="inputClass(form.controls.category)" />
+        placeholder="ej: patologia" [attr.maxlength]="categoryMaxLength" [class]="inputClass(form.controls.category)" />
+      @if (isInvalid(form.controls.category)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.category) }}</span>
+      }
       <datalist id="dental-condition-categories">
         @for (category of categories; track category) {
           <option [value]="category"></option>

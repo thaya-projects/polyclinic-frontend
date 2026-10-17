@@ -1,6 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { normalizeBackendMessage } from './encounters-error.util';
-import { ODONTOGRAM_DISABLED_MESSAGE, isModuleDisabledProblem } from './module-disabled.util';
+import {
+  ODONTOGRAM_DISABLED_MESSAGE, ODONTOGRAM_MODULE_KEY, hasProblemDetail, isModuleDisabledProblem,
+} from './module-disabled.util';
 
 export { ODONTOGRAM_DISABLED_MESSAGE } from './module-disabled.util';
 
@@ -8,15 +10,18 @@ export { ODONTOGRAM_DISABLED_MESSAGE } from './module-disabled.util';
 // `kind`; `message` es el texto a mostrar (siempre en español, nunca el detail crudo del backend).
 // El 401 no llega acá con sentido propio: lo resuelve authInterceptor (refresh o logout).
 //
-// 403 tiene tres causas y dos llegan sin body (las corta un middleware/policy antes de
-// ExceptionHandlingMiddleware):
-//   - global no editable → ProblemDetails con detail "... is global and cannot be modified."
-//   - módulo "odontogram" apagado (OdontogramFeatureGuardMiddleware) → sin body hoy; con
-//     ModuleDisabledException pasa a traer ProblemDetails, que se reconoce primero (module-disabled.util).
+// 403 tiene cuatro causas:
+//   - global no editable → ProblemDetails "Dental condition with id '...' is global and cannot be modified."
+//   - módulo "odontogram" apagado → ProblemDetails de ModuleDisabledException con code "module_disabled"
+//     (se reconoce primero, module-disabled.util).
+//   - sin tenant / usuario inactivo → ProblemDetails de ModuleRequiresTenantUserException ("The odontogram
+//     module is only available to active users of a tenant.", sin code) → forbidden, NO módulo apagado.
 //   - sin permiso organization.manage (policy) → sin body.
-// Para separar las dos últimas se usa el estado del módulo conocido por la sesión
-// (`odontogramEnabled`) y la operación: el GET no exige permiso, así que su 403 sin body es el módulo
-// salvo que se sepa que está prendido.
+// Sin body se usa el estado del módulo conocido por la sesión (`odontogramEnabled`) y la operación:
+// el GET no exige permiso, así que su 403 sin body es el módulo salvo que se sepa que está prendido.
+//
+// 409: DentalConditionCodeAlreadyExistsException ("A dental condition with code '...' already exists
+// for tenant '...'." / "A global dental condition with code '...' already exists.") → duplicate_code.
 export type DentalConditionErrorKind =
   | 'unauthorized' | 'feature_disabled' | 'global_not_editable' | 'forbidden' | 'not_found' | 'duplicate_code'
   | 'validation' | 'other';
@@ -44,7 +49,8 @@ export const DENTAL_CONDITIONS_LOAD_ERROR_MESSAGE = 'No se pudo cargar el catál
 
 type KnownMessage = { pattern: RegExp; translate: (m: RegExpMatchArray) => string };
 
-// DentalConditionCode, HexColor, DentalCondition.NormalizeName y el "name cannot be null" del PATCH.
+// DentalConditionCode, HexColor y DentalCondition (NormalizeName / NormalizeCategory). El PATCH con
+// name null también cae en "Name is required." (lo rechaza la entidad).
 const KNOWN_MESSAGES: KnownMessage[] = [
   { pattern: /^Code is required\.?$/i, translate: () => 'El código es obligatorio.' },
   { pattern: /^Code cannot exceed (\d+) characters\.?$/i,
@@ -52,7 +58,10 @@ const KNOWN_MESSAGES: KnownMessage[] = [
   { pattern: /^Code must contain only lowercase letters, digits and underscores\.?$/i,
     translate: () => 'El código solo admite minúsculas, números y guion bajo (_).' },
   { pattern: /^Name is required\.?$/i, translate: () => 'El nombre es obligatorio.' },
-  { pattern: /^name cannot be null\.?$/i, translate: () => 'El nombre es obligatorio.' },
+  { pattern: /^Name cannot exceed (\d+) characters\.?$/i,
+    translate: m => `El nombre no puede superar los ${m[1]} caracteres.` },
+  { pattern: /^Category cannot exceed (\d+) characters\.?$/i,
+    translate: m => `La categoría no puede superar los ${m[1]} caracteres.` },
   { pattern: /^Color is required\.?$/i, translate: () => 'El color es obligatorio.' },
   { pattern: /^Color must be a hex value in the form #RRGGBB\.?$/i,
     translate: () => 'El color debe tener el formato #RRGGBB (ej: #E53935).' },
@@ -92,14 +101,19 @@ function forbiddenError(err: HttpErrorResponse, context: DentalConditionErrorCon
   if (GLOBAL_NOT_EDITABLE_DETAIL.test(detail)) {
     return { kind: 'global_not_editable', message: DENTAL_CONDITION_GLOBAL_MESSAGE };
   }
-  if (isModuleDisabledProblem(err.error)) return { kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE };
+  if (isModuleDisabledProblem(err.error, ODONTOGRAM_MODULE_KEY)) {
+    return { kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE };
+  }
+  const forbidden: DentalConditionError = context.operation === 'list'
+    ? { kind: 'forbidden', message: DENTAL_CONDITIONS_LIST_FORBIDDEN_MESSAGE }
+    : { kind: 'forbidden', message: DENTAL_CONDITION_FORBIDDEN_MESSAGE };
+  // Otro ProblemDetails (p. ej. usuario sin tenant / inactivo): no es el módulo apagado.
+  if (hasProblemDetail(err.error)) return forbidden;
   const enabled = context.odontogramEnabled ?? null;
   if (enabled === false || (context.operation === 'list' && enabled === null)) {
     return { kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE };
   }
-  return context.operation === 'list'
-    ? { kind: 'forbidden', message: DENTAL_CONDITIONS_LIST_FORBIDDEN_MESSAGE }
-    : { kind: 'forbidden', message: DENTAL_CONDITION_FORBIDDEN_MESSAGE };
+  return forbidden;
 }
 
 export function dentalConditionError(

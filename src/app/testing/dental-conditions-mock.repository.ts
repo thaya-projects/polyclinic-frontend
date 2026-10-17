@@ -6,6 +6,7 @@ import {
   CreateDentalConditionDto, DENTAL_CONDITION_LIMITS, DentalCondition, UpdateDentalConditionDto,
 } from '../core/models/dental-condition.model';
 import { argumentError } from './cie10-mock.catalog';
+import { moduleDisabledError } from './module-problem';
 
 export const MOCK_DENTAL_TENANT_ID = 'tenant-mock';
 
@@ -37,8 +38,8 @@ function httpError(status: number, detail: string): Observable<never> {
 //   create: code trim+lowercase (requerido, ≤ 50, [a-z0-9_]) → name requerido → color #RRGGBB
 //           (normalizado a mayúsculas) → code repetido entre las propias 409 (igual a una global es válido).
 //   update: 404 → global 403 → name null 422 → color 422. category/color vacíos = null.
-//   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 sin body, como
-//   OdontogramFeatureGuardMiddleware.
+//   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 ProblemDetails de
+//   ModuleDisabledException (code "module_disabled").
 // Sin delays (los tests no necesitan timers falsos).
 @Injectable()
 export class MockDentalConditionsRepository implements DentalConditionsRepository {
@@ -78,6 +79,8 @@ export class MockDentalConditionsRepository implements DentalConditionsRepositor
     }
     const name = (dto.name ?? '').trim();
     if (!name) return argumentError('Name is required.', 'name');
+    const nameError = nameTooLong(name) ?? categoryTooLong(dto.category);
+    if (nameError) return nameError;
     const color = normalizeColor(dto.default_color);
     if (color === false) return argumentError('Color must be a hex value in the form #RRGGBB.', 'value');
 
@@ -96,9 +99,12 @@ export class MockDentalConditionsRepository implements DentalConditionsRepositor
     if (current.tenant_id === null) {
       return httpError(403, `Dental condition with id '${id}' is global and cannot be modified.`);
     }
-    if ((dto as { name?: string | null }).name === null) return argumentError('name cannot be null.', 'name');
-    const name = dto.name !== undefined ? dto.name.trim() : current.name;
+    // name null en el PATCH lo rechaza la entidad igual que el vacío: "Name is required.".
+    const rawName = (dto as { name?: string | null }).name;
+    const name = rawName !== undefined ? (rawName ?? '').trim() : current.name;
     if (!name) return argumentError('Name is required.', 'name');
+    const lengthError = nameTooLong(name) ?? categoryTooLong(dto.category);
+    if (lengthError) return lengthError;
     const color = dto.default_color !== undefined ? normalizeColor(dto.default_color) : current.default_color;
     if (color === false) return argumentError('Color must be a hex value in the form #RRGGBB.', 'value');
 
@@ -111,9 +117,9 @@ export class MockDentalConditionsRepository implements DentalConditionsRepositor
   }
 }
 
-// El middleware corta antes de ExceptionHandlingMiddleware: 403 sin ProblemDetails.
+// Módulo apagado: 403 ProblemDetails real de ModuleDisabledException (code module_disabled).
 function moduleDisabled(): Observable<never> {
-  return throwError(() => new HttpErrorResponse({ status: 403, error: null }));
+  return moduleDisabledError();
 }
 
 function normalizeOptional(value: string | null | undefined): string | null {
@@ -127,4 +133,16 @@ function normalizeColor(value: string | null | undefined): string | null | false
   if (trimmed === null) return null;
   const upper = trimmed.toUpperCase();
   return DENTAL_CONDITION_LIMITS.colorFormat.test(upper) ? upper : false;
+}
+
+// DentalCondition.NormalizeName / NormalizeCategory (largos sobre el valor recortado).
+function nameTooLong(name: string): Observable<never> | null {
+  const max = DENTAL_CONDITION_LIMITS.nameMaxLength;
+  return name.length > max ? argumentError(`Name cannot exceed ${max} characters.`, 'name') : null;
+}
+
+function categoryTooLong(category: string | null | undefined): Observable<never> | null {
+  const max = DENTAL_CONDITION_LIMITS.categoryMaxLength;
+  return (category?.trim().length ?? 0) > max
+    ? argumentError(`Category cannot exceed ${max} characters.`, 'category') : null;
 }

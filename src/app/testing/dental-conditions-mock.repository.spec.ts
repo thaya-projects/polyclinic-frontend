@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { MOCK_DENTAL_TENANT_ID, MockDentalConditionsRepository } from './dental-conditions-mock.repository';
+import { moduleDisabledProblem } from './module-problem';
 
 async function errorOf(p: Promise<unknown>): Promise<HttpErrorResponse> {
   try {
@@ -46,10 +47,25 @@ describe('MockDentalConditionsRepository', () => {
       [{ code: 'a'.repeat(51), name: 'x' }, "Code cannot exceed 50 characters. (Parameter 'value')"],
       [{ code: 'con-guion', name: 'x' }, "Code must contain only lowercase letters, digits and underscores. (Parameter 'value')"],
       [{ code: 'ok', name: '  ' }, "Name is required. (Parameter 'name')"],
+      [{ code: 'ok', name: 'n'.repeat(101) }, "Name cannot exceed 100 characters. (Parameter 'name')"],
+      [{ code: 'ok', name: 'x', category: 'c'.repeat(51) }, "Category cannot exceed 50 characters. (Parameter 'category')"],
       [{ code: 'ok', name: 'x', default_color: 'rojo' }, "Color must be a hex value in the form #RRGGBB. (Parameter 'value')"],
     ];
     for (const [dto, detail] of cases) {
       const err = await errorOf(firstValueFrom(repo.create(dto)));
+      expect(err.status).toBe(422);
+      expect(err.error.detail).toBe(detail);
+    }
+  });
+
+  it('update: name null / largo y category larga → 422 con los textos de la entidad', async () => {
+    const cases: [Parameters<MockDentalConditionsRepository['update']>[1], string][] = [
+      [{ name: null } as unknown as { name: string }, "Name is required. (Parameter 'name')"],
+      [{ name: 'n'.repeat(101) }, "Name cannot exceed 100 characters. (Parameter 'name')"],
+      [{ category: 'c'.repeat(51) }, "Category cannot exceed 50 characters. (Parameter 'category')"],
+    ];
+    for (const [dto, detail] of cases) {
+      const err = await errorOf(firstValueFrom(repo.update('dc-own-1', dto)));
       expect(err.status).toBe(422);
       expect(err.error.detail).toBe(detail);
     }
@@ -67,13 +83,15 @@ describe('MockDentalConditionsRepository', () => {
     }));
   });
 
-  it('módulo odontogram apagado: toda llamada → 403 sin body', async () => {
+  it('módulo odontogram apagado: toda llamada → 403 ProblemDetails de ModuleDisabledException', async () => {
     repo.setOdontogramEnabled(false);
     expect(repo.odontogramEnabled()).toBe(false);
     for (const call of [repo.list() as Observable<unknown>, repo.create({ code: 'x', name: 'X' }), repo.update('dc-own-1', { name: 'X' })]) {
       const err = await errorOf(firstValueFrom(call));
       expect(err.status).toBe(403);
-      expect(err.error).toBeNull();
+      expect(err.error).toEqual(moduleDisabledProblem());
+      expect(err.error.code).toBe('module_disabled');
+      expect(err.error.detail).toBe('The odontogram module is not enabled for this tenant.');
     }
   });
 });

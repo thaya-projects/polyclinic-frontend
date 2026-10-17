@@ -28,6 +28,9 @@ export interface UpdateDentalConditionDto {
 // Reglas de DentalConditionCode y HexColor del backend.
 export const DENTAL_CONDITION_LIMITS = {
   codeMaxLength: 50,
+  // DentalCondition.NameMaxLength / CategoryMaxLength (sobre el valor recortado).
+  nameMaxLength: 100,
+  categoryMaxLength: 50,
   codeFormat: /^[a-z0-9_]+$/,
   colorFormat: /^#[0-9A-Fa-f]{6}$/,
 } as const;

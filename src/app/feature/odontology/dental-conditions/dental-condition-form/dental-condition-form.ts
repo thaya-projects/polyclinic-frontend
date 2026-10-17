@@ -18,6 +18,14 @@ function codeFormat(control: AbstractControl): ValidationErrors | null {
   return value && !DENTAL_CONDITION_LIMITS.codeFormat.test(value) ? { pattern: true } : null;
 }
 
+// Largo máximo sobre el valor recortado (DentalCondition hace trim antes de validar el largo).
+function trimmedMaxLength(max: number) {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const length = typeof control.value === 'string' ? control.value.trim().length : 0;
+    return length > max ? { maxlength: { requiredLength: max, actualLength: length } } : null;
+  };
+}
+
 // Reutilizable: si `condition` viene → edit (emit saved, diff-only). Si null → create (emit created).
 // Solo para condiciones propias: las globales no llegan acá (la tabla no ofrece editarlas).
 // Code no editable en modo edit (clave natural, inmutable en el backend).
@@ -40,6 +48,8 @@ export class DentalConditionForm {
   readonly isInvalid = isFieldInvalid;
   readonly categories = DENTAL_CONDITION_CATEGORIES;
   readonly codeMaxLength = DENTAL_CONDITION_LIMITS.codeMaxLength;
+  readonly nameMaxLength = DENTAL_CONDITION_LIMITS.nameMaxLength;
+  readonly categoryMaxLength = DENTAL_CONDITION_LIMITS.categoryMaxLength;
 
   readonly isEdit = computed(() => this.condition() !== null);
 
@@ -47,8 +57,8 @@ export class DentalConditionForm {
     code: ['', [
       Validators.required, notBlank, Validators.maxLength(DENTAL_CONDITION_LIMITS.codeMaxLength), codeFormat,
     ]],
-    name: ['', [Validators.required, notBlank]],
-    category: [''],
+    name: ['', [Validators.required, notBlank, trimmedMaxLength(DENTAL_CONDITION_LIMITS.nameMaxLength)]],
+    category: ['', trimmedMaxLength(DENTAL_CONDITION_LIMITS.categoryMaxLength)],
     default_color: ['', Validators.pattern(DENTAL_CONDITION_LIMITS.colorFormat)],
   });
 
