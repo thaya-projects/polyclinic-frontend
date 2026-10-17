@@ -1,0 +1,119 @@
+<form [formGroup]="form" (ngSubmit)="submit()" (focusin)="refreshDefaultDate()" class="flex flex-col gap-3"
+  data-testid="measurement-form" novalidate>
+  @if (showRequiredError()) {
+    <span role="alert" class="text-xs text-red-500" data-testid="measurement-required-error">{{ requiredMessage }}</span>
+  }
+
+  <div class="grid grid-cols-1 gap-3" [class.sm:grid-cols-2]="!compact()" [class.sm:grid-cols-4]="compact()">
+    <!-- Tipo (se deshabilita desde el FormControl mientras hay una operación en curso) -->
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId('type')">Tipo</label>
+      <select [id]="fieldId('type')" formControlName="type" data-testid="measurement-type"
+        aria-required="true" [attr.aria-invalid]="showError(form.controls.type)"
+        [attr.aria-describedby]="describedBy(form.controls.type, 'type')"
+        [class]="inputClass(form.controls.type)">
+        <option value="">Elegí un tipo…</option>
+        @for (t of types(); track t.type) {
+          <option [value]="t.type">{{ label(t.type) }}</option>
+        }
+        <option [value]="other">Otro…</option>
+      </select>
+      @if (showError(form.controls.type)) {
+        <span role="alert" [id]="fieldId('type-error')" class="text-xs text-red-500" data-testid="measurement-type-error">Elegí un tipo.</span>
+      }
+    </div>
+
+    @if (isOther()) {
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId('custom-type')">Código del tipo</label>
+        <input [id]="fieldId('custom-type')" type="text" formControlName="custom_type" data-testid="measurement-custom-type"
+          placeholder="ej: circunferencia_cintura" maxlength="50" [readOnly]="busy()"
+          aria-required="true" [attr.aria-invalid]="showError(form.controls.custom_type)"
+          [attr.aria-describedby]="describedBy(form.controls.custom_type, 'custom-type')"
+          [class]="inputClass(form.controls.custom_type)" />
+        @if (showError(form.controls.custom_type)) {
+          <span role="alert" [id]="fieldId('custom-type-error')" class="text-xs text-red-500" data-testid="measurement-custom-type-error">{{ customTypeErrorText() }}</span>
+        }
+      </div>
+    }
+
+    <!-- Valor -->
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId('value')">Valor</label>
+      <input [id]="fieldId('value')" type="number" step="any" inputmode="decimal" formControlName="value"
+        data-testid="measurement-value" [readOnly]="busy()"
+        aria-required="true" [attr.aria-invalid]="showError(form.controls.value)"
+        [attr.aria-describedby]="describedBy(form.controls.value, 'value', rangeText() ? fieldId('range') : null)"
+        [attr.min]="definition()?.min ?? null" [attr.max]="definition()?.max ?? null"
+        [class]="inputClass(form.controls.value)" />
+      @if (showError(form.controls.value)) {
+        <span role="alert" [id]="fieldId('value-error')" class="text-xs text-red-500" data-testid="measurement-value-error">{{ valueErrorText() }}</span>
+      } @else if (rangeText(); as range) {
+        <span [id]="fieldId('range')" class="text-xs text-muted" data-testid="measurement-range">{{ range }}</span>
+      }
+    </div>
+
+    <!-- Unidad -->
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId('unit')">Unidad</label>
+      <input [id]="fieldId('unit')" type="text" formControlName="unit" data-testid="measurement-unit" [attr.maxlength]="unitLimit"
+        [readOnly]="unitReadonly() || busy()" [attr.aria-readonly]="unitReadonly()"
+        aria-required="true" [attr.aria-invalid]="showError(form.controls.unit)"
+        [attr.aria-describedby]="describedBy(form.controls.unit, 'unit')"
+        [placeholder]="isOther() ? 'ej: cm' : ''"
+        [class]="inputClass(form.controls.unit, unitReadonly() ? 'bg-surface-alt/40 text-muted' : '')" />
+      @if (showError(form.controls.unit)) {
+        <span role="alert" [id]="fieldId('unit-error')" class="text-xs text-red-500" data-testid="measurement-unit-error">
+          {{ form.controls.unit.hasError('maxlength') ? 'Máximo ' + unitLimit + ' caracteres.' : 'Indicá la unidad.' }}
+        </span>
+      }
+    </div>
+
+    <!-- Fecha y hora (hora local del navegador; se muestra el offset con el que se registra) -->
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId('measured-at')">Fecha y hora</label>
+      <input [id]="fieldId('measured-at')" type="datetime-local" formControlName="measured_at"
+        data-testid="measurement-measured-at" [readOnly]="busy()" [attr.max]="maxLocal()" min="1900-01-01T00:00"
+        aria-required="true" [attr.aria-invalid]="showError(form.controls.measured_at)"
+        [attr.aria-describedby]="describedBy(form.controls.measured_at, 'measured-at', fieldId('offset'))"
+        [class]="inputClass(form.controls.measured_at)" />
+      @if (showError(form.controls.measured_at)) {
+        <span role="alert" [id]="fieldId('measured-at-error')" class="text-xs text-red-500" data-testid="measurement-measured-at-error">{{ measuredAtErrorText() }}</span>
+      } @else {
+        <span [id]="fieldId('offset')" class="text-xs text-muted" data-testid="measurement-offset">{{ offsetHint() }}</span>
+      }
+    </div>
+  </div>
+
+  <!-- Nota -->
+  <div class="flex flex-col gap-1.5">
+    <div class="flex items-center justify-between">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId('note')">Nota (opcional)</label>
+      <span class="text-xs" [class]="noteLength() > noteLimit ? 'text-red-500' : 'text-muted'" data-testid="measurement-note-counter">
+        {{ noteLength() }}/{{ noteLimit }}
+      </span>
+    </div>
+    <textarea [id]="fieldId('note')" rows="2" formControlName="note" data-testid="measurement-note"
+      [readOnly]="busy()" [attr.maxlength]="noteLimit"
+      [attr.aria-invalid]="showError(form.controls.note)" [attr.aria-describedby]="describedBy(form.controls.note, 'note')"
+      class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:ring-3 focus:outline-none"
+      [class]="showError(form.controls.note) ? 'border-red-400 focus:border-red-400 focus:ring-red-400/18' : 'border-border focus:border-brand focus:ring-brand/18'"></textarea>
+    @if (showError(form.controls.note)) {
+      <span role="alert" [id]="fieldId('note-error')" class="text-xs text-red-500" data-testid="measurement-note-error">La nota no puede superar los {{ noteLimit }} caracteres.</span>
+    }
+  </div>
+
+  @if (showSubmit()) {
+    <div class="flex justify-end gap-3">
+      <button type="button" data-testid="btn-reset-measurement" (click)="reset()" [disabled]="busy()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Limpiar
+      </button>
+      <button type="submit" data-testid="btn-add-measurement" [disabled]="busy()"
+        class="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        <i class="ti ti-plus"></i>
+        {{ saving() ? 'Registrando...' : 'Registrar medición' }}
+      </button>
+    </div>
+  }
+</form>

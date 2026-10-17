@@ -1,7 +1,7 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
 import { PatientsPage } from './patients-page';
 import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-repository';
@@ -55,11 +55,26 @@ describe('PatientsPage: botones de encuentros', () => {
     expect(q('patient-new-encounter')?.disabled).toBe(false);
   });
 
+  it('"Signos vitales" junto a "Encuentros": habilitado y navega a /patients/:id/measurements', async () => {
+    await openDetail();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    expect(q('patient-measurements')?.disabled).toBe(false);
+    q('patient-measurements')!.click();
+    expect(navigate).toHaveBeenCalledWith(['/patients', 'pat-1', 'measurements']);
+  });
+
+  it('admin con clinical.void sin profesional: ve "Signos vitales"', async () => {
+    repo.setCurrentUser('admin-user', ['clinical.void']);
+    await openDetail();
+    expect(q('patient-measurements')?.disabled).toBe(false);
+  });
+
   it('sin profesional ni clinical.void: los botones se ocultan', async () => {
     repo.setCurrentUser('user-sin-profesional');
     await openDetail();
     expect(q('patient-encounters')).toBeNull();
     expect(q('patient-new-encounter')).toBeNull();
+    expect(q('patient-measurements')).toBeNull();
   });
 
   it('admin con clinical.void sin profesional: ve Encuentros, "Nueva nota" deshabilitada', async () => {

@@ -183,6 +183,13 @@ export class PatientsPage {
     });
   }
 
+  // Fase 4 T3: signos vitales del paciente. Mismo acceso que "Encuentros".
+  goToMeasurements(patient: Patient): void {
+    if (this.encountersButtonDisabledReason() || !this.showEncounterButtons()) return;
+    this.closeModal();
+    this.router.navigate(['/patients', patient.id, 'measurements']);
+  }
+
   requestDeactivate(patient: Patient): void {
     this.patientToDeactivate.set(patient);
     this.deactivateError.set(null);

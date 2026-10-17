@@ -45,6 +45,13 @@ export interface EncounterSummary {
   version: number;
 }
 
+// Nueva version del encounter tras el alta/baja de un hijo clínico (diagnóstico, medición): el
+// backend la incrementa y el detalle la aplica en memoria.
+export interface EncounterVersionChange {
+  encounterId: string;
+  version: number;
+}
+
 // Permiso que habilita leer encounters sin ser profesional y la anulación administrativa.
 export const CLINICAL_VOID_PERMISSION = 'clinical.void';
 

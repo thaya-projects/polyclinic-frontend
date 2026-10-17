@@ -32,6 +32,10 @@ export interface SessionTenant {
   id: string;
   name: string;
   slug: string;
+  // AuthTenantDTO también trae country_code y locale (ej. 'es-BO'): formato de números/fechas
+  // clínicas. Opcionales: sesiones guardadas antes de tiparlos pueden no traerlos.
+  country_code?: string;
+  locale?: string;
 }
 
 // Respuesta del backend al loguear (o refrescar) — se tolera cualquier

@@ -129,6 +129,16 @@ export const routes: Routes = [
           import('./feature/roles/user-roles-page/user-roles-page').then(m => m.UserRolesPage),
       },
       {
+        // Fase 4 T3/T4: signos vitales del paciente. Se llega desde la ficha ("Signos vitales").
+        // Mismo criterio que encounters: authGuard; el acceso clínico lo decide la pantalla
+        // (profesional activo o clinical.void) y el backend.
+        path: 'patients/:patientId/measurements',
+        loadComponent: () =>
+          import('./feature/measurements/patient-measurements-page/patient-measurements-page')
+            .then(m => m.PatientMeasurementsPage),
+        canActivate: [authGuard],
+      },
+      {
         // T6 (fase 3, pacientes): mismo criterio que roles/user-roles.
         path: 'patients',
         loadComponent: () => import('./feature/patients/patients-page/patients-page').then(m => m.PatientsPage),

@@ -8,6 +8,8 @@ import { BehaviorSubject, Observable, Subject, catchError, combineLatest, distin
 import { EncounterNote } from '../encounter-note/encounter-note';
 import { EncounterDiagnoses } from '../encounter-diagnoses/encounter-diagnoses';
 import { EncounterDiagnosesStore } from '../encounter-diagnoses/encounter-diagnoses.store';
+import { EncounterMeasurements } from '../encounter-measurements/encounter-measurements';
+import { MeasurementsStore } from '../../measurements/measurements.store';
 import { VoidEncounterDialog } from '../void-encounter-dialog/void-encounter-dialog';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-repository';
@@ -17,6 +19,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { AuthStore } from '../../../core/services/auth-store.service';
 import { Encounter, EncounterNotePatch } from '../../../core/models/encounter.model';
 import { CreateDiagnosisDto } from '../../../core/models/diagnosis.model';
+import { CreateMeasurementDto } from '../../../core/models/measurement.model';
 import {
   ADMIN_VOID_ONLY_MESSAGE, ENCOUNTERS_ACCESS_DENIED_MESSAGE, ENCOUNTER_CONFLICT_MESSAGE,
   ENCOUNTER_DRAFT_CONFLICT_MESSAGE, ENCOUNTER_FORBIDDEN_MESSAGE,
@@ -24,6 +27,9 @@ import {
 } from '../../../shared/utils/encounters-error.util';
 
 type PendingAction = 'save' | 'sign' | 'void';
+
+// La sección del detalle muestra una sola página de mediciones del encounter.
+const ENCOUNTER_MEASUREMENTS_LIMIT = 50;
 
 type LoadResult = { id: string; encounter: Encounter } | { id: string; error: unknown };
 
@@ -59,10 +65,17 @@ type LoadResult = { id: string; encounter: Encounter } | { id: string; error: un
 //     sección pasa a solo lectura. El 409 de código repetido no recarga.
 //   - Operaciones mutuamente excluyentes: con una de diagnósticos en curso no se puede guardar,
 //     firmar ni anular, y viceversa.
+//
+// Signos vitales (T3/T4): sección compacta debajo de los diagnósticos con las mediciones de este
+// encounter; su estado vive en MeasurementsStore (provisto acá, scope paciente + encounter). Mismas
+// reglas que diagnósticos: editable con `canEditDiagnoses`, el alta va con el encounter_id
+// precargado y su `encounter_version` se aplica en memoria; un 409 recarga el encounter (→ solo
+// lectura); un 404 del encounter vuelve al listado. Bloqueo cruzado: con una operación de nota,
+// diagnósticos o mediciones en curso, las otras dos quedan deshabilitadas (`sectionsBusy`).
 @Component({
   selector: 'app-encounter-detail-page',
-  imports: [EncounterNote, EncounterDiagnoses, VoidEncounterDialog, ConfirmDialog, RouterLink],
-  providers: [EncounterDiagnosesStore],
+  imports: [EncounterNote, EncounterDiagnoses, EncounterMeasurements, VoidEncounterDialog, ConfirmDialog, RouterLink],
+  providers: [EncounterDiagnosesStore, MeasurementsStore],
   templateUrl: './encounter-detail-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -76,6 +89,7 @@ export class EncounterDetailPage {
   private destroyRef = inject(DestroyRef);
   readonly lookups = inject(EncounterLookupsService);
   readonly diagnoses = inject(EncounterDiagnosesStore);
+  readonly measurements = inject(MeasurementsStore);
 
   private note = viewChild(EncounterNote);
 
@@ -113,6 +127,9 @@ export class EncounterDetailPage {
   // Diagnósticos: mismo `canEdit` que la nota + encounter open (si no, solo el listado).
   readonly canEditDiagnoses = computed(() => this.canEdit() && this.encounter()?.status === 'open');
   private readonly encounterId = computed(() => this.encounter()?.id ?? null);
+  private readonly encounterPatientId = computed(() => this.encounter()?.patient_id ?? null);
+  // Operación de diagnósticos o de signos vitales en curso (cambia la version del encounter).
+  readonly sectionsBusy = computed(() => this.diagnoses.busy() || this.measurements.busy());
 
   // Anulación administrativa (clinical.void) para quien no es el profesional habilitado del encounter.
   readonly canAdminVoid = computed(() => {
@@ -171,6 +188,19 @@ export class EncounterDetailPage {
     this.diagnoses.encounterVersion$.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(change => this.applyVersion(change.encounterId, change.version));
 
+    // Signos vitales: una página de las mediciones de este encounter (se cargan una vez por encounter).
+    effect(() => {
+      const encounterId = this.encounterId();
+      const patientId = this.encounterPatientId();
+      untracked(() => this.measurements.setScope(
+        encounterId && patientId ? { patientId, encounterId } : null, ENCOUNTER_MEASUREMENTS_LIMIT));
+    });
+    this.measurements.conflict$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload());
+    this.measurements.encounterNotFound$.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(message => this.goToListWithNotice(message));
+    this.measurements.encounterVersion$.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(change => this.applyVersion(change.encounterId, change.version));
+
     this.load$.pipe(
       switchMap(id => this.repo.getById(id).pipe(
         map((encounter): LoadResult => ({ id, encounter })),
@@ -211,28 +241,35 @@ export class EncounterDetailPage {
   // B1: la guarda va antes de construir el request (con HTTP no saldría, pero con otras fuentes sí).
   onSave(patch: EncounterNotePatch): void {
     const version = this.currentVersion();
-    if (version === null || this.pending() || this.diagnoses.busy()) return;
+    if (version === null || this.pending() || this.sectionsBusy()) return;
     this.run('save', this.repo.update(this.id, { ...patch, version }), 'Nota guardada.', patch);
   }
 
   onSign(): void {
     const version = this.currentVersion();
-    if (version === null || this.pending() || this.diagnoses.busy()) return;
+    if (version === null || this.pending() || this.sectionsBusy()) return;
     this.run('sign', this.repo.sign(this.id, { version }), 'Nota firmada.');
   }
 
   onCreateDiagnosis(dto: CreateDiagnosisDto): void {
-    if (!this.canEditDiagnoses() || this.pending()) return;
+    if (!this.canEditDiagnoses() || this.pending() || this.measurements.busy()) return;
     this.diagnoses.create(dto);
   }
 
   onRemoveDiagnosis(diagnosisId: string): void {
-    if (!this.canEditDiagnoses() || this.pending()) return;
+    if (!this.canEditDiagnoses() || this.pending() || this.measurements.busy()) return;
     this.diagnoses.remove(diagnosisId);
   }
 
+  // El encounter_id siempre es el mostrado (aunque el formulario mandara otro).
+  onCreateMeasurement(dto: CreateMeasurementDto): void {
+    const encounterId = this.encounterId();
+    if (!encounterId || !this.canEditDiagnoses() || this.pending() || this.sectionsBusy()) return;
+    this.measurements.create({ ...dto, encounter_id: encounterId });
+  }
+
   openVoid(): void {
-    if (this.pending() || this.diagnoses.busy()) return;
+    if (this.pending() || this.sectionsBusy()) return;
     this.voidError.set(null);
     this.voidOpen.set(true);
   }
@@ -245,7 +282,7 @@ export class EncounterDetailPage {
 
   onVoid(reason: string): void {
     const version = this.currentVersion();
-    if (version === null || this.pending() || this.diagnoses.busy()) return;
+    if (version === null || this.pending() || this.sectionsBusy()) return;
     this.voidError.set(null);
     this.run('void', this.repo.void(this.id, { reason, version }), 'Encuentro anulado.');
   }
@@ -345,7 +382,7 @@ export class EncounterDetailPage {
     }
   }
 
-  // Alta/baja de un diagnóstico: nueva version del encounter, sin recargar.
+  // Alta/baja de un hijo clínico: nueva version del encounter, sin recargar.
   private applyVersion(encounterId: string, version: number): void {
     const current = this.encounter();
     if (current && current.id === encounterId && current.id === this.id) this.encounter.set({ ...current, version });

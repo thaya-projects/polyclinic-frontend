@@ -6,17 +6,12 @@ import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-reposit
 import { CIE10_CATALOG } from '../../../core/services/cie10-catalog';
 import { ToastService } from '../../../core/services/toast.service';
 import { Cie10Entry, CreateDiagnosisDto, Diagnosis } from '../../../core/models/diagnosis.model';
+import { EncounterVersionChange } from '../../../core/models/encounter.model';
 import {
   DIAGNOSES_ACCESS_DENIED_MESSAGE, DIAGNOSES_LOAD_ERROR_MESSAGE, DIAGNOSES_NOT_FOUND_MESSAGE, diagnosisError,
 } from '../../../shared/utils/encounters-error.util';
 
 export type DiagnosisPendingAction = 'create' | 'delete';
-
-// Nueva version del encounter tras un alta/baja (el backend la incrementa).
-export interface EncounterVersionChange {
-  encounterId: string;
-  version: number;
-}
 
 type LoadResult = { id: string; diagnoses: Diagnosis[] } | { id: string; error: unknown };
 
