@@ -84,6 +84,22 @@ describe('MockOdontogramRepository', () => {
     expect(created.encounter_id).toBe('enc-open');
   });
 
+  it('create con encounter de otro profesional → 403 (antes que el estado); profesional inactivo → 422', async () => {
+    repo.registerEncounter('enc-foreign', { clinical_record_id: 'cr-pat-1', status: 'signed', actor_is_professional: false });
+    repo.registerEncounter('enc-inactive', {
+      clinical_record_id: 'cr-pat-1', status: 'open', professional_id: 'prof-9', professional_active: false,
+    });
+
+    const foreign = await errorOf(firstValueFrom(repo.create('pat-1', { clinical_record_id: 'cr-pat-1', encounter_id: 'enc-foreign' })));
+    expect(foreign.status).toBe(403);
+    expect(foreign.error.detail)
+      .toBe("Only the user linked to the encounter's professional can attach odontograms to encounter 'enc-foreign'.");
+    const inactive = await errorOf(firstValueFrom(repo.create('pat-1', { clinical_record_id: 'cr-pat-1', encounter_id: 'enc-inactive' })));
+    expect(inactive.status).toBe(422);
+    expect(inactive.error.detail).toBe("Professional with id 'prof-9' is inactive.");
+    expect((await firstValueFrom(repo.getCurrent('pat-1'))).id).toBe('odo-2');
+  });
+
   it('módulo odontogram apagado: toda llamada → 403 ProblemDetails de ModuleDisabledException', async () => {
     repo.setOdontogramEnabled(false);
     expect(repo.odontogramEnabled()).toBe(false);

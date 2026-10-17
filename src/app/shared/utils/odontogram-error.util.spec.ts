@@ -4,7 +4,8 @@ import {
   ODONTOGRAM_PATIENT_NOT_FOUND_MESSAGE, ODONTOGRAM_READ_FORBIDDEN_MESSAGE, ODONTOGRAM_VALIDATION_MESSAGE,
   ODONTOGRAM_NOT_FOUND_MESSAGE, ODONTOGRAM_WRITE_FORBIDDEN_MESSAGE, TOOTH_CONDITION_HISTORIC_MESSAGE,
   TOOTH_CONDITION_NOT_FOUND_MESSAGE, TOOTH_CONDITION_CONFLICT_MESSAGE, ODONTOGRAM_ENCOUNTER_SIGNED_MESSAGE,
-  ODONTOGRAM_ENCOUNTER_VOIDED_MESSAGE, odontogramError,
+  ODONTOGRAM_ENCOUNTER_VOIDED_MESSAGE, ODONTOGRAM_ENCOUNTER_NOT_OWNER_MESSAGE,
+  ODONTOGRAM_ENCOUNTER_PROFESSIONAL_INACTIVE_MESSAGE, odontogramError,
 } from './odontogram-error.util';
 import { moduleDisabledProblem, moduleRequiresTenantUserProblem } from '../../testing/module-problem';
 
@@ -39,6 +40,14 @@ describe('odontogramError', () => {
       .toEqual({ kind: 'validation', message: 'El encuentro indicado no corresponde a la historia clínica del paciente.' });
   });
 
+  it('422 profesional del encuentro inactivo / 404 profesional → texto propio', () => {
+    expect(odontogramError(httpErr(422, { detail: "Professional with id 'p-1' is inactive." })))
+      .toEqual({ kind: 'validation', message: ODONTOGRAM_ENCOUNTER_PROFESSIONAL_INACTIVE_MESSAGE });
+    expect(ODONTOGRAM_ENCOUNTER_PROFESSIONAL_INACTIVE_MESSAGE).toBe('El profesional del encuentro está inactivo.');
+    expect(odontogramError(httpErr(404, { detail: "Professional with id 'p-1' was not found." })).message)
+      .toBe('No se encontró el profesional del encuentro.');
+  });
+
   it('409 → conflict (carrera del current)', () => {
     const err = httpErr(409, { detail: "Another odontogram became current for patient 'x' concurrently. Reload and try again." });
     expect(odontogramError(err)).toEqual({ kind: 'conflict', message: ODONTOGRAM_CONFLICT_MESSAGE });
@@ -61,6 +70,20 @@ describe('odontogramError', () => {
 });
 
 describe('odontogramError: 403', () => {
+  it('EncounterActionNotAllowedForUser al asociar → encounter_forbidden (ni módulo apagado ni policy)', () => {
+    const err = httpErr(403, {
+      title: 'Forbidden', status: 403,
+      detail: "Only the user linked to the encounter's professional can attach odontograms to encounter 'e-1'.",
+    });
+    for (const odontogramEnabled of [true, false, null]) {
+      expect(odontogramError(err, 'x', { operation: 'write', odontogramEnabled }))
+        .toEqual({ kind: 'encounter_forbidden', message: ODONTOGRAM_ENCOUNTER_NOT_OWNER_MESSAGE });
+    }
+    expect(ODONTOGRAM_ENCOUNTER_NOT_OWNER_MESSAGE).toBe('Solo el profesional del encuentro puede asociarle un odontograma.');
+    // El 403 de módulo apagado sigue mandando.
+    expect(odontogramError(httpErr(403, moduleDisabledProblem()), 'x', { operation: 'write' }).kind).toBe('feature_disabled');
+  });
+
   it('ProblemDetails del módulo apagado (ModuleDisabledException) → feature_disabled aunque la sesión lo crea prendido', () => {
     const bodies = [
       { title: 'Forbidden', status: 403, detail: "Module 'odontogram' is not enabled for this tenant." },

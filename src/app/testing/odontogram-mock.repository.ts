@@ -32,6 +32,11 @@ function seed(): Odontogram[] {
 export interface MockOdontogramEncounter {
   clinical_record_id: string;
   status: 'open' | 'signed' | 'voided';
+  // Profesional del encounter (default 'prof-1'). actor_is_professional=false → el usuario de la
+  // sesión no es su user (403); professional_active=false → profesional inactivo (422).
+  professional_id?: string;
+  actor_is_professional?: boolean;
+  professional_active?: boolean;
 }
 
 const DENTITIONS: readonly Dentition[] = ['permanente', 'temporal', 'mixta'];
@@ -45,7 +50,8 @@ function httpError(status: number, detail: string): Observable<never> {
 //   getById: inexistente → 404.
 //   create: 404 patient → 422 clinical_record_id faltante → 404 clinical record → 422 de otro
 //           paciente → encounter registrado (registerEncounter): 422 de otra historia clínica →
-//           409 firmado / anulado → dentition inválida 422 → desplaza el current (is_current = false)
+//           403 el usuario no es el profesional del encounter (EncounterActionNotAllowedForUser) →
+//           422 profesional del encounter inactivo → 409 firmado / anulado → dentition inválida 422 → desplaza el current (is_current = false)
 //           y crea el nuevo current con snapshot_date = ahora. dentition ausente = permanente.
 //           Un encounter_id no registrado se acepta (abierto, de la misma historia clínica).
 //   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 ProblemDetails de
@@ -108,6 +114,13 @@ export class MockOdontogramRepository implements OdontogramRepository {
       if (encounter.clinical_record_id !== recordId) {
         return httpError(422,
           `Encounter '${dto.encounter_id}' does not belong to clinical record '${recordId}'.`);
+      }
+      if (encounter.actor_is_professional === false) {
+        return httpError(403,
+          `Only the user linked to the encounter's professional can attach odontograms to encounter '${dto.encounter_id}'.`);
+      }
+      if (encounter.professional_active === false) {
+        return httpError(422, `Professional with id '${encounter.professional_id ?? 'prof-1'}' is inactive.`);
       }
       if (encounter.status !== 'open') {
         return httpError(409, `Cannot attach odontograms to an encounter with status '${encounter.status}'.`);

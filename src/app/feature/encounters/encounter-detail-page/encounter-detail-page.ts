@@ -117,6 +117,12 @@ export class EncounterDetailPage {
 
   // Diagnósticos: mismo `canEdit` que la nota + encounter open (si no, solo el listado).
   readonly canEditDiagnoses = computed(() => this.canEdit() && this.encounter()?.status === 'open');
+  // Odontograma: solo se asocia este encounter (encounter_id) si el usuario es su profesional y está
+  // open (el backend respondería 403 / 409). Si no, el acceso igual abre el odontograma del paciente.
+  readonly odontogramQueryParams = computed(() => {
+    const e = this.encounter();
+    return e && this.canEditDiagnoses() ? { encounter_id: e.id } : null;
+  });
   private readonly encounterId = computed(() => this.encounter()?.id ?? null);
 
   // Anulación administrativa (clinical.void) para quien no es el profesional habilitado del encounter.

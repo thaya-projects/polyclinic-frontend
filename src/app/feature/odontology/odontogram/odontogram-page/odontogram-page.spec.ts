@@ -11,6 +11,7 @@ import { MockToothConditionsRepository } from '../../../../testing/tooth-conditi
 import { firstValueFrom } from 'rxjs';
 import {
   ODONTOGRAM_CONFLICT_MESSAGE, ODONTOGRAM_DISABLED_MESSAGE, TOOTH_CONDITION_HISTORIC_MESSAGE,
+  ODONTOGRAM_ENCOUNTER_NOT_OWNER_MESSAGE, ODONTOGRAM_ENCOUNTER_PROFESSIONAL_INACTIVE_MESSAGE,
 } from '../../../../shared/utils/odontogram-error.util';
 
 // La pantalla corre contra el mock (desacoplada de la fuente de datos).
@@ -136,6 +137,25 @@ describe('OdontogramPage', () => {
     expect(q('create-encounter-note')).not.toBeNull();
     page.onCreate();
     expect(create).toHaveBeenCalledWith('pat-1', { clinical_record_id: 'cr-pat-1', dentition: 'permanente', encounter_id: 'enc-9' });
+  });
+
+  it('403 encounter ajeno / 422 profesional inactivo: mensaje en el modal, sin tratarlo como módulo apagado', async () => {
+    repo.registerEncounter('enc-foreign', { clinical_record_id: 'cr-pat-1', status: 'open', actor_is_professional: false });
+    repo.registerEncounter('enc-inactive', { clinical_record_id: 'cr-pat-1', status: 'open', professional_active: false });
+    for (const [encounterId, message] of [
+      ['enc-foreign', ODONTOGRAM_ENCOUNTER_NOT_OWNER_MESSAGE],
+      ['enc-inactive', ODONTOGRAM_ENCOUNTER_PROFESSIONAL_INACTIVE_MESSAGE],
+    ]) {
+      await render('pat-1', { encounter_id: encounterId });
+      const page = fixture.componentInstance;
+      page.openCreate();
+      page.onCreate();
+      fixture.detectChanges();
+      expect(page.createOpen()).toBe(true);
+      expect(page.moduleDisabled()).toBe(false);
+      expect(page.actionError()).toBe(message);
+      expect(page.odontogram()?.id).toBe('odo-2');
+    }
   });
 
   it('sin current: el CTA del estado vacío crea el primero (sin aviso de histórico)', async () => {

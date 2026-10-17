@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, convertToParamMap, provideRouter, ActivatedRoute } from '@angular/router';
@@ -8,6 +9,7 @@ import { CIE10_CATALOG } from '../../../core/services/cie10-catalog';
 import { MockCie10Catalog } from '../../../testing/cie10-mock.catalog';
 import { MOCK_CURRENT_USER_ID, MockEncountersRepository } from '../../../testing/encounters-mock.repository';
 import { ToastService } from '../../../core/services/toast.service';
+import { FeaturesService } from '../../../core/services/features.service';
 import { Encounter } from '../../../core/models/encounter.model';
 import {
   ADMIN_VOID_ONLY_MESSAGE, ENCOUNTERS_ACCESS_DENIED_MESSAGE, ENCOUNTER_CONFLICT_MESSAGE,
@@ -23,6 +25,7 @@ describe('EncounterDetailPage (mock repository)', () => {
   let toast: ToastService;
   let el: HTMLElement;
   let params$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  const modules = signal<Record<string, boolean>>({});
 
   const q = (testId: string) => el.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
   const textarea = (field: string) => q(`field-${field}`) as HTMLTextAreaElement;
@@ -53,6 +56,7 @@ describe('EncounterDetailPage (mock repository)', () => {
 
   beforeEach(async () => {
     params$ = new BehaviorSubject(convertToParamMap({ id: 'enc-1' }));
+    modules.set({});
     await TestBed.configureTestingModule({
       imports: [EncounterDetailPage],
       providers: [
@@ -60,6 +64,7 @@ describe('EncounterDetailPage (mock repository)', () => {
         { provide: ActivatedRoute, useValue: { paramMap: params$.asObservable() } },
         { provide: ENCOUNTERS_REPOSITORY, useClass: MockEncountersRepository },
         { provide: CIE10_CATALOG, useClass: MockCie10Catalog },
+        { provide: FeaturesService, useValue: { enabledMap: modules.asReadonly() } },
       ],
     }).compileComponents();
     repo = TestBed.inject(ENCOUNTERS_REPOSITORY) as MockEncountersRepository;
@@ -241,6 +246,34 @@ describe('EncounterDetailPage (mock repository)', () => {
     expect(q('btn-sign')).toBeNull();
     expect(q('btn-void')).toBeNull();
     expect(q('not-owner-info')?.textContent).toContain(ENCOUNTER_FORBIDDEN_MESSAGE);
+  });
+
+  describe('acceso al odontograma (fase 6)', () => {
+    const link = () => q('encounter-odontogram') as HTMLAnchorElement | null;
+
+    it('sin el módulo odontogram no hay acceso', async () => {
+      await create('enc-1');
+      expect(link()).toBeNull();
+    });
+
+    it('profesional del encuentro abierto: asocia el encounter (encounter_id)', async () => {
+      modules.set({ odontogram: true });
+      await create('enc-1');
+      expect(link()?.getAttribute('href')).toBe('/patients/pat-1/odontogram?encounter_id=enc-1');
+    });
+
+    it('usuario que no es el profesional del encuentro: abre el odontograma sin asociarlo', async () => {
+      modules.set({ odontogram: true });
+      await create('enc-3');
+      const href = link()?.getAttribute('href') ?? '';
+      expect(href).toMatch(/^\/patients\/[^/]+\/odontogram$/);
+    });
+
+    it('encuentro propio ya firmado: abre el odontograma sin asociarlo', async () => {
+      modules.set({ odontogram: true });
+      await create('enc-2');
+      expect(link()?.getAttribute('href')).toBe('/patients/pat-2/odontogram');
+    });
   });
 
   it('profesional propio desactivado sin clinical.void: no puede ver notas (sin llamar al backend)', async () => {
