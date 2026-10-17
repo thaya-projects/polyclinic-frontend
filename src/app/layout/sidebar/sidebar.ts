@@ -38,9 +38,14 @@ const NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', route: '/patients' },
   // Fase 4 T6: encuentros clínicos (notas de evolución).
   { kind: 'leaf', label: 'Encuentros', icon: 'notes', route: '/encounters', requiresEncountersAccess: true },
-  // T6 FF (demo): entry gated por feature 'odontogram'. Aparece sólo si el tenant lo tiene
-  // activo. Sirve de contrato de referencia — cuando el layout de clínica exista se moverá allí.
-  { kind: 'leaf', label: 'Odontograma', icon: 'tooth', comingSoon: true, moduleKey: 'odontogram' },
+  // Fase 6: grupo Odontología gated por feature 'odontogram' (cada hijo lleva el moduleKey; un
+  // grupo sin hijos visibles se oculta entero).
+  {
+    kind: 'group', label: 'Odontología', icon: 'dental', children: [
+      { kind: 'leaf', label: 'Catálogo', icon: 'list-details', route: '/odontology/catalog', moduleKey: 'odontogram' },
+      { kind: 'leaf', label: 'Odontograma', icon: 'dental', comingSoon: true, moduleKey: 'odontogram' },
+    ],
+  },
   { kind: 'leaf', label: 'Configuración', icon: 'settings', comingSoon: true },
 ];
 

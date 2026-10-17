@@ -116,6 +116,15 @@ export const routes: Routes = [
         canDeactivate: [(page: { canLeave(): boolean | Promise<boolean> }) => page.canLeave()],
       },
       {
+        // Fase 6 T5: Odontología > Catálogo de condiciones dentales. authGuard; el backend aplica
+        // la policy TenantUser y el feature flag "odontogram" (403 si está apagado).
+        path: 'odontology/catalog',
+        loadComponent: () =>
+          import('./feature/odontology/dental-conditions/dental-conditions-page/dental-conditions-page')
+            .then(m => m.DentalConditionsPage),
+        canActivate: [authGuard],
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.
