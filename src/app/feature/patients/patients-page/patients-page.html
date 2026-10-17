@@ -101,6 +101,13 @@
           Nueva nota
         </button>
         }
+        @if (odontogramEnabled()) {
+        <button type="button" (click)="goToOdontogram(patient)" data-testid="patient-odontogram"
+          class="flex h-10 items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+          <i class="ti ti-dental"></i>
+          Odontograma
+        </button>
+        }
         <button type="button" (click)="closeModal()"
           class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand">
           Cerrar

@@ -20,6 +20,7 @@ import { EncounterLookupsService } from '../../../core/services/encounter-lookup
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthStore } from '../../../core/services/auth-store.service';
+import { FeaturesService } from '../../../core/services/features.service';
 import { Encounter, EncounterNotePatch } from '../../../core/models/encounter.model';
 import { CreateDiagnosisDto } from '../../../core/models/diagnosis.model';
 import { CreateMeasurementDto } from '../../../core/models/measurement.model';
@@ -125,6 +126,10 @@ export class EncounterDetailPage {
   leaveConfirmOpen = signal(false);
   private leaveResolver: ((leave: boolean) => void) | null = null;
 
+  // Fase 6: acceso al odontograma del paciente (asociando este encounter) con el módulo activo.
+  private features = inject(FeaturesService);
+  readonly odontogramEnabled = computed(() => this.features.enabledMap()['odontogram'] === true);
+
   readonly patientName = computed(() => {
     const e = this.encounter();
     return e ? this.lookups.patientNameById()[e.patient_id] ?? '' : '';
@@ -143,6 +148,12 @@ export class EncounterDetailPage {
 
   // Diagnósticos: mismo `canEdit` que la nota + encounter open (si no, solo el listado).
   readonly canEditDiagnoses = computed(() => this.canEdit() && this.encounter()?.status === 'open');
+  // Odontograma: solo se asocia este encounter (encounter_id) si el usuario es su profesional y está
+  // open (el backend respondería 403 / 409). Si no, el acceso igual abre el odontograma del paciente.
+  readonly odontogramQueryParams = computed(() => {
+    const e = this.encounter();
+    return e && this.canEditDiagnoses() ? { encounter_id: e.id } : null;
+  });
   private readonly encounterId = computed(() => this.encounter()?.id ?? null);
   private readonly encounterPatientId = computed(() => this.encounter()?.patient_id ?? null);
   // Operación de diagnósticos, signos vitales o recetas en curso (cambia la version del encounter).

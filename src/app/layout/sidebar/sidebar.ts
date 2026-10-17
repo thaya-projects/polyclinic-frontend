@@ -41,10 +41,15 @@ const CLINIC_NAV_ITEMS: NavEntry[] = [
   // (profesional activo o clinical.void).
   { kind: 'leaf', label: 'Encuentros', icon: 'notes', route: '/encounters', requiresEncountersAccess: true },
   { kind: 'leaf', label: 'Servicios', icon: 'stethoscope', route: '/services' },
-  // T6 FF (demo): entry gated por feature 'odontogram'. Aparece sólo si el
-  // tenant lo tiene activo.
-  { kind: 'leaf', label: 'Odontograma', icon: 'tooth', comingSoon: true, moduleKey: 'odontogram' },
-  // Fase 8: gated por feature 'invoicing' — mismo criterio que Odontograma.
+  // Fase 6: grupo Odontología gated por feature 'odontogram' (cada hijo lleva el moduleKey; un
+  // grupo sin hijos visibles se oculta entero). Reemplaza la entry demo "Odontograma" de T6 FF.
+  {
+    kind: 'group', label: 'Odontología', icon: 'dental', children: [
+      { kind: 'leaf', label: 'Catálogo', icon: 'list-details', route: '/odontology/catalog', moduleKey: 'odontogram' },
+      { kind: 'leaf', label: 'Odontograma', icon: 'dental', route: '/odontology/odontogram', moduleKey: 'odontogram' },
+    ],
+  },
+  // Fase 8: gated por feature 'invoicing' — mismo criterio que Odontología.
   { kind: 'leaf', label: 'Facturas', icon: 'file-invoice', route: '/invoices', moduleKey: 'invoicing' },
 ];
 

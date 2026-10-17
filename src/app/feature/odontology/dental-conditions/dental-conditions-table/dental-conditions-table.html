@@ -1,0 +1,49 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Sin condiciones dentales todavía.">
+  <ng-template appDataTableCell="name" let-row>
+    <div class="flex items-center gap-3">
+      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-icon-soft text-brand">
+        <i class="ti ti-dental"></i>
+      </div>
+      <span class="font-semibold text-text">{{ row.name }}</span>
+    </div>
+  </ng-template>
+
+  <ng-template appDataTableCell="code" let-row>
+    <span class="font-mono text-xs text-muted">{{ row.code }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="category" let-row>
+    <span class="text-sm text-text">{{ row.category ?? '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="default_color" let-row>
+    @if (row.default_color) {
+      <div class="flex items-center gap-2" data-testid="color-cell">
+        <span class="inline-block h-5 w-5 shrink-0 rounded-md border border-border"
+          [style.background-color]="row.default_color" [attr.title]="row.default_color"></span>
+        <span class="font-mono text-xs text-muted">{{ row.default_color }}</span>
+      </div>
+    } @else {
+      <span class="text-xs text-muted">Sin color</span>
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="scope" let-row>
+    <app-status-chip
+      [label]="row.tenant_id ? 'Propia' : 'Global'"
+      [tone]="row.tenant_id ? 'wait' : 'neutral'" />
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex items-center justify-end gap-2">
+      @if (row.tenant_id) {
+        <button type="button" (click)="edit.emit(row)"
+          class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+          Editar
+        </button>
+      } @else {
+        <span class="text-xs text-muted">Solo lectura</span>
+      }
+    </div>
+  </ng-template>
+</app-data-table>

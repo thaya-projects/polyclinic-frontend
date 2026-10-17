@@ -1,0 +1,91 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-3" data-testid="tooth-condition-form">
+  <p class="text-xs font-semibold tracking-wide text-muted uppercase">
+    {{ isEdit() ? 'Editar condición' : 'Marcar condición' }}
+  </p>
+
+  @if (!isEdit() && fdiError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600" role="alert"
+      data-testid="fdi-error">
+      <i class="ti ti-alert-circle"></i>
+      {{ fdiError() }}
+    </div>
+  }
+
+  <div class="flex flex-col gap-1.5">
+    <label class="text-xs font-medium tracking-wide text-muted uppercase" for="tooth-condition-condition">Condición</label>
+    <div class="flex items-center gap-2">
+      <span class="inline-block h-5 w-5 shrink-0 rounded-md border border-border" data-testid="condition-swatch"
+        [style.background-color]="selectedCondition()?.default_color ?? 'transparent'"
+        [attr.title]="selectedCondition()?.default_color ?? 'Sin color'"></span>
+      <select id="tooth-condition-condition" formControlName="condition_id" data-testid="condition-select"
+        [class]="inputClass(form.controls.condition_id) + ' min-w-0 flex-1'">
+        <option value="" disabled>Elegí una condición</option>
+        @if (globalConditions().length) {
+          <optgroup label="Globales">
+            @for (c of globalConditions(); track c.id) {
+              <option [value]="c.id">{{ c.name }}{{ c.default_color ? ' · ' + c.default_color : '' }}</option>
+            }
+          </optgroup>
+        }
+        @if (ownConditions().length) {
+          <optgroup label="Propias">
+            @for (c of ownConditions(); track c.id) {
+              <option [value]="c.id">{{ c.name }}{{ c.default_color ? ' · ' + c.default_color : '' }}</option>
+            }
+          </optgroup>
+        }
+      </select>
+    </div>
+    @if (isInvalid(form.controls.condition_id)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.condition_id) }}</span>
+    }
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" for="tooth-condition-surface">Cara</label>
+      <select id="tooth-condition-surface" formControlName="surface" data-testid="surface-select"
+        [class]="inputClass(form.controls.surface)">
+        @for (option of surfaceOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" for="tooth-condition-state">Estado</label>
+      <select id="tooth-condition-state" formControlName="state" data-testid="state-select"
+        [class]="inputClass(form.controls.state)">
+        @for (option of stateOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label class="text-xs font-medium tracking-wide text-muted uppercase" for="tooth-condition-note">Nota</label>
+    <textarea id="tooth-condition-note" formControlName="note" rows="2" placeholder="Opcional" data-testid="note-input"
+      class="rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+  </div>
+
+  <div class="flex items-center justify-end gap-2">
+    @if (isEdit()) {
+      <button type="button" (click)="cancel()" [disabled]="saving()" data-testid="tooth-condition-cancel"
+        class="flex h-9 items-center justify-center rounded-xl border border-border px-3 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+    }
+    <button type="submit" [disabled]="saving() || (!isEdit() && !!fdiError())" data-testid="tooth-condition-submit"
+      class="flex h-9 items-center justify-center gap-1.5 rounded-xl bg-brand px-4 text-xs font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      @if (saving()) {
+        <i class="ti ti-loader-2 animate-spin"></i>
+        Guardando...
+      } @else if (isEdit()) {
+        Guardar cambios
+      } @else {
+        <i class="ti ti-plus"></i>
+        Marcar
+      }
+    </button>
+  </div>
+</form>

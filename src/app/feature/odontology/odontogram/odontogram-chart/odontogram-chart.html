@@ -1,0 +1,62 @@
+<div class="flex flex-col gap-6 overflow-x-auto" data-testid="odontogram-chart">
+  @for (chart of charts(); track chart.kind) {
+    <section class="flex flex-col gap-2" [attr.data-testid]="'chart-' + chart.kind" [attr.aria-label]="chartLabel(chart)">
+      @if (charts().length > 1) {
+        <h5 class="text-xs font-semibold tracking-wide text-muted uppercase">{{ chartLabel(chart) }}</h5>
+      }
+      <div class="mx-auto flex w-max flex-col gap-1">
+        <ng-container [ngTemplateOutlet]="arch" [ngTemplateOutletContext]="{ $implicit: chart.upper, upper: true }" />
+        <div class="border-t border-dashed border-border"></div>
+        <ng-container [ngTemplateOutlet]="arch" [ngTemplateOutletContext]="{ $implicit: chart.lower, upper: false }" />
+      </div>
+    </section>
+  }
+</div>
+
+<ng-template #arch let-row let-upper="upper">
+  <div class="flex items-stretch">
+    <div class="flex gap-1 pr-2">
+      @for (fdi of row.left; track fdi) {
+        <ng-container [ngTemplateOutlet]="tooth" [ngTemplateOutletContext]="{ $implicit: fdi, upper }" />
+      }
+    </div>
+    <div class="w-px bg-border"></div>
+    <div class="flex gap-1 pl-2">
+      @for (fdi of row.right; track fdi) {
+        <ng-container [ngTemplateOutlet]="tooth" [ngTemplateOutletContext]="{ $implicit: fdi, upper }" />
+      }
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #tooth let-fdi let-upper="upper">
+  <button type="button" (click)="select(fdi)" [attr.data-testid]="'tooth-' + fdi"
+    [attr.aria-pressed]="selectedTooth() === fdi" [attr.aria-label]="'Pieza ' + fdi"
+    class="flex w-11 flex-col items-center gap-1 rounded-lg border px-1 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+    [class]="selectedTooth() === fdi
+      ? 'border-brand bg-card-accent text-brand'
+      : 'border-transparent text-muted hover:border-border hover:bg-surface-alt hover:text-navy'">
+    @if (upper) {
+      <span class="text-[0.7rem] font-semibold tabular-nums">{{ fdi }}</span>
+    }
+    <svg viewBox="0 0 40 40" class="h-8 w-8" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+      <polygon points="2,2 38,2 28,12 12,12" pointer-events="all" [attr.data-testid]="'face-' + fdi + '-top'"
+        [attr.fill]="faceFill(fdi, 'top')" [attr.stroke-width]="faceStroke(fdi, 'top')" (click)="selectFace($event, fdi, 'top')" />
+      <polygon points="38,2 38,38 28,28 28,12" pointer-events="all" [attr.data-testid]="'face-' + fdi + '-right'"
+        [attr.fill]="faceFill(fdi, 'right')" [attr.stroke-width]="faceStroke(fdi, 'right')" (click)="selectFace($event, fdi, 'right')" />
+      <polygon points="2,38 38,38 28,28 12,28" pointer-events="all" [attr.data-testid]="'face-' + fdi + '-bottom'"
+        [attr.fill]="faceFill(fdi, 'bottom')" [attr.stroke-width]="faceStroke(fdi, 'bottom')" (click)="selectFace($event, fdi, 'bottom')" />
+      <polygon points="2,2 12,12 12,28 2,38" pointer-events="all" [attr.data-testid]="'face-' + fdi + '-left'"
+        [attr.fill]="faceFill(fdi, 'left')" [attr.stroke-width]="faceStroke(fdi, 'left')" (click)="selectFace($event, fdi, 'left')" />
+      <rect x="12" y="12" width="16" height="16" pointer-events="all" [attr.data-testid]="'face-' + fdi + '-center'"
+        [attr.fill]="faceFill(fdi, 'center')" [attr.stroke-width]="faceStroke(fdi, 'center')" (click)="selectFace($event, fdi, 'center')" />
+      @if (paint()[fdi]?.cervical; as cervical) {
+        <rect x="0.75" y="0.75" width="38.5" height="38.5" rx="2" [attr.stroke]="cervical" stroke-width="1.5" fill="none"
+          pointer-events="none" [attr.data-testid]="'cervical-' + fdi" />
+      }
+    </svg>
+    @if (!upper) {
+      <span class="text-[0.7rem] font-semibold tabular-nums">{{ fdi }}</span>
+    }
+  </button>
+</ng-template>

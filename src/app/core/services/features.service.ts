@@ -1,6 +1,6 @@
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable, tap } from 'rxjs';
+import { Observable, catchError, finalize, map, of, shareReplay, tap } from 'rxjs';
 import { FeaturesApi } from './features-api';
 import { FeatureKey, UpdateEnabledModulesDto } from '../models/features.model';
 
@@ -24,20 +24,38 @@ export class FeaturesService {
 
   readonly enabledMap = computed(() => this.modulesSignal());
 
+  // GET en vuelo compartido: si el Shell y un guard (featureEnabledGuard) piden a la vez, sale uno solo.
+  private inFlight: Observable<void> | null = null;
+
   loadMine(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    this.api.getMine().subscribe({
-      next: dto => {
-        this.modulesSignal.set(dto.modules);
-        this.loadedSignal.set(true);
-      },
-      error: () => {
+    this.request().subscribe();
+  }
+
+  // Fase 6 FF: para guards de ruta. Emite (y completa) cuando el mapa está cargado: al instante si ya
+  // lo estaba, si no espera el GET en vuelo o dispara uno. En SSR emite enseguida (sin sesión).
+  ready(): Observable<void> {
+    if (this.loadedSignal() || !isPlatformBrowser(this.platformId)) return of(undefined);
+    return this.request();
+  }
+
+  private request(): Observable<void> {
+    if (!this.inFlight) {
+      this.inFlight = this.api.getMine().pipe(
+        tap(dto => this.modulesSignal.set(dto.modules)),
+        map(() => undefined),
         // Ante error (401/403/404): dejamos el mapa vacío → todos cerrados. Los guards de UI
         // deben esconder, no mostrar, hasta que haya un load exitoso.
-        this.modulesSignal.set({});
-        this.loadedSignal.set(true);
-      },
-    });
+        catchError(() => {
+          this.modulesSignal.set({});
+          return of(undefined);
+        }),
+        tap(() => this.loadedSignal.set(true)),
+        finalize(() => (this.inFlight = null)),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+    }
+    return this.inFlight;
   }
 
   updateForTenant(tenantId: string, dto: UpdateEnabledModulesDto): Observable<void> {
