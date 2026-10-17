@@ -37,19 +37,33 @@ function httpError(status: number, detail: string): Observable<never> {
 //   create: code trim+lowercase (requerido, ≤ 50, [a-z0-9_]) → name requerido → color #RRGGBB
 //           (normalizado a mayúsculas) → code repetido entre las propias 409 (igual a una global es válido).
 //   update: 404 → global 403 → name null 422 → color 422. category/color vacíos = null.
+//   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 sin body, como
+//   OdontogramFeatureGuardMiddleware.
 // Sin delays (los tests no necesitan timers falsos).
 @Injectable()
 export class MockDentalConditionsRepository implements DentalConditionsRepository {
   private conditions: DentalCondition[] = seed();
   private nextId = 100;
+  private moduleEnabled = true;
+
+  // Helper para tests/demo: prende o apaga el módulo "odontogram" del tenant.
+  setOdontogramEnabled(enabled: boolean): void {
+    this.moduleEnabled = enabled;
+  }
+
+  odontogramEnabled(): boolean | null {
+    return this.moduleEnabled;
+  }
 
   list(): Observable<DentalCondition[]> {
+    if (!this.moduleEnabled) return moduleDisabled();
     const sorted = [...this.conditions].sort((a, b) =>
       Number(a.tenant_id !== null) - Number(b.tenant_id !== null) || a.code.localeCompare(b.code));
     return of(sorted.map(c => ({ ...c })));
   }
 
   create(dto: CreateDentalConditionDto): Observable<DentalCondition> {
+    if (!this.moduleEnabled) return moduleDisabled();
     const code = (dto.code ?? '').trim().toLowerCase();
     if (!code) return argumentError('Code is required.', 'value');
     if (code.length > DENTAL_CONDITION_LIMITS.codeMaxLength) {
@@ -76,6 +90,7 @@ export class MockDentalConditionsRepository implements DentalConditionsRepositor
   }
 
   update(id: string, dto: UpdateDentalConditionDto): Observable<DentalCondition> {
+    if (!this.moduleEnabled) return moduleDisabled();
     const current = this.conditions.find(c => c.id === id && (c.tenant_id === null || c.tenant_id === MOCK_DENTAL_TENANT_ID));
     if (!current) return httpError(404, `Dental condition with id '${id}' was not found.`);
     if (current.tenant_id === null) {
@@ -94,6 +109,11 @@ export class MockDentalConditionsRepository implements DentalConditionsRepositor
     this.conditions = this.conditions.map(c => (c.id === id ? updated : c));
     return of({ ...updated });
   }
+}
+
+// El middleware corta antes de ExceptionHandlingMiddleware: 403 sin ProblemDetails.
+function moduleDisabled(): Observable<never> {
+  return throwError(() => new HttpErrorResponse({ status: 403, error: null }));
 }
 
 function normalizeOptional(value: string | null | undefined): string | null {

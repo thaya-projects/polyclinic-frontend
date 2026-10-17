@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   DENTAL_CONDITION_DUPLICATE_CODE_MESSAGE, DENTAL_CONDITION_FORBIDDEN_MESSAGE, DENTAL_CONDITION_GLOBAL_MESSAGE,
-  DENTAL_CONDITION_NOT_FOUND_MESSAGE, DENTAL_CONDITION_VALIDATION_MESSAGE, dentalConditionError,
+  DENTAL_CONDITION_NOT_FOUND_MESSAGE, DENTAL_CONDITION_VALIDATION_MESSAGE, DENTAL_CONDITIONS_LIST_FORBIDDEN_MESSAGE,
+  ODONTOGRAM_DISABLED_MESSAGE, SESSION_EXPIRED_MESSAGE, dentalConditionError,
 } from './dental-conditions-error.util';
 
 const httpErr = (status: number, error: unknown = null) => new HttpErrorResponse({ status, error });
@@ -43,5 +44,39 @@ describe('dentalConditionError', () => {
   it('0 → sin conexión; no HTTP → fallback', () => {
     expect(dentalConditionError(httpErr(0)).message).toBe('No se pudo conectar con el servidor.');
     expect(dentalConditionError(new Error('x'), 'fallback')).toEqual({ kind: 'other', message: 'fallback' });
+  });
+
+  it('401 → unauthorized (lo resuelve authInterceptor)', () => {
+    expect(dentalConditionError(httpErr(401))).toEqual({ kind: 'unauthorized', message: SESSION_EXPIRED_MESSAGE });
+  });
+});
+
+describe('dentalConditionError: 403 del módulo odontogram apagado', () => {
+  it('listado con 403 sin body y módulo desconocido o apagado → feature_disabled (mensaje claro)', () => {
+    for (const odontogramEnabled of [null, false]) {
+      expect(dentalConditionError(httpErr(403), 'x', { operation: 'list', odontogramEnabled }))
+        .toEqual({ kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE });
+    }
+    expect(ODONTOGRAM_DISABLED_MESSAGE).toContain('Odontología no está habilitado');
+  });
+
+  it('listado con 403 y módulo prendido → sin acceso (no se culpa al módulo)', () => {
+    expect(dentalConditionError(httpErr(403), 'x', { operation: 'list', odontogramEnabled: true }))
+      .toEqual({ kind: 'forbidden', message: DENTAL_CONDITIONS_LIST_FORBIDDEN_MESSAGE });
+  });
+
+  it('escritura con 403 sin body: módulo apagado → feature_disabled; si no → sin permiso', () => {
+    expect(dentalConditionError(httpErr(403), 'x', { operation: 'write', odontogramEnabled: false }).kind)
+      .toBe('feature_disabled');
+    expect(dentalConditionError(httpErr(403), 'x', { operation: 'write', odontogramEnabled: true }))
+      .toEqual({ kind: 'forbidden', message: DENTAL_CONDITION_FORBIDDEN_MESSAGE });
+    expect(dentalConditionError(httpErr(403), 'x', { operation: 'write', odontogramEnabled: null }).kind)
+      .toBe('forbidden');
+  });
+
+  it('403 de global no editable gana aunque el módulo figure apagado', () => {
+    const err = httpErr(403, { detail: "Dental condition with id 'abc' is global and cannot be modified." });
+    expect(dentalConditionError(err, 'x', { operation: 'write', odontogramEnabled: false }).kind)
+      .toBe('global_not_editable');
   });
 });

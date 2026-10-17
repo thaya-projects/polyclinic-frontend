@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { MOCK_DENTAL_TENANT_ID, MockDentalConditionsRepository } from './dental-conditions-mock.repository';
 
 async function errorOf(p: Promise<unknown>): Promise<HttpErrorResponse> {
@@ -65,5 +65,15 @@ describe('MockDentalConditionsRepository', () => {
     expect(updated).toEqual(expect.objectContaining({
       code: 'sellante', name: 'Sellante', category: null, default_color: null,
     }));
+  });
+
+  it('módulo odontogram apagado: toda llamada → 403 sin body', async () => {
+    repo.setOdontogramEnabled(false);
+    expect(repo.odontogramEnabled()).toBe(false);
+    for (const call of [repo.list() as Observable<unknown>, repo.create({ code: 'x', name: 'X' }), repo.update('dc-own-1', { name: 'X' })]) {
+      const err = await errorOf(firstValueFrom(call));
+      expect(err.status).toBe(403);
+      expect(err.error).toBeNull();
+    }
   });
 });

@@ -13,7 +13,16 @@
     }
   </div>
 
-  @if (listError()) {
+  @if (moduleDisabled()) {
+    <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800"
+      role="alert" data-testid="module-disabled">
+      <i class="ti ti-lock mt-0.5"></i>
+      <div>
+        <p class="font-semibold">Odontología no habilitada</p>
+        <p class="mt-0.5">{{ listError() }}</p>
+      </div>
+    </div>
+  } @else if (listError()) {
     <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">
       <i class="ti ti-alert-circle"></i>
       {{ listError() }}

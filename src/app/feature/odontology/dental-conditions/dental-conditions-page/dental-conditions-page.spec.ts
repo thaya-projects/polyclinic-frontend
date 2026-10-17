@@ -2,7 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DentalConditionsPage } from './dental-conditions-page';
 import { DENTAL_CONDITIONS_REPOSITORY } from '../../../../core/services/dental-conditions-repository';
 import { MockDentalConditionsRepository } from '../../../../testing/dental-conditions-mock.repository';
-import { DENTAL_CONDITION_DUPLICATE_CODE_MESSAGE } from '../../../../shared/utils/dental-conditions-error.util';
+import {
+  DENTAL_CONDITION_DUPLICATE_CODE_MESSAGE, ODONTOGRAM_DISABLED_MESSAGE,
+} from '../../../../shared/utils/dental-conditions-error.util';
 
 // La pantalla corre contra el mock (desacoplada de la fuente de datos).
 describe('DentalConditionsPage', () => {
@@ -75,3 +77,47 @@ describe('DentalConditionsPage', () => {
     expect(rowOf('sellante').textContent).toContain('Sellante de fosas');
   });
 });
+
+describe('DentalConditionsPage: módulo odontogram apagado', () => {
+  let fixture: ComponentFixture<DentalConditionsPage>;
+  let repo: MockDentalConditionsRepository;
+
+  const el = () => fixture.nativeElement as HTMLElement;
+
+  async function render(): Promise<void> {
+    fixture = TestBed.createComponent(DentalConditionsPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [DentalConditionsPage],
+      providers: [{ provide: DENTAL_CONDITIONS_REPOSITORY, useClass: MockDentalConditionsRepository }],
+    });
+    repo = TestBed.inject(DENTAL_CONDITIONS_REPOSITORY) as MockDentalConditionsRepository;
+  });
+
+  it('listado con 403 del módulo: estado bloqueado con mensaje claro, sin tabla ni alta', async () => {
+    repo.setOdontogramEnabled(false);
+    await render();
+    const blocked = el().querySelector('[data-testid="module-disabled"]');
+    expect(blocked?.textContent).toContain(ODONTOGRAM_DISABLED_MESSAGE);
+    expect(el().querySelector('table')).toBeNull();
+    expect(el().textContent).not.toContain('Nueva condición');
+  });
+
+  it('el módulo se apaga con la pantalla abierta: el alta cierra el modal y bloquea la pantalla', async () => {
+    await render();
+    const page = fixture.componentInstance;
+    page.openCreateModal();
+    repo.setOdontogramEnabled(false);
+    page.onCreate({ code: 'fractura', name: 'Fractura' });
+    fixture.detectChanges();
+    expect(page.modalMode()).toBe('none');
+    expect(page.moduleDisabled()).toBe(true);
+    expect(el().querySelector('[data-testid="module-disabled"]')?.textContent).toContain(ODONTOGRAM_DISABLED_MESSAGE);
+  });
+});
+

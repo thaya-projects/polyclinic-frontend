@@ -10,7 +10,7 @@ import {
   CreateDentalConditionDto, DentalCondition, UpdateDentalConditionDto, isGlobalDentalCondition,
 } from '../../../../core/models/dental-condition.model';
 import {
-  DENTAL_CONDITIONS_LOAD_ERROR_MESSAGE, dentalConditionError,
+  DENTAL_CONDITIONS_LOAD_ERROR_MESSAGE, DentalConditionError, dentalConditionError,
 } from '../../../../shared/utils/dental-conditions-error.util';
 
 type ModalMode = 'none' | 'create' | 'edit';
@@ -31,6 +31,8 @@ export class DentalConditionsPage {
   // Arranca en true: en el prerender (SSR) no se pide nada y se muestra el estado de carga.
   readonly listLoading = signal(true);
   readonly listError = signal<string | null>(null);
+  // 403 del módulo "odontogram" apagado: estado propio (no un error genérico) y sin acciones.
+  readonly moduleDisabled = signal(false);
   // Aviso no bloqueante sobre el listado (ej. la condición editada ya no existe).
   readonly notice = signal<string | null>(null);
 
@@ -49,6 +51,7 @@ export class DentalConditionsPage {
     if (!isPlatformBrowser(this.platformId)) return;
     this.listLoading.set(true);
     this.listError.set(null);
+    this.moduleDisabled.set(false);
     this.repo.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => {
         this.conditions.set(list);
@@ -56,7 +59,9 @@ export class DentalConditionsPage {
       },
       error: (err: unknown) => {
         this.listLoading.set(false);
-        this.listError.set(dentalConditionError(err, DENTAL_CONDITIONS_LOAD_ERROR_MESSAGE).message);
+        const error = this.classify(err, DENTAL_CONDITIONS_LOAD_ERROR_MESSAGE, 'list');
+        this.moduleDisabled.set(error.kind === 'feature_disabled');
+        this.listError.set(error.message);
       },
     });
   }
@@ -93,7 +98,12 @@ export class DentalConditionsPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(dentalConditionError(err, 'No se pudo crear la condición.').message);
+        const error = this.classify(err, 'No se pudo crear la condición.', 'write');
+        if (error.kind === 'feature_disabled') {
+          this.showModuleDisabled(error.message);
+          return;
+        }
+        this.actionError.set(error.message);
       },
     });
   }
@@ -116,7 +126,11 @@ export class DentalConditionsPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        const { kind, message } = dentalConditionError(err, 'No se pudo guardar la condición.');
+        const { kind, message } = this.classify(err, 'No se pudo guardar la condición.', 'write');
+        if (kind === 'feature_disabled') {
+          this.showModuleDisabled(message);
+          return;
+        }
         // Ya no existe (o pasó a ser global): el listado quedó viejo → cerrar, avisar y recargar.
         if (kind === 'not_found' || kind === 'global_not_editable') {
           this.closeModal();
@@ -131,6 +145,17 @@ export class DentalConditionsPage {
 
   dismissNotice(): void {
     this.notice.set(null);
+  }
+
+  private classify(err: unknown, fallback: string, operation: 'list' | 'write'): DentalConditionError {
+    return dentalConditionError(err, fallback, { operation, odontogramEnabled: this.repo.odontogramEnabled() });
+  }
+
+  // El módulo se apagó con la pantalla abierta: se cierra el modal y la pantalla pasa al estado bloqueado.
+  private showModuleDisabled(message: string): void {
+    this.closeModal();
+    this.moduleDisabled.set(true);
+    this.listError.set(message);
   }
 
   private upsertLocal(condition: DentalCondition): void {
