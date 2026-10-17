@@ -1,4 +1,4 @@
-import { AppRole } from './role.model';
+import { SessionRoleCode } from './role.model';
 import { TenantStatus } from './tenant.model';
 
 // Snake_case a propósito: T14 conecta esto contra el DTO real del backend
@@ -16,12 +16,22 @@ export interface SuperAdminLoginDto {
   password: string;
 }
 
-// Usuario logueado, tal como viene dentro de la respuesta de login/refresh (T15).
+// Un usuario de clínica puede tener más de un rol (ej. admin + profesional).
+export interface SessionRole {
+  code: SessionRoleCode;
+}
+
+// Usuario logueado, tal como viene dentro de la respuesta de login/refresh
+// y de GET /auth/me. is_superadmin es la fuente de verdad para distinguir
+// staff de la plataforma de usuarios de clínica — roles[] solo aplica a
+// estos últimos (un super admin no pertenece a ningún tenant, así que
+// normalmente viene vacío).
 export interface SessionUser {
   id: string;
   full_name: string;
   email: string;
-  role: AppRole;
+  is_superadmin: boolean;
+  roles: SessionRole[];
   // Códigos de permiso del usuario (AuthUserDTO.Permissions, en login y GET /auth/me). Opcional:
   // sesiones guardadas antes de tiparlo pueden no traerlo. Ej.: 'clinical.void'.
   permissions?: string[];

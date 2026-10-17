@@ -3,11 +3,16 @@ import { ListFilters } from '../../../../shared/components/list-filters/list-fil
 import { ListFilterConfig } from '../../../../shared/components/list-filters/list-filter.model';
 import { COUNTRIES } from '../../../../core/constants/countries.const';
 
+// Refleja Domain.Enums.SubscriptionStatus (backend) — mismo mapeo que tenants-table.ts/
+// subscription-status-badge.ts. "Suspendido"/"Activo" como ESTADO DEL TENANT (is_active) es un
+// concepto aparte, ya representado por la columna "Activo" de la tabla — este filtro es
+// puramente sobre el status de la subscription.
 const STATUS_OPTIONS = [
-  { value: 'active', label: 'Activo', tone: 'ok' as const },
-  { value: 'trial', label: 'Trial', tone: 'wait' as const },
-  { value: 'suspended', label: 'Suspendido', tone: 'neutral' as const },
-  { value: 'cancelled', label: 'Cancelado', tone: 'neutral' as const },
+  { value: 'trialing', label: 'Trial', tone: 'wait' as const },
+  { value: 'active', label: 'Activa', tone: 'ok' as const },
+  { value: 'past_due', label: 'Pago vencido', tone: 'neutral' as const },
+  { value: 'canceled', label: 'Cancelada', tone: 'neutral' as const },
+  { value: 'unpaid', label: 'Impaga', tone: 'neutral' as const },
 ];
 
 @Component({

@@ -36,7 +36,7 @@ describe('Sidebar: entrada Encuentros', () => {
     repo = TestBed.inject(ENCOUNTERS_REPOSITORY) as MockEncountersRepository;
     TestBed.inject(AuthStore).setSession({
       access_token: 't',
-      user: { id: 'mock-user-1', full_name: 'Laura', email: 'l@x.com', role: 'app_user' as never },
+      user: { id: 'mock-user-1', full_name: 'Laura', email: 'l@x.com', is_superadmin: false, roles: [] },
       tenant: { id: 'ten-1', name: 'Clínica', slug: 'clinica' },
     });
   });

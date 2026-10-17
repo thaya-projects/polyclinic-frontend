@@ -1,0 +1,22 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Todavía no hay planes de tratamiento.">
+  <ng-template appDataTableCell="created_at" let-row>
+    <span class="text-muted">{{ formatDate(row.created_at) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="status" let-row>
+    <app-treatment-plan-status-badge [status]="row.status" />
+  </ng-template>
+
+  <ng-template appDataTableCell="total_estimated" let-row>
+    <span class="font-semibold text-text">{{ formatAmount(row.total_estimated, row.currency) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" (click)="view.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        Ver detalle
+      </button>
+    </div>
+  </ng-template>
+</app-data-table>
