@@ -1,11 +1,11 @@
-import { InjectionToken } from '@angular/core';
+import { InjectionToken, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CreateOdontogramDto, Odontogram, OdontogramPatientOption } from '../models/odontogram.model';
-import { MockOdontogramRepository } from '../../testing/odontogram-mock.repository';
+import { HttpOdontogramRepository } from './odontogram-http.repository';
 
 // Fase 6 T5: abstracción de la fuente de datos del odontograma. Las pantallas solo conocen este
 // contrato (vía ODONTOGRAM_REPOSITORY), nunca HttpClient ni el mock — así T5 corre con
-// MockOdontogramRepository y T6 enchufa la implementación HTTP sin tocar componentes.
+// MockOdontogramRepository y T6 enchufa HttpOdontogramRepository sin tocar componentes.
 //
 // Los errores viajan como HttpErrorResponse en ambas implementaciones (el mock los fabrica con el
 // mismo status y detail que el backend), para que el manejo de 401/403/404/409/422 sea uno solo.
@@ -31,8 +31,10 @@ export interface OdontogramRepository {
   odontogramEnabled(): boolean | null;
 }
 
-// T5: mientras no exista la implementación HTTP, el default es el mock en memoria.
+// T6: la implementación HTTP es la default. Para correr contra el mock (demo/tests):
+//   providers: [{ provide: ODONTOGRAM_REPOSITORY, useClass: MockOdontogramRepository }]
+//   (MockOdontogramRepository vive en src/app/testing/).
 export const ODONTOGRAM_REPOSITORY = new InjectionToken<OdontogramRepository>(
   'ODONTOGRAM_REPOSITORY',
-  { providedIn: 'root', factory: () => new MockOdontogramRepository() },
+  { providedIn: 'root', factory: () => inject(HttpOdontogramRepository) },
 );

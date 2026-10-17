@@ -4,7 +4,10 @@ import { BehaviorSubject } from 'rxjs';
 import { OdontogramPage } from './odontogram-page';
 import { ODONTOGRAM_REPOSITORY } from '../../../../core/services/odontogram-repository';
 import { MockOdontogramRepository } from '../../../../testing/odontogram-mock.repository';
-import { ODONTOGRAM_DISABLED_MESSAGE } from '../../../../shared/utils/odontogram-error.util';
+import { firstValueFrom } from 'rxjs';
+import {
+  ODONTOGRAM_CONFLICT_MESSAGE, ODONTOGRAM_DISABLED_MESSAGE,
+} from '../../../../shared/utils/odontogram-error.util';
 
 // La pantalla corre contra el mock (desacoplada de la fuente de datos).
 describe('OdontogramPage', () => {
@@ -94,5 +97,74 @@ describe('OdontogramPage', () => {
     fixture.detectChanges();
     expect(q('pick-pat-3')).not.toBeNull();
     expect(q('pick-pat-1')).toBeNull();
+  });
+
+  // ── T6: Nuevo odontograma ──────────────────────────────────────────────────────────────────────
+  it('nuevo odontograma: elige dentición, recarga el current y avisa que el anterior quedó como histórico', async () => {
+    await render('pat-1');
+    const page = fixture.componentInstance;
+    const previousDate = page.formatDate('2026-03-10T14:30:00Z');
+    q('new-odontogram')!.click();
+    fixture.detectChanges();
+    expect(q('create-history-warning')?.textContent).toContain(previousDate);
+    (q('dentition-temporal') as HTMLInputElement).click();
+    q('create-submit')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(page.createOpen()).toBe(false);
+    expect(q('notice')?.textContent).toContain(`El odontograma anterior quedó como histórico del ${previousDate}`);
+    expect(page.odontogram()).toEqual(expect.objectContaining({ dentition: 'temporal', is_current: true }));
+    expect(q('odontogram-meta')!.textContent).toContain('Dentición temporal');
+    expect((await firstValueFrom(repo.getById('odo-2'))).is_current).toBe(false);
+  });
+
+  it('toma clinical_record_id del paciente y encounter_id del query param', async () => {
+    const create = vi.spyOn(repo, 'create');
+    await render('pat-1', { encounter_id: 'enc-9' });
+    const page = fixture.componentInstance;
+    page.openCreate();
+    fixture.detectChanges();
+    expect(q('create-encounter-note')).not.toBeNull();
+    page.onCreate();
+    expect(create).toHaveBeenCalledWith('pat-1', { clinical_record_id: 'cr-pat-1', dentition: 'permanente', encounter_id: 'enc-9' });
+  });
+
+  it('sin current: el CTA del estado vacío crea el primero (sin aviso de histórico)', async () => {
+    await render('pat-2');
+    q('empty-create')!.click();
+    fixture.detectChanges();
+    expect(q('create-history-warning')).toBeNull();
+    fixture.componentInstance.onCreate();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(q('empty-state')).toBeNull();
+    expect(q('odontogram-meta')!.textContent).toContain('Actual');
+    expect(q('notice')).toBeNull();
+  });
+
+  it('409 (carrera del current): cierra el modal, avisa y recarga', async () => {
+    await render('pat-1');
+    const page = fixture.componentInstance;
+    const getCurrent = vi.spyOn(repo, 'getCurrent');
+    page.openCreate();
+    repo.simulateCurrentConflict();
+    page.onCreate();
+    fixture.detectChanges();
+    expect(page.createOpen()).toBe(false);
+    expect(q('notice')?.textContent).toContain(ODONTOGRAM_CONFLICT_MESSAGE);
+    expect(getCurrent).toHaveBeenCalledWith('pat-1');
+  });
+
+  it('el módulo se apaga con el modal abierto: cierra y bloquea la pantalla', async () => {
+    await render('pat-1');
+    const page = fixture.componentInstance;
+    page.openCreate();
+    repo.setOdontogramEnabled(false);
+    page.onCreate();
+    fixture.detectChanges();
+    expect(page.createOpen()).toBe(false);
+    expect(q('module-disabled')?.textContent).toContain(ODONTOGRAM_DISABLED_MESSAGE);
+    expect(q('new-odontogram')).toBeNull();
   });
 });

@@ -79,4 +79,10 @@ describe('dentalConditionError: 403 del módulo odontogram apagado', () => {
     expect(dentalConditionError(err, 'x', { operation: 'write', odontogramEnabled: false }).kind)
       .toBe('global_not_editable');
   });
+
+  it('ProblemDetails del módulo apagado (ModuleDisabledException) gana aunque la sesión lo crea prendido', () => {
+    const err = httpErr(403, { title: 'Forbidden', detail: "Module 'odontogram' is not enabled for this tenant." });
+    expect(dentalConditionError(err, 'x', { operation: 'write', odontogramEnabled: true }))
+      .toEqual({ kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE });
+  });
 });

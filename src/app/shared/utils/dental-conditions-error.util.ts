@@ -1,5 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { normalizeBackendMessage } from './encounters-error.util';
+import { ODONTOGRAM_DISABLED_MESSAGE, isModuleDisabledProblem } from './module-disabled.util';
+
+export { ODONTOGRAM_DISABLED_MESSAGE } from './module-disabled.util';
 
 // Fase 6: clasificación de errores de /tenants/dental-conditions. La pantalla decide qué hacer según
 // `kind`; `message` es el texto a mostrar (siempre en español, nunca el detail crudo del backend).
@@ -8,7 +11,8 @@ import { normalizeBackendMessage } from './encounters-error.util';
 // 403 tiene tres causas y dos llegan sin body (las corta un middleware/policy antes de
 // ExceptionHandlingMiddleware):
 //   - global no editable → ProblemDetails con detail "... is global and cannot be modified."
-//   - módulo "odontogram" apagado (OdontogramFeatureGuardMiddleware) → sin body.
+//   - módulo "odontogram" apagado (OdontogramFeatureGuardMiddleware) → sin body hoy; con
+//     ModuleDisabledException pasa a traer ProblemDetails, que se reconoce primero (module-disabled.util).
 //   - sin permiso organization.manage (policy) → sin body.
 // Para separar las dos últimas se usa el estado del módulo conocido por la sesión
 // (`odontogramEnabled`) y la operación: el GET no exige permiso, así que su 403 sin body es el módulo
@@ -33,8 +37,6 @@ export const DENTAL_CONDITION_GLOBAL_MESSAGE =
 export const DENTAL_CONDITION_FORBIDDEN_MESSAGE =
   'No tenés permiso para gestionar el catálogo dental (requiere el permiso de administración de la clínica).';
 export const DENTAL_CONDITIONS_LIST_FORBIDDEN_MESSAGE = 'No tenés acceso al catálogo dental de esta clínica.';
-export const ODONTOGRAM_DISABLED_MESSAGE =
-  'El módulo de Odontología no está habilitado para tu clínica. Pedile al administrador de la plataforma que lo active.';
 export const SESSION_EXPIRED_MESSAGE = 'Tu sesión expiró. Iniciá sesión de nuevo.';
 export const DENTAL_CONDITION_NOT_FOUND_MESSAGE = 'La condición ya no existe. Se actualizó el listado.';
 export const DENTAL_CONDITION_VALIDATION_MESSAGE = 'Revisá los datos ingresados e intentá de nuevo.';
@@ -90,6 +92,7 @@ function forbiddenError(err: HttpErrorResponse, context: DentalConditionErrorCon
   if (GLOBAL_NOT_EDITABLE_DETAIL.test(detail)) {
     return { kind: 'global_not_editable', message: DENTAL_CONDITION_GLOBAL_MESSAGE };
   }
+  if (isModuleDisabledProblem(err.error)) return { kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE };
   const enabled = context.odontogramEnabled ?? null;
   if (enabled === false || (context.operation === 'list' && enabled === null)) {
     return { kind: 'feature_disabled', message: ODONTOGRAM_DISABLED_MESSAGE };

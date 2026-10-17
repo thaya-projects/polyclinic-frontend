@@ -14,7 +14,25 @@
         <p class="mt-1 text-sm text-muted">Elegí un paciente para ver su odontograma actual.</p>
       }
     </div>
+    @if (canCreate()) {
+      <button type="button" (click)="openCreate()" data-testid="new-odontogram"
+        class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+        <i class="ti ti-plus"></i>
+        Nuevo odontograma
+      </button>
+    }
   </div>
+
+  @if (notice()) {
+    <div class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700" role="status"
+      data-testid="notice">
+      <i class="ti ti-info-circle"></i>
+      <span class="flex-1">{{ notice() }}</span>
+      <button type="button" (click)="dismissNotice()" aria-label="Cerrar aviso" class="text-amber-700 hover:text-amber-900">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+  }
 
   @if (!patientId()) {
     <app-patient-picker [patients]="patientOptions()" [loading]="patientsLoading()"
@@ -47,6 +65,11 @@
       data-testid="empty-state">
       <i class="ti ti-dental text-3xl text-muted"></i>
       <p class="text-sm font-medium text-navy">Este paciente todavía no tiene odontograma.</p>
+      <button type="button" (click)="openCreate()" data-testid="empty-create"
+        class="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark">
+        <i class="ti ti-plus"></i>
+        Crear odontograma
+      </button>
     </div>
   } @else if (odontogram(); as o) {
     <div class="flex flex-wrap items-center gap-3" data-testid="odontogram-meta">
@@ -70,3 +93,47 @@
     </div>
   }
 </div>
+
+<!-- Nuevo odontograma -->
+<app-modal [open]="createOpen()" title="Nuevo odontograma" (closed)="closeCreate()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" role="alert"
+      data-testid="create-error">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <fieldset class="flex flex-col gap-2">
+    <legend class="mb-2 text-sm font-medium text-navy">Dentición</legend>
+    @for (option of dentitionOptions; track option.value) {
+      <label class="flex cursor-pointer items-center gap-2.5 rounded-xl border px-4 py-3 text-sm text-text transition-colors"
+        [class]="newDentition() === option.value ? 'border-brand bg-card-accent' : 'border-border hover:border-brand'">
+        <input type="radio" name="dentition" [value]="option.value" [checked]="newDentition() === option.value"
+          (change)="newDentition.set(option.value)" [attr.data-testid]="'dentition-' + option.value" class="accent-brand" />
+        {{ option.label }}
+      </label>
+    }
+  </fieldset>
+  <div class="mt-4 flex flex-col gap-1.5 text-xs text-muted">
+    @if (odontogram()?.is_current) {
+      <p data-testid="create-history-warning">
+        <i class="ti ti-history"></i>
+        El odontograma actual (del {{ formatDate(odontogram()!.snapshot_date) }}) quedará guardado como histórico.
+      </p>
+    }
+    @if (encounterId()) {
+      <p data-testid="create-encounter-note"><i class="ti ti-notes"></i> Se asociará al encuentro desde el que llegaste.</p>
+    }
+  </div>
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeCreate()" [disabled]="creating()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="onCreate()" [disabled]="creating()" data-testid="create-submit"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ creating() ? 'Creando...' : 'Crear odontograma' }}
+    </button>
+  </div>
+</app-modal>

@@ -2,28 +2,39 @@ import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, 
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Subject, catchError, of, switchMap } from 'rxjs';
+import { Subject, catchError, of, switchMap, throwError } from 'rxjs';
 import { OdontogramChart } from '../odontogram-chart/odontogram-chart';
 import { SelectedToothPanel } from '../selected-tooth-panel/selected-tooth-panel';
 import { PatientPicker } from '../patient-picker/patient-picker';
 import { StatusChip } from '../../../../shared/components/status-chip/status-chip';
+import { Modal } from '../../../../shared/components/modal/modal';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { ODONTOGRAM_REPOSITORY } from '../../../../core/services/odontogram-repository';
 import {
-  Odontogram, OdontogramPatientOption, dentitionLabel,
+  DENTITION_OPTIONS, Dentition, Odontogram, OdontogramPatientOption, dentitionLabel,
 } from '../../../../core/models/odontogram.model';
 import {
   ODONTOGRAM_LOAD_ERROR_MESSAGE, OdontogramError, odontogramError,
 } from '../../../../shared/utils/odontogram-error.util';
+
+const NO_CLINICAL_RECORD_MESSAGE =
+  'No se pudo obtener la historia clínica del paciente. Completala desde la ficha del paciente e intentá de nuevo.';
 
 // Fase 6 T5: Odontología > Odontograma. Solo conoce ODONTOGRAM_REPOSITORY (mock o HTTP).
 //   /patients/:patientId/odontogram[?encounter_id=] → odontograma current del paciente.
 //   /odontology/odontogram (entrada del menú, sin paciente) → selector de paciente que navega a la
 //   ruta de arriba.
 // La grilla y el panel de pieza son presentacionales: la página solo guarda la pieza seleccionada.
+//
+// T6 "Nuevo odontograma": elige dentición, toma clinical_record_id de la historia clínica del paciente
+// (resolveClinicalRecordId) y encounter_id del query param si se llegó desde un encounter. Al crear,
+// recarga el current y avisa que el anterior quedó como snapshot histórico (con su fecha).
+//   404 sin current → estado vacío con CTA "Crear odontograma".
+//   403 módulo apagado → estado bloqueado (también si se apaga con el modal abierto).
+//   409 (carrera del current) → cierra el modal, avisa y recarga.
 @Component({
   selector: 'app-odontogram-page',
-  imports: [OdontogramChart, SelectedToothPanel, PatientPicker, StatusChip, RouterLink],
+  imports: [OdontogramChart, SelectedToothPanel, PatientPicker, StatusChip, Modal, RouterLink],
   templateUrl: './odontogram-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -49,6 +60,17 @@ export class OdontogramPage {
   readonly noCurrent = signal(false);
 
   readonly selectedTooth = signal<number | null>(null);
+
+  // Alta de odontograma nuevo.
+  readonly dentitionOptions = DENTITION_OPTIONS;
+  readonly createOpen = signal(false);
+  readonly newDentition = signal<Dentition>('permanente');
+  readonly creating = signal(false);
+  readonly actionError = signal<string | null>(null);
+  // Aviso no bloqueante (snapshot histórico tras crear / conflicto de current).
+  readonly notice = signal<string | null>(null);
+  readonly canCreate = computed(() => !!this.patientId() && !this.loading() && !this.moduleDisabled()
+    && (this.noCurrent() || !!this.odontogram()));
 
   // Selector de paciente (entrada sin paciente).
   readonly patientSearch = signal('');
@@ -76,6 +98,8 @@ export class OdontogramPage {
       this.patientId.set(params.get('patientId'));
       this.encounterId.set(this.route.snapshot.queryParamMap.get('encounter_id'));
       this.selectedTooth.set(null);
+      this.notice.set(null);
+      this.closeCreate();
       if (this.patientId()) this.load();
       else this.searchPatients(this.patientSearch());
     });
@@ -133,6 +157,78 @@ export class OdontogramPage {
 
   clearSelection(): void {
     this.selectedTooth.set(null);
+  }
+
+  openCreate(): void {
+    if (!this.canCreate()) return;
+    this.newDentition.set(this.odontogram()?.dentition ?? 'permanente');
+    this.actionError.set(null);
+    this.createOpen.set(true);
+  }
+
+  closeCreate(): void {
+    this.createOpen.set(false);
+    this.actionError.set(null);
+  }
+
+  onCreate(): void {
+    const patientId = this.patientId();
+    if (!patientId || this.creating()) return;
+    const previous = this.odontogram();
+    const dentition = this.newDentition();
+    const encounterId = this.encounterId();
+    let resolvingRecord = true;
+
+    this.creating.set(true);
+    this.actionError.set(null);
+    this.notice.set(null);
+    this.repo.resolveClinicalRecordId(patientId).pipe(
+      switchMap(clinicalRecordId => {
+        resolvingRecord = false;
+        return this.repo.create(patientId, {
+          clinical_record_id: clinicalRecordId, dentition, ...(encounterId ? { encounter_id: encounterId } : {}),
+        });
+      }),
+      catchError((err: unknown) => throwError(() => ({ err, resolvingRecord }))),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: () => {
+        this.creating.set(false);
+        this.closeCreate();
+        this.selectedTooth.set(null);
+        if (previous?.is_current) {
+          this.notice.set(`El odontograma anterior quedó como histórico del ${this.formatDate(previous.snapshot_date)}.`);
+        }
+        this.load();
+      },
+      error: ({ err, resolvingRecord: fromRecord }: { err: unknown; resolvingRecord: boolean }) => {
+        this.creating.set(false);
+        const { kind, message } = this.classify(err, 'No se pudo crear el odontograma.', 'write');
+        if (kind === 'feature_disabled') {
+          this.closeCreate();
+          this.odontogram.set(null);
+          this.moduleDisabled.set(true);
+          this.loadError.set(message);
+          return;
+        }
+        if (fromRecord) {
+          this.actionError.set(NO_CLINICAL_RECORD_MESSAGE);
+          return;
+        }
+        // Otro request dejó un current nuevo: el que se muestra quedó viejo → cerrar, avisar y recargar.
+        if (kind === 'conflict') {
+          this.closeCreate();
+          this.notice.set(message);
+          this.load();
+          return;
+        }
+        this.actionError.set(message);
+      },
+    });
+  }
+
+  dismissNotice(): void {
+    this.notice.set(null);
   }
 
   formatDate(iso: string): string {
