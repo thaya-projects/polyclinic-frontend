@@ -97,7 +97,7 @@ describe('MockPrescriptionsRepository', () => {
       expect(await failure(repo.createForEncounter('enc-2', { items: [{ medication: '' }] })))
         .toEqual({ status: 409, detail: PRESCRIPTION_BACKEND_MESSAGES.encounterNotOpen('signed') });
       expect(await failure(repo.createForEncounter('enc-1', { items: [{ medication: '  ' }] })))
-        .toEqual({ status: 422, detail: "medication is required. (Parameter 'medication')" });
+        .toEqual({ status: 422, detail: "items[0].medication is required. (Parameter 'items[0].medication')" });
       expect(backend.encounter('enc-1')?.version).toBe(1);
     });
 
@@ -105,13 +105,15 @@ describe('MockPrescriptionsRepository', () => {
       expect((await failure(repo.createForEncounter('enc-1', { notes: 'x'.repeat(2001) }))).detail)
         .toBe("notes cannot exceed 2000 characters. (Parameter 'notes')");
       expect((await failure(repo.createForEncounter('enc-1', { items: [{ medication: 'x'.repeat(201) }] }))).detail)
-        .toBe("medication cannot exceed 200 characters. (Parameter 'medication')");
-      expect((await failure(repo.createForEncounter('enc-1', { items: [{ medication: 'A', duration: 'x'.repeat(201) }] }))).detail)
-        .toBe("duration cannot exceed 200 characters. (Parameter 'duration')");
+        .toBe("items[0].medication cannot exceed 200 characters. (Parameter 'items[0].medication')");
+      expect((await failure(repo.createForEncounter('enc-1', { items: [{ medication: 'A' }, { medication: 'B', duration: 'x'.repeat(201) }] }))).detail)
+        .toBe("items[1].duration cannot exceed 200 characters. (Parameter 'items[1].duration')");
       expect((await failure(repo.createForEncounter('enc-1', { items: [{ medication: 'A', instructions: 'x'.repeat(1001) }] }))).detail)
-        .toBe("instructions cannot exceed 1000 characters. (Parameter 'instructions')");
+        .toBe("items[0].instructions cannot exceed 1000 characters. (Parameter 'items[0].instructions')");
       expect((await failure(repo.createForEncounter('enc-1', { items: [{ medication: 'A\0' }] }))).detail)
-        .toBe("medication cannot contain the null character (U+0000). (Parameter 'medication')");
+        .toBe("items[0].medication cannot contain the null character (U+0000). (Parameter 'items[0].medication')");
+      expect((await failure(repo.createStandalone('pat-1', { items: [{ medication: 'A' }, null as never] }))))
+        .toEqual({ status: 422, detail: "items[1] cannot be null. (Parameter 'items')" });
       const items = Array.from({ length: PRESCRIPTION_LIMITS.maxItems + 1 }, (_, i) => ({ medication: `M${i}` }));
       expect(await failure(repo.createForEncounter('enc-1', { items }))).toEqual({ status: 422, detail: PRESCRIPTION_BACKEND_MESSAGES.maxItems });
     });
@@ -148,8 +150,26 @@ describe('MockPrescriptionsRepository', () => {
       expect((await firstValueFrom(repo.addItem('rx-2', { medication: 'Ibuprofeno' }))).encounter_version).toBeNull();
       expect(await failure(repo.addItem('rx-3', { medication: 'Ibuprofeno' })))
         .toEqual({ status: 409, detail: 'Items can only be added within 24 hours of issuing a standalone prescription.' });
-      repo.setIssuedAt('rx-2', new Date(Date.now() - 24 * 3600_000).toISOString());
+      repo.setIssuedAt('rx-2', new Date(Date.now() - 24 * 3600_000 - 1000).toISOString());
       expect((await failure(repo.addItem('rx-2', { medication: 'Ibuprofeno' }))).status).toBe(409);
+    });
+
+    it('borde de la ventana: exactamente 24 h se acepta; un ms más → 409', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        vi.setSystemTime(new Date('2026-10-17T12:00:00Z'));
+        repo.setIssuedAt('rx-2', '2026-10-16T12:00:00.000Z');
+        expect((await firstValueFrom(repo.addItem('rx-2', { medication: 'A' }))).medication).toBe('A');
+        vi.setSystemTime(new Date('2026-10-17T12:00:00.001Z'));
+        expect((await failure(repo.addItem('rx-2', { medication: 'B' }))).status).toBe(409);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('ítem nulo al agregar: 422 "item cannot be null."', async () => {
+      expect(await failure(repo.addItem('rx-2', null as never)))
+        .toEqual({ status: 422, detail: "item cannot be null. (Parameter 'item')" });
     });
 
     it('orden: 404 receta → otro profesional 403 → inactivo 422 → encuentro no open 409 → medication 422 → máximo 50', async () => {

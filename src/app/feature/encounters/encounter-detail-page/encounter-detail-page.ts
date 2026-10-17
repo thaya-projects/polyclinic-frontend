@@ -80,8 +80,11 @@ type LoadResult = { id: string; encounter: Encounter } | { id: string; error: un
 // Recetas (Recetas T4/T5): sección debajo de "Signos vitales" con las recetas de este encounter; su
 // estado vive en PrescriptionsStore (provisto acá, scope paciente + encounter). Mismas reglas:
 // editable con `canEditDiagnoses` ("Nueva receta" y "Agregar medicamento"), `encounter_version` de
-// cada alta (receta o ítem) se aplica en memoria; un 409 recarga el encounter (→ solo lectura); un
-// 404 del encounter vuelve al listado. Entra en el bloqueo cruzado (`sectionsBusy`).
+// cada alta (receta o ítem) se aplica en memoria; un 409 de estado recarga el encounter (→ solo
+// lectura); un 409 de concurrencia (`concurrency$`) también lo recarga para tomar la versión nueva,
+// pero sin bloquear la receta; cada carga del encounter le avisa su estado al store
+// (`syncEncounterStatus`: si sigue open se liberan bloqueos viejos). Un 404 del encounter vuelve al
+// listado. Cancelar el alta limpia el error de la sección. Entra en el bloqueo cruzado (`sectionsBusy`).
 @Component({
   selector: 'app-encounter-detail-page',
   imports: [
@@ -232,6 +235,7 @@ export class EncounterDetailPage {
       untracked(() => this.prescriptions.setScope(encounterId && patientId ? { patientId, encounterId } : null));
     });
     this.prescriptions.conflict$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload());
+    this.prescriptions.concurrency$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload());
     this.prescriptions.encounterNotFound$.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(message => this.goToListWithNotice(message));
     this.prescriptions.encounterVersion$.pipe(takeUntilDestroyed(this.destroyRef))
@@ -310,6 +314,12 @@ export class EncounterDetailPage {
     this.prescriptions.create(dto);
   }
 
+  // Cancelar "Nueva receta": el error del intento anterior no debe verse al reabrir.
+  onCancelPrescription(): void {
+    if (this.prescriptions.busy()) return;
+    this.prescriptions.actionError.set(null);
+  }
+
   onAddPrescriptionItem(request: PrescriptionItemRequest): void {
     if (!this.encounterId() || !this.canEditDiagnoses() || this.pending() || this.sectionsBusy()) return;
     if (this.prescriptionAddItemReasons()[request.prescriptionId] !== null) return;
@@ -375,6 +385,7 @@ export class EncounterDetailPage {
       this.toast.error(ENCOUNTER_CONFLICT_MESSAGE);
     }
     this.encounter.set(encounter);
+    this.prescriptions.syncEncounterStatus(encounter.id, encounter.status);
   }
 
   private run(action: PendingAction, request$: Observable<Encounter>, successMessage: string, patch?: EncounterNotePatch): void {

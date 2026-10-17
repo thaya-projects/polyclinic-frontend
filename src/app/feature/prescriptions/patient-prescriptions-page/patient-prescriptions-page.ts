@@ -18,11 +18,11 @@ import { PROFESSIONALS_LOAD_ERROR_MESSAGE } from '../../../shared/utils/encounte
 import {
   PATIENT_NOT_FOUND_MESSAGE, PRESCRIPTIONS_ACCESS_DENIED_MESSAGE, PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE,
   PRESCRIPTION_FORBIDDEN_MESSAGE, PRESCRIPTION_INACTIVE_PROFESSIONAL_MESSAGE, PRESCRIPTION_ITEM_FORBIDDEN_MESSAGE,
-  PRESCRIPTION_WINDOW_CLOSED_MESSAGE,
+  PRESCRIPTION_WINDOW_LIKELY_CLOSED_MESSAGE,
 } from '../../../shared/utils/prescriptions-error.util';
 
 const PAGE_SIZE = 10;
-// Cada cuánto se re-evalúa la ventana de 24 h de las recetas sueltas con la página abierta.
+// Cada cuánto se re-evalúa la pista de la ventana de 24 h de las recetas sueltas con la página abierta.
 const CLOCK_TICK_MS = 60_000;
 
 export const ENCOUNTER_STATUS_CHECKING_MESSAGE = 'Verificando el estado del encuentro…';
@@ -40,10 +40,12 @@ export const PRESCRIPTION_MAX_ITEMS_REACHED_MESSAGE =
 // sale hasta saberlo; sin acceso (o con 403 del backend) se muestra el aviso. Emitir: solo un
 // profesional activo.
 // "Agregar medicamento" (cálculo del cliente; el backend responde 409 igual y se maneja):
-// habilitado solo si el usuario es el profesional (activo) que prescribió y, si la receta es suelta,
-// está dentro de las 24 h desde issued_at (se re-evalúa cada minuto y al enviar) o, si tiene
-// encuentro, este sigue open (se consulta su estado).
-// Errores: 404 del paciente → "Paciente no encontrado."; 409 → mensaje y la receta queda bloqueada;
+// habilitado solo si el usuario es el profesional (activo) que prescribió y, si tiene encuentro,
+// este sigue open (se consulta su estado, solo para las recetas propias). En una receta suelta la
+// ventana de 24 h NO deshabilita (el reloj del cliente puede estar adelantado): si según el reloj
+// local ya venció se muestra una pista y el 409 del backend decide (ahí sí se bloquea).
+// Errores: 404 del paciente → "Paciente no encontrado."; 409 de ventana/encuentro cerrado → mensaje y
+// la receta queda bloqueada; otro 409 (concurrencia) → mensaje y se recarga la lista, sin bloquear;
 // 403/422 → inline; 401 → authInterceptor.
 @Component({
   selector: 'app-patient-prescriptions-page',
@@ -66,7 +68,7 @@ export class PatientPrescriptionsPage {
   readonly patientId = signal('');
   readonly patientMissing = signal(false);
   readonly createOpen = signal(false);
-  // Reloj para la ventana de 24 h (se actualiza cada minuto y antes de cada alta de ítem).
+  // Reloj para la pista de la ventana de 24 h (se actualiza cada minuto).
   readonly now = signal(Date.now());
   private readonly createForm = viewChild(PrescriptionForm);
 
@@ -90,7 +92,6 @@ export class PatientPrescriptionsPage {
 
   // "Agregar medicamento" por receta: null = habilitado; texto = motivo (deshabilitado).
   readonly addItemReasons = computed<Record<string, string | null>>(() => {
-    const now = this.now();
     const locked = this.store.lockedReasons();
     const statuses = this.store.encounterStatuses();
     const state = this.lookups.professionalsState();
@@ -102,15 +103,22 @@ export class PatientPrescriptionsPage {
       if (!linked.active) return PRESCRIPTION_INACTIVE_PROFESSIONAL_MESSAGE;
       if (locked[p.id]) return locked[p.id];
       if (p.items.length >= PRESCRIPTION_LIMITS.maxItems) return PRESCRIPTION_MAX_ITEMS_REACHED_MESSAGE;
-      if (p.encounter_id) {
-        const status = statuses[p.encounter_id];
-        if (status === undefined || status === 'loading') return ENCOUNTER_STATUS_CHECKING_MESSAGE;
-        if (status === 'error') return ENCOUNTER_STATUS_ERROR_MESSAGE;
-        return status === 'open' ? null : PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE;
-      }
-      return isWithinStandaloneItemWindow(p.issued_at, now) ? null : PRESCRIPTION_WINDOW_CLOSED_MESSAGE;
+      if (!p.encounter_id) return null;
+      const status = statuses[p.encounter_id];
+      if (status === undefined || status === 'loading') return ENCOUNTER_STATUS_CHECKING_MESSAGE;
+      if (status === 'error') return ENCOUNTER_STATUS_ERROR_MESSAGE;
+      return status === 'open' ? null : PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE;
     };
     return Object.fromEntries(this.store.items().map(p => [p.id, reason(p)]));
+  });
+
+  // Pista (no deshabilita) para las recetas sueltas habilitadas cuya ventana venció según el reloj local.
+  readonly addItemHints = computed<Record<string, string>>(() => {
+    const now = this.now();
+    const reasons = this.addItemReasons();
+    return Object.fromEntries(this.store.items()
+      .filter(p => !p.encounter_id && reasons[p.id] === null && !isWithinStandaloneItemWindow(p.issued_at, now))
+      .map(p => [p.id, PRESCRIPTION_WINDOW_LIKELY_CLOSED_MESSAGE]));
   });
 
   constructor() {
@@ -138,6 +146,12 @@ export class PatientPrescriptionsPage {
       const id = this.patientId();
       const allowed = this.lookups.encountersAccess() === 'allowed';
       untracked(() => this.store.setScope(id && allowed ? { patientId: id, encounterId: null } : null, PAGE_SIZE));
+    });
+
+    // Solo se consulta el estado de los encuentros de las recetas del profesional actual (activo).
+    effect(() => {
+      const owner = this.lookups.currentProfessional()?.id ?? null;
+      untracked(() => this.store.setStatusOwner(owner));
     });
 
     this.store.patientNotFound$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -180,10 +194,9 @@ export class PatientPrescriptionsPage {
     this.store.create(dto);
   }
 
-  // La ventana de 24 h se re-evalúa con la hora actual justo antes de enviar.
+  // La ventana de 24 h no se chequea acá (la decide el backend con su reloj).
   onAddItem(request: PrescriptionItemRequest): void {
     if (this.store.busy()) return;
-    this.now.set(Date.now());
     if (this.addItemReasons()[request.prescriptionId] !== null) return;
     this.store.addItem(request.prescriptionId, request.dto);
   }

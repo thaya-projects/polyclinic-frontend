@@ -12,10 +12,12 @@ import { PRESCRIPTIONS_REPOSITORY } from '../../../core/services/prescriptions-r
 import { MockEncountersRepository } from '../../../testing/encounters-mock.repository';
 import { MockPrescriptionsRepository } from '../../../testing/prescriptions-mock.repository';
 import { CreatedPrescriptionItem } from '../../../core/models/prescription.model';
+import { ToastService } from '../../../core/services/toast.service';
 import { Encounter } from '../../../core/models/encounter.model';
 import {
-  PATIENT_NOT_FOUND_MESSAGE, PRESCRIPTIONS_ACCESS_DENIED_MESSAGE, PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE,
-  PRESCRIPTION_FORBIDDEN_MESSAGE, PRESCRIPTION_ITEM_FORBIDDEN_MESSAGE, PRESCRIPTION_WINDOW_CLOSED_MESSAGE,
+  PATIENT_NOT_FOUND_MESSAGE, PRESCRIPTIONS_ACCESS_DENIED_MESSAGE, PRESCRIPTION_CONCURRENCY_MESSAGE,
+  PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE, PRESCRIPTION_FORBIDDEN_MESSAGE, PRESCRIPTION_ITEM_FORBIDDEN_MESSAGE,
+  PRESCRIPTION_NOT_FOUND_MESSAGE, PRESCRIPTION_WINDOW_CLOSED_MESSAGE, PRESCRIPTION_WINDOW_LIKELY_CLOSED_MESSAGE,
 } from '../../../shared/utils/prescriptions-error.util';
 
 @Component({ template: '' })
@@ -37,6 +39,8 @@ describe('PatientPrescriptionsPage (mock repositories)', () => {
   const card = (index: number) => cards()[index];
   const addButton = (index: number) => card(index).querySelector<HTMLButtonElement>('[data-testid="btn-add-item"]')!;
   const reasonOf = (index: number) => card(index).querySelector('[data-testid="add-item-reason"]')?.textContent?.trim() ?? null;
+  const hintOf = (index: number) => card(index).querySelector('[data-testid="add-item-hint"]')?.textContent?.trim() ?? null;
+  const http409 = (detail?: string) => throwError(() => new HttpErrorResponse({ status: 409, error: detail ? { detail } : null }));
   const medicationsOf = (index: number) =>
     Array.from(card(index).querySelectorAll('[data-testid="prescription-item-medication"]')).map(c => c.textContent?.trim());
 
@@ -107,22 +111,50 @@ describe('PatientPrescriptionsPage (mock repositories)', () => {
     expect(addButton(2).disabled).toBe(true);
     expect(reasonOf(2)).toBe(PRESCRIPTION_ITEM_FORBIDDEN_MESSAGE);
     expect(addButton(2).getAttribute('aria-describedby')).toBe(card(2).querySelector('[data-testid="add-item-reason"]')!.id);
-    // rx-3: suelta, mía, vieja.
-    expect(addButton(3).disabled).toBe(true);
-    expect(reasonOf(3)).toBe(PRESCRIPTION_WINDOW_CLOSED_MESSAGE);
+    // rx-3: suelta, mía, vieja según el reloj local → NO se deshabilita (decide el backend); solo una pista.
+    expect(addButton(3).disabled).toBe(false);
+    expect(reasonOf(3)).toBeNull();
+    expect(hintOf(3)).toBe(PRESCRIPTION_WINDOW_LIKELY_CLOSED_MESSAGE);
+    expect(addButton(3).getAttribute('aria-describedby')).toBe(card(3).querySelector('[data-testid="add-item-hint"]')!.id);
+    expect(hintOf(0)).toBeNull();
   });
 
-  it('la ventana de 24 h se re-evalúa con el reloj: al vencer se deshabilita', async () => {
+  it('la pista de la ventana de 24 h se re-evalúa con el reloj, pero el botón sigue habilitado', async () => {
     vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
     try {
       const issued = Date.now() - 23.5 * 3600_000;
       repo.setIssuedAt('rx-2', new Date(issued).toISOString());
       await open();
-      expect(addButton(0).disabled).toBe(false);
+      expect(hintOf(0)).toBeNull();
       vi.advanceTimersByTime(31 * 60_000);
       await settle();
-      expect(addButton(0).disabled).toBe(true);
-      expect(reasonOf(0)).toBe(PRESCRIPTION_WINDOW_CLOSED_MESSAGE);
+      expect(addButton(0).disabled).toBe(false);
+      expect(hintOf(0)).toBe(PRESCRIPTION_WINDOW_LIKELY_CLOSED_MESSAGE);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reloj del cliente adelantado: no bloquea el envío; el backend (dentro de la ventana) lo acepta', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const serverNow = new Date('2026-10-17T12:00:00Z').getTime();
+      vi.setSystemTime(serverNow);
+      repo.setIssuedAt('rx-2', new Date(serverNow - 23 * 3600_000).toISOString());
+      // El cliente va 3 h adelantado: según él pasaron 26 h.
+      vi.setSystemTime(serverNow + 3 * 3600_000);
+      await open();
+      expect(addButton(0).disabled).toBe(false);
+      expect(hintOf(0)).toBe(PRESCRIPTION_WINDOW_LIKELY_CLOSED_MESSAGE);
+      addButton(0).click();
+      await settle();
+      typeIn(d<HTMLInputElement>('item-medication')!, 'Ibuprofeno');
+      // El request lo evalúa el servidor con SU hora.
+      vi.setSystemTime(serverNow);
+      d('btn-save-item')!.click();
+      await settle();
+      expect(medicationsOf(0)).toEqual(['Amoxicilina', 'Ibuprofeno']);
+      expect(d('item-error')).toBeNull();
     } finally {
       vi.useRealTimers();
     }
@@ -232,12 +264,102 @@ describe('PatientPrescriptionsPage (mock repositories)', () => {
     pending$.complete();
   });
 
-  it('el contenedor no envía ítems a recetas bloqueadas en el cliente', async () => {
+  it('el contenedor no envía ítems a recetas bloqueadas en el cliente (permiso); la ventana la decide el backend', async () => {
     const page = await open();
     const addItem = vi.spyOn(repo, 'addItem');
-    page.onAddItem({ prescriptionId: 'rx-3', dto: { medication: 'A' } });
     page.onAddItem({ prescriptionId: 'rx-4', dto: { medication: 'A' } });
     expect(addItem).not.toHaveBeenCalled();
+    // rx-3 venció según el cliente, pero se intenta: el 409 del backend la bloquea.
+    page.onAddItem({ prescriptionId: 'rx-3', dto: { medication: 'A' } });
+    await settle();
+    expect(addItem).toHaveBeenCalledTimes(1);
+    expect(addButton(3).disabled).toBe(true);
+    expect(reasonOf(3)).toBe(PRESCRIPTION_WINDOW_CLOSED_MESSAGE);
+    expect(hintOf(3)).toBeNull();
+    page.onAddItem({ prescriptionId: 'rx-3', dto: { medication: 'B' } });
+    expect(addItem).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['concurrencia', 'The resource was modified by another request. Reload and try again.'],
+    ['índice único', "Unique constraint 'IX_prescription_items_position' on table 'prescription_items' was violated."],
+  ])('409 de %s al agregar: mensaje para reintentar, la receta NO se bloquea y se recarga la lista', async (_, detail) => {
+    await open();
+    addButton(0).click();
+    await settle();
+    const list = vi.spyOn(repo, 'listByPatient');
+    vi.spyOn(repo, 'addItem').mockReturnValueOnce(http409(detail));
+    typeIn(d<HTMLInputElement>('item-medication')!, 'Ibuprofeno');
+    d('btn-save-item')!.click();
+    await settle();
+    expect(card(0).querySelector('[data-testid="item-error"]')?.textContent).toContain(PRESCRIPTION_CONCURRENCY_MESSAGE);
+    expect(addButton(0).disabled).toBe(false);
+    expect(reasonOf(0)).toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+    // El formulario sigue abierto con lo escrito: reintentar funciona.
+    expect(d<HTMLInputElement>('item-medication')!.value).toBe('Ibuprofeno');
+    d('btn-save-item')!.click();
+    await settle();
+    expect(medicationsOf(0)).toEqual(['Amoxicilina', 'Ibuprofeno']);
+  });
+
+  it('409 de concurrencia al emitir una receta suelta: mensaje sin hablar de encuentro, modal abierto, lista recargada', async () => {
+    const page = await open();
+    page.openCreate();
+    await settle();
+    const list = vi.spyOn(repo, 'listByPatient');
+    vi.spyOn(repo, 'createStandalone').mockReturnValueOnce(http409('The resource was modified by another request. Reload and try again.'));
+    page.onCreate({ notes: 'x' });
+    await settle();
+    expect(d('create-error')?.textContent).toContain(PRESCRIPTION_CONCURRENCY_MESSAGE);
+    expect(d('create-error')?.textContent).not.toMatch(/encuentro/i);
+    expect(page.createOpen()).toBe(true);
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it('emitir una receta suelta estando en la página 2 lleva a la página 1', async () => {
+    for (let i = 0; i < 8; i++) await firstValueFrom(repo.createStandalone('pat-1', { notes: `n${i}` }));
+    const page = await open();
+    page.setPage(2);
+    await settle();
+    expect(page.store.page()).toBe(2);
+    page.openCreate();
+    page.onCreate({ notes: 'Nueva' });
+    await settle();
+    expect(page.store.page()).toBe(1);
+    expect(cards().length).toBe(10);
+    expect(dAll('prescription-notes-text').some(n => n.textContent?.includes('Nueva'))).toBe(true);
+  });
+
+  it('solo consulta el estado de los encuentros de las recetas propias (no de las de otros profesionales)', async () => {
+    const getById = vi.spyOn(encounters, 'getById');
+    await open();
+    expect(getById.mock.calls.map(c => c[0])).toEqual(['enc-1']);
+  });
+
+  it('foco: al cerrar el formulario de ítem vuelve a "Agregar medicamento"', async () => {
+    await open();
+    addButton(0).click();
+    await settle();
+    d('btn-cancel-item')!.click();
+    await settle();
+    expect(d('prescription-item-form')).toBeNull();
+    expect(document.activeElement).toBe(addButton(0));
+    expect(addButton(0).id).toBe('prescription-rx-2-add-btn');
+  });
+
+  it('foco: si la receta queda bloqueada (409 de la ventana), va al aviso de error', async () => {
+    await open();
+    addButton(0).click();
+    await settle();
+    vi.spyOn(repo, 'addItem').mockReturnValue(http409('Items can only be added within 24 hours of issuing a standalone prescription.'));
+    typeIn(d<HTMLInputElement>('item-medication')!, 'Ibuprofeno');
+    d('btn-save-item')!.click();
+    await settle();
+    const alert = card(0).querySelector<HTMLElement>('[data-testid="item-error"]')!;
+    expect(addButton(0).disabled).toBe(true);
+    expect(alert.getAttribute('tabindex')).toBe('-1');
+    expect(document.activeElement).toBe(alert);
   });
 
   it('404 del paciente al leer → "Paciente no encontrado."', async () => {
@@ -246,8 +368,9 @@ describe('PatientPrescriptionsPage (mock repositories)', () => {
     expect(q('btn-new-standalone')).toBeNull();
   });
 
-  it('404 de la receta al agregar → aviso y la lista se recarga', async () => {
+  it('404 de la receta al agregar → aviso (toast) y la lista se recarga', async () => {
     const page = await open();
+    const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
     const list = vi.spyOn(repo, 'listByPatient');
     vi.spyOn(repo, 'addItem').mockReturnValue(throwError(() => new HttpErrorResponse({
       status: 404, error: { detail: "Prescription with id 'rx-2' was not found." },
@@ -255,6 +378,7 @@ describe('PatientPrescriptionsPage (mock repositories)', () => {
     page.onAddItem({ prescriptionId: 'rx-2', dto: { medication: 'A' } });
     await settle();
     expect(list).toHaveBeenCalledTimes(1);
+    expect(toastError).toHaveBeenCalledWith(PRESCRIPTION_NOT_FOUND_MESSAGE);
   });
 
   it('sin profesional ni clinical.void: aviso de acceso y no se pide la lista', async () => {

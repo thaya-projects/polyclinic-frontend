@@ -1,4 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy, Component, Injector, PLATFORM_ID, afterNextRender, computed, effect, inject, input, output, signal,
+  untracked,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { PrescriptionItemForm } from '../prescription-item-form/prescription-item-form';
 import { CreatePrescriptionItemDto, Prescription } from '../../../core/models/prescription.model';
@@ -18,8 +22,11 @@ export interface PrescriptionItemRequest {
 //   map[id] undefined   → no se muestra en esa receta;
 //   map[id] === null    → habilitado;
 //   map[id] === 'texto' → deshabilitado, con el motivo visible y asociado (aria-describedby).
+// `addItemHints[id]`: pista informativa que NO deshabilita (ej. la ventana de 24 h según el reloj
+// local), también asociada al botón.
 // El formulario de ítem se abre debajo de la receta (uno por vez) y queda abierto tras cada alta
-// para cargar varios medicamentos seguidos; se cierra solo si la receta deja de admitir ítems.
+// para cargar varios medicamentos seguidos; se cierra con Cancelar o si la receta deja de admitir
+// ítems. Al cerrarse, el foco vuelve a "Agregar medicamento" o, si quedó deshabilitado, al error.
 @Component({
   selector: 'app-prescriptions-list',
   imports: [PrescriptionItemForm, RouterLink],
@@ -27,11 +34,15 @@ export interface PrescriptionItemRequest {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PrescriptionsList {
+  private injector = inject(Injector);
+  private platformId = inject(PLATFORM_ID);
+
   prescriptions = input.required<Prescription[]>();
   locale = input('es');
   professionalNames = input<Record<string, string>>({});
   showEncounterLink = input(false);
   addItemReasons = input<Record<string, string | null> | null>(null);
+  addItemHints = input<Record<string, string>>({});
   busy = input(false);
   addingItemTo = input<string | null>(null);
   itemError = input<PrescriptionItemError | null>(null);
@@ -65,7 +76,12 @@ export class PrescriptionsList {
       const id = this.openFor();
       const reasons = this.addItemReasons();
       const exists = this.prescriptions().some(p => p.id === id);
-      if (id && (!exists || !reasons || reasons[id] !== null)) untracked(() => this.openFor.set(null));
+      if (id && (!exists || !reasons || reasons[id] !== null)) {
+        untracked(() => {
+          this.openFor.set(null);
+          if (exists) this.restoreFocus(id);
+        });
+      }
     });
   }
 
@@ -84,7 +100,10 @@ export class PrescriptionsList {
   }
 
   close(): void {
+    const id = this.openFor();
+    if (!id) return;
     this.openFor.set(null);
+    this.restoreFocus(id);
   }
 
   submitItem(prescriptionId: string, dto: CreatePrescriptionItemDto): void {
@@ -98,6 +117,40 @@ export class PrescriptionsList {
 
   title(p: Prescription): string {
     return `Receta del ${this.formatDate(p.issued_at)}`;
+  }
+
+  hint(id: string): string | null {
+    return this.hasButton(id) ? this.addItemHints()[id] ?? null : null;
+  }
+
+  addButtonId(id: string): string {
+    return `prescription-${id}-add-btn`;
+  }
+
+  itemErrorId(id: string): string {
+    return `prescription-${id}-item-error`;
+  }
+
+  // Ids del motivo y/o la pista asociados a "Agregar medicamento".
+  describedBy(id: string): string | null {
+    const ids = [
+      this.reason(id) ? `prescription-${id}-add-reason` : null,
+      this.hint(id) ? `prescription-${id}-add-hint` : null,
+    ].filter(Boolean);
+    return ids.length ? ids.join(' ') : null;
+  }
+
+  // Tras cerrar el formulario: al botón si sigue habilitado; si no, al error de la receta.
+  private restoreFocus(id: string): void {
+    afterNextRender(() => {
+      if (!isPlatformBrowser(this.platformId)) return;
+      const button = document.getElementById(this.addButtonId(id)) as HTMLButtonElement | null;
+      if (button && !button.disabled) {
+        button.focus();
+        return;
+      }
+      document.getElementById(this.itemErrorId(id))?.focus();
+    }, { injector: this.injector });
   }
 
   headingId(p: Prescription): string {

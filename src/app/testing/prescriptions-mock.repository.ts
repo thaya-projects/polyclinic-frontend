@@ -12,10 +12,7 @@ import { injectClinicalBackend } from './mock-clinical-backend';
 import { argumentError } from './cie10-mock.catalog';
 import { comparePrescriptionsAsc, comparePrescriptionsDesc } from '../feature/prescriptions/prescription-format.util';
 
-// Textos del backend que imita el mock. El de la ventana de 24 h es el del contrato; el resto NO
-// ESTÁ CONFIRMADO (Polyclinic.Domain/Exceptions/Prescriptions todavía no existe) y sigue el estilo
-// de los mensajes existentes (EncounterActionNotAllowedForUserException + ClinicalChildOperation,
-// EncounterStatusTransitionNotAllowedException, NotFoundException, ProfessionalInactiveException).
+// Textos del backend que imita el mock (los mismos que devuelve Polyclinic.Api).
 export const PRESCRIPTION_BACKEND_MESSAGES = {
   windowClosed: 'Items can only be added within 24 hours of issuing a standalone prescription.',
   encounterForbidden: (encounterId: string) =>
@@ -26,6 +23,11 @@ export const PRESCRIPTION_BACKEND_MESSAGES = {
   encounterNotOpen: (status: string) => `Cannot add prescriptions to an encounter with status '${status}'.`,
   itemEncounterNotOpen: (status: string) => `Cannot add prescription items to an encounter with status '${status}'.`,
   maxItems: `A prescription cannot have more than ${PRESCRIPTION_LIMITS.maxItems} items.`,
+  concurrency: 'The resource was modified by another request. Reload and try again.',
+  itemNull: (index: number) => `items[${index}] cannot be null.`,
+  singleItemNull: 'item cannot be null.',
+  requestBodyNullChar: 'Request body cannot contain the null character (U+0000).',
+  textNullChar: 'Text values cannot contain the null character (U+0000).',
 } as const;
 
 const HOUR = 60 * 60 * 1000;
@@ -97,9 +99,10 @@ function optional(value: string | null | undefined): string | null {
 //     → notes / ítems (422) → alta + version del encounter.
 //   createStandalone: 404 paciente → sin profesional vinculado (403) → inactivo (422) → notes / ítems.
 //   addItem: 404 receta → no es el usuario del profesional que prescribió (403) → inactivo (422) →
-//     con encuentro: no open (409); suelta: fuera de las 24 h (409) → ítem (422) → máximo 50 (422)
-//     → alta (+ version del encounter si tiene).
-//   Las ArgumentException llevan el sufijo " (Parameter 'x')" (argumentError).
+//     con encuentro: no open (409); suelta: pasaron MÁS de 24 h (409; exactamente 24 h se acepta) →
+//     ítem (422) → máximo 50 (422) → alta (+ version del encounter si tiene).
+//   Las ArgumentException llevan el sufijo " (Parameter 'x')" (argumentError). En el alta, los
+//   errores de cada ítem llevan el prefijo "items[i]." y un ítem nulo da "items[i] cannot be null.".
 // Sin delays (los tests no necesitan timers falsos).
 @Injectable()
 export class MockPrescriptionsRepository implements PrescriptionsRepository {
@@ -164,9 +167,10 @@ export class MockPrescriptionsRepository implements PrescriptionsRepository {
     if (encounter && encounter.status !== 'open') {
       return httpError(409, PRESCRIPTION_BACKEND_MESSAGES.itemEncounterNotOpen(encounter.status));
     }
-    if (!prescription.encounter_id && Date.now() - Date.parse(prescription.issued_at) >= PRESCRIPTION_LIMITS.standaloneItemWindowMs) {
+    if (!prescription.encounter_id && Date.now() - Date.parse(prescription.issued_at) > PRESCRIPTION_LIMITS.standaloneItemWindowMs) {
       return httpError(409, PRESCRIPTION_BACKEND_MESSAGES.windowClosed);
     }
+    if (dto === null || dto === undefined) return argumentError(PRESCRIPTION_BACKEND_MESSAGES.singleItemNull, 'item');
     const invalid = this.validateItem(dto);
     if (invalid) return invalid;
     if (prescription.items.length >= PRESCRIPTION_LIMITS.maxItems) return httpError(422, PRESCRIPTION_BACKEND_MESSAGES.maxItems);
@@ -187,8 +191,9 @@ export class MockPrescriptionsRepository implements PrescriptionsRepository {
     if (notes?.includes('\0')) return argumentError('notes cannot contain the null character (U+0000).', 'notes');
     const items = dto?.items ?? [];
     if (items.length > PRESCRIPTION_LIMITS.maxItems) return httpError(422, PRESCRIPTION_BACKEND_MESSAGES.maxItems);
-    for (const item of items) {
-      const invalid = this.validateItem(item);
+    for (const [index, item] of items.entries()) {
+      if (item === null || item === undefined) return argumentError(PRESCRIPTION_BACKEND_MESSAGES.itemNull(index), 'items');
+      const invalid = this.validateItem(item, `items[${index}].`);
       if (invalid) return invalid;
     }
     const id = `rx-${this.nextId++}`;
@@ -206,9 +211,10 @@ export class MockPrescriptionsRepository implements PrescriptionsRepository {
     return of({ ...clone(prescription), encounter_version: encounterVersion });
   }
 
-  private validateItem(dto: CreatePrescriptionItemDto): Observable<never> | null {
+  // `prefix`: "items[i]." en el alta (el backend nombra así el ítem); vacío al agregar uno suelto.
+  private validateItem(dto: CreatePrescriptionItemDto, prefix = ''): Observable<never> | null {
     const medication = (dto?.medication ?? '').trim();
-    if (!medication) return argumentError('medication is required.', 'medication');
+    if (!medication) return argumentError(`${prefix}medication is required.`, `${prefix}medication`);
     const fields: [keyof CreatePrescriptionItemDto, number][] = [
       ['medication', PRESCRIPTION_LIMITS.medication],
       ...PRESCRIPTION_ITEM_SHORT_FIELDS.map(f => [f, PRESCRIPTION_LIMITS[f]] as [keyof CreatePrescriptionItemDto, number]),
@@ -216,8 +222,12 @@ export class MockPrescriptionsRepository implements PrescriptionsRepository {
     ];
     for (const [field, max] of fields) {
       const value = optional(dto?.[field]);
-      if (value && value.length > max) return argumentError(`${field} cannot exceed ${max} characters.`, field);
-      if (value?.includes('\0')) return argumentError(`${field} cannot contain the null character (U+0000).`, field);
+      if (value && value.length > max) {
+        return argumentError(`${prefix}${field} cannot exceed ${max} characters.`, `${prefix}${field}`);
+      }
+      if (value?.includes('\0')) {
+        return argumentError(`${prefix}${field} cannot contain the null character (U+0000).`, `${prefix}${field}`);
+      }
     }
     return null;
   }

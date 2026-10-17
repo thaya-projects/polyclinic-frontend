@@ -34,6 +34,10 @@ export interface PrescriptionItemError {
   message: string;
 }
 
+// Por qué el backend bloqueó una receta: la ventana de 24 h (definitivo) o el encuentro cerrado
+// (se libera si al recargar el encuentro vuelve a estar open).
+type PrescriptionLock = { kind: 'window' | 'encounter'; reason: string };
+
 type LoadResult = { key: string; items: Prescription[]; total: number } | { key: string; error: unknown };
 
 export const DEFAULT_PRESCRIPTIONS_PAGE_SIZE = 10;
@@ -55,10 +59,15 @@ const EMPTY_RESPONSE = new Error('La fuente de datos completó sin responder.');
 //   `encounterNotFound$`; 404 "Prescription…" (al agregar ítem) → aviso + se recarga la lista.
 //   409 de encuentro no open → aviso + `conflict$` (el detalle recarga el encuentro → solo lectura) y
 //   la receta queda bloqueada; 409 de la ventana de 24 h → aviso y "Agregar medicamento" se
-//   deshabilita en ESA receta (`lockedReasons`). 403/422 → inline en español. 401: authInterceptor.
-// - Pantalla del paciente: para las recetas con encuentro se consulta el estado de cada encuentro
-//   (ENCOUNTERS_REPOSITORY.getById, una vez por id y ámbito) para habilitar "Agregar medicamento"
-//   solo si sigue open.
+//   deshabilita en ESA receta (`lockedReasons`). Cualquier otro 409 (concurrencia, índice único…) →
+//   aviso para reintentar SIN bloquear: se recarga la lista y, en un encuentro, `concurrency$` (el
+//   detalle recarga el encuentro → versión nueva). 403/422 → inline en español. 401: authInterceptor.
+//   Los bloqueos por encuentro cerrado se liberan si el encuentro vuelve a leerse open
+//   (`syncEncounterStatus`, también al reconsultar estados en la pantalla del paciente).
+// - Pantalla del paciente: para las recetas con encuentro DEL PROFESIONAL ACTUAL (activo; ver
+//   `setStatusOwner`) se consulta el estado de cada encuentro (ENCOUNTERS_REPOSITORY.getById, una vez
+//   por id y ámbito) para habilitar "Agregar medicamento" solo si sigue open. Las recetas de otros
+//   profesionales ya están deshabilitadas por permiso: no se consulta nada por ellas.
 @Injectable()
 export class PrescriptionsStore {
   private repo = inject(PRESCRIPTIONS_REPOSITORY);
@@ -89,16 +98,22 @@ export class PrescriptionsStore {
   // Se incrementan con cada alta exitosa: los formularios se limpian / el modal se cierra.
   readonly createdSeq = signal(0);
   readonly itemAddedSeq = signal(0);
-  // Recetas en las que el backend respondió 409 al agregar un ítem → motivo para deshabilitar.
-  readonly lockedReasons = signal<Record<string, string>>({});
+  // Recetas en las que el backend respondió 409 (ventana o encuentro cerrado) → motivo para deshabilitar.
+  private readonly locks = signal<Record<string, PrescriptionLock>>({});
+  readonly lockedReasons = computed<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(this.locks()).map(([id, lock]) => [id, lock.reason])));
   readonly encounterStatuses = signal<Record<string, EncounterStatusLookup>>({});
 
   readonly conflict$ = new Subject<string>();
+  // 409 de concurrencia en el ámbito de un encuentro: el contenedor recarga el encuentro (versión).
+  readonly concurrency$ = new Subject<string>();
   readonly encounterNotFound$ = new Subject<string>();
   readonly patientNotFound$ = new Subject<string>();
   readonly encounterVersion$ = new Subject<EncounterVersionChange>();
 
   private scope: PrescriptionsScope | null = null;
+  // Profesional (vinculado y activo) del usuario: solo sus recetas pueden recibir ítems.
+  private statusOwner: string | null = null;
   private generation = 0;
   private readonly scopeChanged$ = new Subject<void>();
   private currentKey = '';
@@ -133,7 +148,7 @@ export class PrescriptionsStore {
     this.itemError.set(null);
     this.pending.set(null);
     this.addingItemTo.set(null);
-    this.lockedReasons.set({});
+    this.locks.set({});
     this.encounterStatuses.set({});
     this.currentKey = '';
     if (!scope) {
@@ -141,6 +156,25 @@ export class PrescriptionsStore {
       return;
     }
     this.load();
+  }
+
+  // Pantalla del paciente: id del profesional vinculado y activo (o null). Solo se consulta el estado
+  // de los encuentros de SUS recetas.
+  setStatusOwner(professionalId: string | null): void {
+    if (professionalId === this.statusOwner) return;
+    this.statusOwner = professionalId;
+    if (this.scope && !this.scope.encounterId) this.loadEncounterStatuses(this.items());
+  }
+
+  // El encuentro se volvió a leer: si sigue open, los bloqueos por "encuentro cerrado" de sus recetas
+  // quedaron viejos y se liberan.
+  syncEncounterStatus(encounterId: string, status: EncounterStatus): void {
+    if (status !== 'open') return;
+    const ids = new Set(this.items().filter(p => p.encounter_id === encounterId).map(p => p.id));
+    const locks = this.locks();
+    const stale = Object.keys(locks).filter(id => locks[id].kind === 'encounter' && ids.has(id));
+    if (stale.length === 0) return;
+    this.locks.update(map => Object.fromEntries(Object.entries(map).filter(([id]) => !stale.includes(id))));
   }
 
   setPage(page: number): void {
@@ -276,10 +310,13 @@ export class PrescriptionsStore {
     }
   }
 
-  // Estado de los encuentros de las recetas mostradas (una consulta por id y ámbito).
+  // Estado de los encuentros de las recetas del profesional actual (una consulta por id y ámbito).
   private loadEncounterStatuses(list: Prescription[], force: string | null = null): void {
+    const owner = this.statusOwner;
+    if (!owner) return;
     const known = this.encounterStatuses();
-    const ids = [...new Set(list.map(p => p.encounter_id).filter((id): id is string => !!id))]
+    const ids = [...new Set(list.filter(p => p.professional_id === owner).map(p => p.encounter_id)
+      .filter((id): id is string => !!id))]
       .filter(id => id === force || !known[id] || known[id] === 'error');
     if (ids.length === 0) return;
     const generation = this.generation;
@@ -287,7 +324,9 @@ export class PrescriptionsStore {
     for (const id of ids) {
       let received = false;
       const set = (status: EncounterStatusLookup) => {
-        if (generation === this.generation) this.encounterStatuses.update(map => ({ ...map, [id]: status }));
+        if (generation !== this.generation) return;
+        this.encounterStatuses.update(map => ({ ...map, [id]: status }));
+        if (status !== 'loading' && status !== 'error') this.syncEncounterStatus(id, status);
       };
       this.encountersRepo.getById(id).pipe(takeUntil(this.scopeChanged$), takeUntilDestroyed(this.destroyRef)).subscribe({
         next: encounter => {
@@ -314,6 +353,10 @@ export class PrescriptionsStore {
         this.actionError.set(message);
         this.conflict$.next(message);
         return;
+      case 'concurrency':
+        this.actionError.set(message);
+        this.refreshAfterConcurrency(message);
+        return;
       case 'not_found':
         this.actionError.set(message);
         this.encounterNotFound$.next(message);
@@ -330,28 +373,34 @@ export class PrescriptionsStore {
 
   private handleItemError(err: unknown, prescription: Prescription): void {
     const { kind, message } = prescriptionError(err, {
-      fallback: 'No se pudo agregar el medicamento.', operation: 'add_item', encounterContext: !!prescription.encounter_id,
+      fallback: 'No se pudo agregar el medicamento.', operation: 'add_item',
     });
     const prescriptionId = prescription.id;
     switch (kind) {
       case 'unauthorized':
         return;
       case 'window_closed':
-        this.lock(prescriptionId, message);
+        this.lock(prescriptionId, 'window', message);
         this.itemError.set({ prescriptionId, message });
         return;
       case 'conflict': {
         // Encuentro firmado/anulado: la receta deja de admitir ítems. En el detalle, el contenedor
         // recarga el encuentro (→ solo lectura); en la pantalla del paciente se vuelve a consultar su estado.
         const inEncounterView = !!this.scope?.encounterId;
-        this.lock(prescriptionId, PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE);
+        this.lock(prescriptionId, 'encounter', PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE);
         this.itemError.set({ prescriptionId, message: inEncounterView ? PRESCRIPTION_CONFLICT_MESSAGE : message });
         if (!inEncounterView && prescription.encounter_id) this.loadEncounterStatuses([prescription], prescription.encounter_id);
         this.conflict$.next(message);
         return;
       }
-      case 'prescription_not_found':
+      case 'concurrency':
+        // No se bloquea: el formulario sigue abierto con lo escrito para reintentar.
         this.itemError.set({ prescriptionId, message });
+        this.refreshAfterConcurrency(message);
+        return;
+      case 'prescription_not_found':
+        // La receta desaparece al recargar (y con ella su error inline): el aviso va por toast.
+        this.toast.error(message);
         this.load();
         return;
       case 'not_found':
@@ -368,8 +417,14 @@ export class PrescriptionsStore {
     }
   }
 
-  private lock(prescriptionId: string, reason: string): void {
-    this.lockedReasons.update(map => ({ ...map, [prescriptionId]: reason }));
+  private lock(prescriptionId: string, kind: PrescriptionLock['kind'], reason: string): void {
+    this.locks.update(map => ({ ...map, [prescriptionId]: { kind, reason } }));
+  }
+
+  // 409 de concurrencia: se vuelven a pedir los datos (la lista; en un encuentro además su versión).
+  private refreshAfterConcurrency(message: string): void {
+    this.load();
+    if (this.scope?.encounterId) this.concurrency$.next(message);
   }
 
   // Ítem nuevo al final de su receta, sin recargar y sin duplicar por id.
@@ -395,11 +450,10 @@ export class PrescriptionsStore {
       return;
     }
     const size = this.pageSize();
-    const first = list[0];
     const last = list[list.length - 1];
-    // Va antes que la primera fila de una página > 1 → pertenece a una página anterior: toda la
-    // página actual se corre un lugar, así que se pide de nuevo.
-    if (this.page() > 1 && (!first || comparePrescriptionsDesc(created, first) < 0)) {
+    // Desde una página > 1 se vuelve a la 1 (ahí aparece la receta recién emitida).
+    if (this.page() > 1) {
+      this.page.set(1);
       this.load();
       return;
     }

@@ -34,11 +34,11 @@
                 </a>
               }
               @if (hasButton(p.id)) {
-                <button type="button" data-testid="btn-add-item" (click)="toggle(p.id)"
+                <button type="button" [id]="addButtonId(p.id)" data-testid="btn-add-item" (click)="toggle(p.id)"
                   [disabled]="reason(p.id) !== null || busy()"
                   [attr.aria-expanded]="openPrescriptionId() === p.id"
                   [attr.aria-controls]="openPrescriptionId() === p.id ? 'prescription-' + p.id + '-item-form' : null"
-                  [attr.aria-describedby]="reason(p.id) ? 'prescription-' + p.id + '-add-reason' : null"
+                  [attr.aria-describedby]="describedBy(p.id)"
                   [attr.aria-label]="'Agregar medicamento a la ' + title(p).toLowerCase()"
                   class="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-navy">
                   <i class="ti ti-pill" aria-hidden="true"></i>
@@ -50,6 +50,11 @@
 
           @if (reason(p.id); as why) {
             <p [id]="'prescription-' + p.id + '-add-reason'" class="text-xs text-muted" data-testid="add-item-reason">{{ why }}</p>
+          }
+          @if (hint(p.id); as note) {
+            <p [id]="'prescription-' + p.id + '-add-hint'" class="flex items-center gap-1 text-xs text-amber-700" data-testid="add-item-hint">
+              <i class="ti ti-clock-exclamation" aria-hidden="true"></i>{{ note }}
+            </p>
           }
 
           @if (p.notes) {
@@ -87,7 +92,7 @@
 
           @if (itemError(); as err) {
             @if (err.prescriptionId === p.id) {
-              <div role="alert" class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="item-error">
+              <div role="alert" [id]="itemErrorId(p.id)" tabindex="-1" class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="item-error">
                 <i class="ti ti-alert-circle" aria-hidden="true"></i>
                 {{ err.message }}
               </div>

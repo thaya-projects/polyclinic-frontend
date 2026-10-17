@@ -109,6 +109,7 @@
       [itemAddedSeq]="prescriptions.itemAddedSeq()"
       (create)="onCreatePrescription($event)"
       (addItem)="onAddPrescriptionItem($event)"
+      (cancelled)="onCancelPrescription()"
       (retry)="prescriptions.load()" />
   } @else if (loading()) {
     <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">

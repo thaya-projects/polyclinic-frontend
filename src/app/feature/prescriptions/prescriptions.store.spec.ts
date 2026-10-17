@@ -11,8 +11,8 @@ import { Encounter } from '../../core/models/encounter.model';
 import { PagedResult } from '../../core/models/paged-result.model';
 import { ToastService } from '../../core/services/toast.service';
 import {
-  PRESCRIPTION_CONFLICT_MESSAGE, PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE, PRESCRIPTION_NOT_FOUND_MESSAGE,
-  PRESCRIPTION_WINDOW_CLOSED_MESSAGE,
+  PRESCRIPTION_CONCURRENCY_MESSAGE, PRESCRIPTION_CONFLICT_MESSAGE, PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE,
+  PRESCRIPTION_NOT_FOUND_MESSAGE, PRESCRIPTION_WINDOW_CLOSED_MESSAGE,
 } from '../../shared/utils/prescriptions-error.util';
 
 function rx(id: string, issuedAt: string, extra: Partial<Prescription> = {}): Prescription {
@@ -26,6 +26,9 @@ function item(id: string, prescriptionId: string, medication = 'Ibuprofeno'): Pr
 function paged(items: Prescription[], total: number, query: PrescriptionsQuery): PagedResult<Prescription> {
   return { items, total_count: total, current_page: query.page, page_size: query.limit, total_pages: Math.ceil(total / query.limit) };
 }
+
+const CONCURRENCY_DETAIL = 'The resource was modified by another request. Reload and try again.';
+const UNIQUE_DETAIL = "Unique constraint 'IX_prescription_items_position' on table 'prescription_items' was violated.";
 
 const http = (status: number, detail?: string) => throwError(() => new HttpErrorResponse({ status, error: detail ? { detail } : null }));
 
@@ -60,7 +63,10 @@ describe('PrescriptionsStore', () => {
   const ids = () => store.items().map(p => p.id);
 
   describe('ámbito del paciente', () => {
-    beforeEach(() => store.setScope({ patientId: 'p1', encounterId: null }, 3));
+    beforeEach(() => {
+      store.setStatusOwner('prof-1');
+      store.setScope({ patientId: 'p1', encounterId: null }, 3);
+    });
 
     it('carga la página 1 (issued_at desc) y consulta el estado de los encuentros de las recetas', () => {
       expect(ids()).toEqual(['a', 'b', 'c']);
@@ -84,12 +90,33 @@ describe('PrescriptionsStore', () => {
       expect(versions).toEqual([]);
     });
 
-    it('página > 1: la receta nueva va a la página 1 → recarga la actual', () => {
+    it('página > 1: tras emitir vuelve a la página 1 (ahí aparece la receta nueva)', () => {
       store.setPage(2);
       repo.listByPatient.mockClear();
       repo.createStandalone.mockReturnValue(of({ ...rx('n', '2026-10-17T10:00:00Z'), encounter_version: null }));
       store.create({});
-      expect(repo.listByPatient).toHaveBeenCalledWith('p1', { page: 2, limit: 3 });
+      expect(store.page()).toBe(1);
+      expect(repo.listByPatient).toHaveBeenCalledTimes(1);
+      expect(repo.listByPatient).toHaveBeenCalledWith('p1', { page: 1, limit: 3 });
+    });
+
+    it('estado de encuentros: solo para recetas del profesional actual (sin N+1 por recetas ajenas)', () => {
+      repo.listByPatient.mockReturnValue(of(paged([
+        rx('a', '2026-10-10T12:00:00Z', { encounter_id: 'e1' }),
+        rx('f', '2026-10-09T12:00:00Z', { encounter_id: 'e2', professional_id: 'prof-2' }),
+        rx('g', '2026-10-08T12:00:00Z', { encounter_id: 'e3', professional_id: 'prof-3' }),
+      ], 3, { page: 1, limit: 3 })));
+      getById.mockClear();
+      store.load();
+      expect(getById).not.toHaveBeenCalled(); // e1 ya se conocía
+      expect(store.encounterStatuses()).toEqual({ e1: 'open' });
+
+      // Sin profesional vinculado/activo no se consulta nada; al aparecer uno, solo sus encuentros.
+      store.setStatusOwner(null);
+      store.setScope({ patientId: 'p2', encounterId: null }, 3);
+      expect(getById).not.toHaveBeenCalled();
+      store.setStatusOwner('prof-2');
+      expect(getById.mock.calls.map(c => c[0])).toEqual(['e2']);
     });
 
     it('agregar ítem: se agrega al final de su receta sin recargar; varios ítems; dedupe por id', () => {
@@ -125,12 +152,60 @@ describe('PrescriptionsStore', () => {
       expect(store.encounterStatuses()).toEqual({ e1: 'signed' });
     });
 
-    it('404 de la receta al agregar ítem: aviso y se recarga la lista', () => {
+    it('404 de la receta al agregar ítem: aviso por toast (la receta desaparece) y se recarga la lista', () => {
+      const toastError = vi.spyOn(TestBed.inject(ToastService), 'error');
       repo.listByPatient.mockClear();
       repo.addItem.mockReturnValue(http(404, "Prescription with id 'b' was not found."));
       store.addItem('b', { medication: 'Ibuprofeno' });
-      expect(store.itemError()).toEqual({ prescriptionId: 'b', message: PRESCRIPTION_NOT_FOUND_MESSAGE });
+      expect(toastError).toHaveBeenCalledWith(PRESCRIPTION_NOT_FOUND_MESSAGE);
+      expect(store.itemError()).toBeNull();
       expect(repo.listByPatient).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['concurrencia', CONCURRENCY_DETAIL],
+      ['índice único', UNIQUE_DETAIL],
+      ['sin detail', undefined],
+    ])('409 de %s al agregar ítem a una receta suelta: mensaje, NO bloquea, recarga la lista', (_, detail) => {
+      const conflicts: string[] = [];
+      store.conflict$.subscribe(c => conflicts.push(c));
+      repo.listByPatient.mockClear();
+      repo.addItem.mockReturnValue(http(409, detail));
+      store.addItem('b', { medication: 'Ibuprofeno' });
+      expect(store.itemError()).toEqual({ prescriptionId: 'b', message: PRESCRIPTION_CONCURRENCY_MESSAGE });
+      expect(store.lockedReasons()).toEqual({});
+      expect(store.busy()).toBe(false);
+      expect(conflicts).toEqual([]);
+      expect(repo.listByPatient).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['concurrencia', CONCURRENCY_DETAIL],
+      ['índice único', UNIQUE_DETAIL],
+    ])('409 de %s al emitir una receta suelta: mensaje sin hablar de encuentro y recarga la lista', (_, detail) => {
+      const concurrency: string[] = [];
+      store.concurrency$.subscribe(c => concurrency.push(c));
+      repo.listByPatient.mockClear();
+      repo.createStandalone.mockReturnValue(http(409, detail));
+      store.create({ items: [{ medication: 'A' }] });
+      expect(store.actionError()).toBe(PRESCRIPTION_CONCURRENCY_MESSAGE);
+      expect(store.actionError()).not.toMatch(/encuentro/i);
+      expect(repo.listByPatient).toHaveBeenCalledTimes(1);
+      // En la pantalla del paciente no hay encuentro que recargar.
+      expect(concurrency).toEqual([]);
+    });
+
+    it('bloqueo por encuentro cerrado: se libera si al reconsultar el encuentro sigue open', () => {
+      // El backend dice "signed" pero al reconsultar el encuentro sigue open: el bloqueo no queda pegado.
+      repo.addItem.mockReturnValue(http(409, "Cannot add prescription items to an encounter with status 'signed'."));
+      store.addItem('a', { medication: 'Ibuprofeno' });
+      expect(store.encounterStatuses()).toEqual({ e1: 'open' });
+      expect(store.lockedReasons()).toEqual({});
+      // La ventana de 24 h, en cambio, no se libera.
+      repo.addItem.mockReturnValue(http(409, 'Items can only be added within 24 hours of issuing a standalone prescription.'));
+      store.addItem('b', { medication: 'Ibuprofeno' });
+      store.syncEncounterStatus('e1', 'open');
+      expect(store.lockedReasons()).toEqual({ b: PRESCRIPTION_WINDOW_CLOSED_MESSAGE });
     });
 
     it('401: no muestra nada (authInterceptor)', () => {
@@ -211,6 +286,35 @@ describe('PrescriptionsStore', () => {
       repo.addItem.mockReturnValue(of({ ...item('i1', 'x'), encounter_version: 7 }));
       store.addItem('x', { medication: 'Ibuprofeno' });
       expect(versions).toEqual([{ encounterId: 'e1', version: 7 }]);
+    });
+
+    it.each([
+      ['concurrencia', CONCURRENCY_DETAIL],
+      ['índice único', UNIQUE_DETAIL],
+    ])('409 de %s al emitir o agregar: aviso, concurrency$ (recargar versión), sin conflict$ ni bloqueo', (_, detail) => {
+      const conflicts: string[] = [];
+      const concurrency: string[] = [];
+      store.conflict$.subscribe(c => conflicts.push(c));
+      store.concurrency$.subscribe(c => concurrency.push(c));
+      repo.createForEncounter.mockReturnValue(http(409, detail));
+      store.create({});
+      expect(store.actionError()).toBe(PRESCRIPTION_CONCURRENCY_MESSAGE);
+      repo.addItem.mockReturnValue(http(409, detail));
+      store.addItem('x', { medication: 'A' });
+      expect(store.itemError()).toEqual({ prescriptionId: 'x', message: PRESCRIPTION_CONCURRENCY_MESSAGE });
+      expect(store.lockedReasons()).toEqual({});
+      expect(concurrency.length).toBe(2);
+      expect(conflicts).toEqual([]);
+    });
+
+    it('syncEncounterStatus: el encuentro recargado sigue open → se liberan los bloqueos de encuentro cerrado', () => {
+      repo.addItem.mockReturnValue(http(409, "Cannot add prescription items to an encounter with status 'signed'."));
+      store.addItem('x', { medication: 'A' });
+      expect(store.lockedReasons()).toEqual({ x: PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE });
+      store.syncEncounterStatus('e1', 'signed');
+      expect(store.lockedReasons()).toEqual({ x: PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE });
+      store.syncEncounterStatus('e1', 'open');
+      expect(store.lockedReasons()).toEqual({});
     });
 
     it('409 al emitir o agregar: aviso + conflict$', () => {
