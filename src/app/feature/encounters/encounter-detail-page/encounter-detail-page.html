@@ -1,0 +1,145 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <a routerLink="/encounters" class="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand">
+        <i class="ti ti-arrow-left"></i>
+        Encuentros
+      </a>
+      <h2 class="mt-1 text-2xl font-bold text-navy">Nota de evolución</h2>
+    </div>
+  </div>
+
+  @if (actionError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="action-error">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+
+  @if (accessView() === 'denied') {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-denied">
+      <i class="ti ti-lock"></i>
+      {{ accessDeniedMessage }}
+    </div>
+  } @else if (accessView() === 'loading') {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-loading">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando…
+    </div>
+  } @else {
+  @if (lookups.professionalsError(); as profError) {
+    <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="professionals-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ profError }}</span>
+      <button type="button" (click)="retryProfessionals()" data-testid="professionals-retry"
+        class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+        Reintentar
+      </button>
+    </div>
+  }
+
+  @if (encounter(); as e) {
+    <app-encounter-note
+      [encounter]="e"
+      [patientName]="patientName()"
+      [professionalName]="professionalName()"
+      [signedByName]="signedByName()"
+      [voidedByName]="voidedByName()"
+      [saving]="pending() === 'save'"
+      [signing]="pending() === 'sign'"
+      [voiding]="pending() === 'void'"
+      [canEdit]="canEdit()"
+      [adminVoid]="canAdminVoid()"
+      [readOnlyReason]="readOnlyReason()"
+      [draft]="draft()"
+      [blocked]="sectionsBusy()"
+      (save)="onSave($event)"
+      (sign)="onSign()"
+      (voidRequested)="openVoid()" />
+
+    <app-encounter-diagnoses
+      [diagnoses]="diagnoses.diagnoses()"
+      [loading]="diagnoses.loading()"
+      [loadError]="diagnoses.loadError()"
+      [loadRetryable]="diagnoses.loadRetryable()"
+      [editable]="canEditDiagnoses()"
+      [creating]="diagnoses.pending() === 'create'"
+      [busy]="sectionsBusy() || pending() !== null"
+      [deletingId]="diagnoses.deletingId()"
+      [error]="diagnoses.actionError()"
+      [createdSeq]="diagnoses.createdSeq()"
+      [searchCie10]="diagnoses.searchCie10"
+      (create)="onCreateDiagnosis($event)"
+      (remove)="onRemoveDiagnosis($event)"
+      (retry)="diagnoses.load()" />
+
+    <app-encounter-measurements
+      [encounterId]="e.id"
+      [measurements]="measurements.items()"
+      [total]="measurements.total()"
+      [types]="measurements.types()"
+      [typesError]="measurements.typesError()"
+      [locale]="measurements.locale()"
+      [loading]="measurements.loading()"
+      [loadError]="measurements.loadError()"
+      [loadRetryable]="measurements.loadRetryable()"
+      [editable]="canEditDiagnoses()"
+      [saving]="measurements.saving()"
+      [busy]="sectionsBusy() || pending() !== null"
+      [error]="measurements.actionError()"
+      [createdSeq]="measurements.createdSeq()"
+      (create)="onCreateMeasurement($event)"
+      (retry)="measurements.load()"
+      (retryTypes)="measurements.loadTypes()" />
+
+    <app-encounter-prescriptions
+      [prescriptions]="prescriptions.items()"
+      [locale]="prescriptions.locale()"
+      [professionalNames]="lookups.professionalNameById()"
+      [loading]="prescriptions.loading()"
+      [loadError]="prescriptions.loadError()"
+      [loadRetryable]="prescriptions.loadRetryable()"
+      [editable]="canEditDiagnoses()"
+      [saving]="prescriptions.saving()"
+      [busy]="sectionsBusy() || pending() !== null"
+      [error]="prescriptions.actionError()"
+      [createdSeq]="prescriptions.createdSeq()"
+      [addItemReasons]="prescriptionAddItemReasons()"
+      [addingItemTo]="prescriptions.addingItemTo()"
+      [itemError]="prescriptions.itemError()"
+      [itemAddedSeq]="prescriptions.itemAddedSeq()"
+      (create)="onCreatePrescription($event)"
+      (addItem)="onAddPrescriptionItem($event)"
+      (retry)="prescriptions.load()" />
+  } @else if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando encuentro...
+    </div>
+  } @else if (loadError()) {
+    <div class="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 py-10 text-sm text-red-600" data-testid="load-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ loadError() }}</span>
+      <button type="button" (click)="reload()" data-testid="load-retry"
+        class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+        Reintentar
+      </button>
+    </div>
+  }
+  }
+</div>
+
+<app-void-encounter-dialog
+  [open]="voidOpen()"
+  [saving]="pending() === 'void'"
+  [error]="voidError()"
+  (confirmed)="onVoid($event)"
+  (cancelled)="closeVoid()" />
+
+<app-confirm-dialog
+  [open]="leaveConfirmOpen()"
+  title="Cambios sin guardar"
+  message="La nota tiene cambios sin guardar. Si salís ahora se pierden."
+  confirmLabel="Salir sin guardar"
+  cancelLabel="Seguir editando"
+  tone="danger"
+  (confirmed)="resolveLeave(true)"
+  (cancelled)="resolveLeave(false)" />

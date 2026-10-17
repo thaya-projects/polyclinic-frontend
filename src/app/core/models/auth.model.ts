@@ -32,6 +32,9 @@ export interface SessionUser {
   email: string;
   is_superadmin: boolean;
   roles: SessionRole[];
+  // Códigos de permiso del usuario (AuthUserDTO.Permissions, en login y GET /auth/me). Opcional:
+  // sesiones guardadas antes de tiparlo pueden no traerlo. Ej.: 'clinical.void'.
+  permissions?: string[];
 }
 
 // Tenant al que pertenece el usuario logueado — ausente para un super admin.
@@ -39,6 +42,10 @@ export interface SessionTenant {
   id: string;
   name: string;
   slug: string;
+  // AuthTenantDTO también trae country_code y locale (ej. 'es-BO'): formato de números/fechas
+  // clínicas. Opcionales: sesiones guardadas antes de tiparlos pueden no traerlos.
+  country_code?: string;
+  locale?: string;
 }
 
 // Respuesta del backend al loguear (o refrescar) — se tolera cualquier

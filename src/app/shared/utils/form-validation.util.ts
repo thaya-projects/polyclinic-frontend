@@ -14,6 +14,7 @@ export function fieldErrorMessage(control: AbstractControl | null): string {
   if (errors['email']) return 'Ingresa un correo válido.';
   if (errors['pattern']) return 'Solo minúsculas, números y guiones (ej: mi-clinica).';
   if (errors['minlength']) return `Mínimo ${errors['minlength'].requiredLength} caracteres.`;
+  if (errors['maxlength']) return `Máximo ${errors['maxlength'].requiredLength} caracteres.`;
   if (errors['min']) return `El valor mínimo es ${errors['min'].min}.`;
   return 'Valor inválido.';
 }

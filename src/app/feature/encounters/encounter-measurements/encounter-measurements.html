@@ -1,0 +1,71 @@
+<section class="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4" data-testid="measurements-section">
+  <h3 class="text-lg font-semibold text-navy">Signos vitales</h3>
+
+  @if (error()) {
+    <div role="alert" class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="measurements-error">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  }
+
+  @if (loadError()) {
+    <div role="alert" class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="measurements-load-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ loadError() }}</span>
+      @if (loadRetryable()) {
+        <button type="button" (click)="retry.emit()" data-testid="measurements-retry"
+          class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+          Reintentar
+        </button>
+      }
+    </div>
+  } @else if (loading() && measurements().length === 0) {
+    <p class="flex items-center gap-2 text-sm text-muted"><i class="ti ti-loader-2 animate-spin"></i>Cargando signos vitales...</p>
+  } @else if (measurements().length === 0) {
+    <p class="text-sm text-muted" data-testid="measurements-empty">Sin signos vitales registrados en este encuentro.</p>
+  } @else {
+    <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="measurements-list">
+      @for (m of measurements(); track m.id) {
+        <li class="flex flex-col gap-0.5 rounded-lg border border-border px-3 py-2" data-testid="measurement-item">
+          <div class="flex items-baseline justify-between gap-2">
+            <span class="text-xs font-medium tracking-wide text-muted uppercase" data-testid="measurement-item-type">{{ typeLabel(m.type) }}</span>
+            <span class="text-xs text-muted">{{ formatDate(m.measured_at) }}</span>
+          </div>
+          <p class="text-base font-semibold text-text tabular-nums" data-testid="measurement-item-value">
+            {{ formatValue(m.value) }} <span class="text-sm font-normal text-muted">{{ m.unit }}</span>
+          </p>
+          @if (m.note) {
+            <p class="text-xs whitespace-pre-line text-muted">{{ m.note }}</p>
+          }
+        </li>
+      }
+    </ul>
+    @if (total() > measurements().length) {
+      <p class="text-xs text-muted" data-testid="measurements-more">
+        Se muestran {{ measurements().length }} de {{ total() }}. El historial completo está en "Signos vitales" del paciente.
+      </p>
+    }
+  }
+
+  @if (editable()) {
+    <div class="flex flex-col gap-3 border-t border-border pt-4">
+      @if (typesError(); as typesErr) {
+        <div role="alert" class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600" data-testid="measurements-types-error">
+          <span>{{ typesErr }} Podés registrar un tipo con "Otro…".</span>
+          <button type="button" (click)="retryTypes.emit()" data-testid="measurements-types-retry"
+            class="rounded-lg border border-red-200 px-3 py-1.5 font-medium text-red-600 transition-colors hover:border-red-400">
+            Reintentar
+          </button>
+        </div>
+      }
+      <app-measurement-form
+        [types]="types()"
+        [locale]="locale()"
+        [encounterId]="encounterId()"
+        [busy]="busy()"
+        [saving]="saving()"
+        [createdSeq]="createdSeq()"
+        [compact]="true"
+        (submitted)="create.emit($event)" />
+    </div>
+  }
+</section>

@@ -18,6 +18,11 @@ export class PatientsApi {
     return this.http.get<PatientsPageResult>(this.base, { params });
   }
 
+  // GET /tenants/patients/:id (404 si no existe o es de otro tenant).
+  getById(id: string): Observable<Patient> {
+    return this.http.get<Patient>(`${this.base}/${id}`);
+  }
+
   create(dto: CreatePatientDto): Observable<Patient> {
     return this.http.post<Patient>(this.base, dto);
   }

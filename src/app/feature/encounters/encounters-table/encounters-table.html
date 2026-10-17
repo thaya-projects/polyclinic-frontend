@@ -1,0 +1,28 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Sin encuentros para los filtros seleccionados.">
+  <ng-template appDataTableCell="encounter_date" let-row>
+    <span class="text-sm text-text">{{ formatDate(row.encounter_date) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="patient" let-row>
+    <span class="font-semibold text-text">{{ patientName(row.patient_id) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="professional" let-row>
+    <span class="text-sm text-muted">{{ professionalName(row.professional_id) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="chief_complaint" let-row>
+    <span class="line-clamp-1 text-sm text-muted">{{ row.chief_complaint || '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="status" let-row>
+    <app-encounter-status-badge [status]="row.status" />
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <button type="button" (click)="view.emit(row)"
+      class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+      Ver
+    </button>
+  </ng-template>
+</app-data-table>

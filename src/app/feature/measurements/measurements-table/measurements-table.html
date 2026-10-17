@@ -1,0 +1,34 @@
+<app-data-table [columns]="columns" [rows]="rows()" [emptyMessage]="emptyMessage()">
+  <ng-template appDataTableCell="type" let-row>
+    <span class="font-semibold text-text" data-testid="measurement-row-type">{{ typeLabel(row.type) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="value" let-row>
+    <span class="text-sm text-text tabular-nums" data-testid="measurement-row-value">{{ formatValue(row.value) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="unit" let-row>
+    <span class="text-sm text-muted" data-testid="measurement-row-unit">{{ row.unit || '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="measured_at" let-row>
+    <span class="text-sm text-text" data-testid="measurement-row-date">{{ formatDate(row.measured_at) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="note" let-row>
+    <span class="line-clamp-2 text-sm whitespace-pre-line text-muted">{{ row.note || '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="encounter" let-row>
+    @if (row.encounter_id) {
+      <a [routerLink]="['/encounters', row.encounter_id]" data-testid="measurement-row-encounter"
+        [attr.aria-label]="encounterLinkLabel(row)"
+        class="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        <i class="ti ti-notes" aria-hidden="true"></i>
+        Ver
+      </a>
+    } @else {
+      <span class="text-xs text-muted">—</span>
+    }
+  </ng-template>
+</app-data-table>

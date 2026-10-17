@@ -1,0 +1,118 @@
+<section class="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4" data-testid="diagnoses-section">
+  <h3 class="text-lg font-semibold text-navy">Diagnósticos</h3>
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="diagnoses-error">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Listado -->
+  @if (loadError()) {
+    <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="diagnoses-load-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ loadError() }}</span>
+      @if (loadRetryable()) {
+        <button type="button" (click)="retry.emit()" data-testid="diagnoses-retry"
+          class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+          Reintentar
+        </button>
+      }
+    </div>
+  } @else if (loading() && diagnoses().length === 0) {
+    <p class="flex items-center gap-2 text-sm text-muted"><i class="ti ti-loader-2 animate-spin"></i>Cargando diagnósticos...</p>
+  } @else if (diagnoses().length === 0) {
+    <p class="text-sm text-muted" data-testid="diagnoses-empty">Sin diagnósticos registrados.</p>
+  } @else {
+    <ul class="flex flex-col divide-y divide-border" data-testid="diagnoses-list">
+      @for (d of diagnoses(); track d.id) {
+        <li class="flex items-start justify-between gap-3 py-2.5" data-testid="diagnosis-item">
+          <div class="flex min-w-0 flex-col gap-0.5">
+            <p class="text-sm text-text">
+              @if (d.cie10_code) {
+                <span class="mr-1 font-semibold" data-testid="diagnosis-code">{{ d.cie10_code }}</span>
+              }
+              <span class="whitespace-pre-line" data-testid="diagnosis-description">{{ d.description }}</span>
+            </p>
+          </div>
+          <div class="flex shrink-0 items-center gap-2">
+            <app-status-chip data-testid="diagnosis-badge"
+              [label]="d.is_definitive ? 'Definitivo' : 'Presuntivo'" [tone]="d.is_definitive ? 'ok' : 'wait'" />
+            @if (editable()) {
+              <button type="button" data-testid="btn-delete-diagnosis" (click)="askRemove(d)"
+                [disabled]="busy()" [attr.aria-label]="'Eliminar diagnóstico ' + d.description"
+                class="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted transition-colors hover:border-red-400 hover:text-red-500 disabled:opacity-50">
+                <i class="ti" [class.ti-trash]="deletingId() !== d.id" [class.ti-loader-2]="deletingId() === d.id"
+                  [class.animate-spin]="deletingId() === d.id"></i>
+              </button>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+
+  <!-- Alta -->
+  @if (editable()) {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-3 border-t border-border pt-4" data-testid="diagnosis-form">
+      <div class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium tracking-wide text-muted uppercase">Código CIE-10 (opcional)</span>
+        @if (selected(); as entry) {
+          <div class="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface-alt/40 px-3.5 py-2.5 text-sm text-text" data-testid="cie10-selected">
+            <span><span class="font-semibold">{{ entry.code }}</span> — {{ entry.description }}</span>
+            <button type="button" data-testid="btn-clear-cie10" (click)="clearCode()" [disabled]="busy()"
+              aria-label="Quitar código CIE-10"
+              class="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:text-red-500 disabled:opacity-50">
+              <i class="ti ti-x"></i>
+            </button>
+          </div>
+        } @else {
+          <app-cie10-search [search]="searchCie10()" [disabled]="busy()" (picked)="onPicked($event)" />
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-medium tracking-wide text-muted uppercase" for="diagnosis-description">
+            Descripción{{ selected() ? ' (opcional)' : '' }}
+          </label>
+          <span class="text-xs" [class]="descriptionLength() > limit ? 'text-red-500' : 'text-muted'" data-testid="diagnosis-counter">
+            {{ descriptionLength() }}/{{ limit }}
+          </span>
+        </div>
+        <textarea id="diagnosis-description" rows="2" formControlName="description" data-testid="diagnosis-description-input"
+          [readOnly]="busy()" [attr.maxlength]="limit"
+          [placeholder]="selected() ? 'Si la dejás vacía se usa la del CIE-10' : 'Descripción del diagnóstico'"
+          class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:ring-3 focus:outline-none"
+          [class]="isInvalid(form.controls.description) || showRequiredError() ? 'border-red-400 focus:border-red-400 focus:ring-red-400/18' : 'border-border focus:border-brand focus:ring-brand/18'"></textarea>
+        @if (isInvalid(form.controls.description)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.description) }}</span>
+        } @else if (showRequiredError()) {
+          <span class="text-xs text-red-500" data-testid="diagnosis-required-error">{{ requiredMessage }}</span>
+        }
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <label class="flex items-center gap-2 text-sm text-text">
+          <input type="checkbox" formControlName="is_definitive" data-testid="diagnosis-definitive"
+            class="h-4 w-4 rounded border-border accent-brand" />
+          Diagnóstico definitivo
+        </label>
+        <button type="submit" data-testid="btn-add-diagnosis" [disabled]="busy()"
+          class="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+          <i class="ti ti-plus"></i>
+          {{ creating() ? 'Agregando...' : 'Agregar diagnóstico' }}
+        </button>
+      </div>
+    </form>
+  }
+</section>
+
+<app-confirm-dialog
+  [open]="!!confirmTarget()"
+  title="Eliminar diagnóstico"
+  [message]="confirmMessage()"
+  confirmLabel="Eliminar"
+  tone="danger"
+  (confirmed)="confirmRemove()"
+  (cancelled)="cancelRemove()" />

@@ -100,6 +100,23 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        // Fase 4 T6/T7: encuentros clínicos (notas de evolución). Mismo criterio que professionals:
+        // authGuard; el backend aplica la policy TenantUser.
+        path: 'encounters',
+        loadComponent: () =>
+          import('./feature/encounters/encounters-page/encounters-page').then(m => m.EncountersPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        path: 'encounters/:id',
+        loadComponent: () =>
+          import('./feature/encounters/encounter-detail-page/encounter-detail-page')
+            .then(m => m.EncounterDetailPage),
+        canActivate: [authGuard, clinicGuard],
+        // B6: si la nota tiene cambios sin guardar, pregunta antes de salir.
+        canDeactivate: [(page: { canLeave(): boolean | Promise<boolean> }) => page.canLeave()],
+      },
+      {
         // Sin guard a propósito — todavía no se definió si hace falta
         // restringir esto a role.code === 'admin' a nivel de ruta (hoy
         // solo se oculta el link en el sidebar para quien no es admin).
@@ -118,6 +135,26 @@ export const routes: Routes = [
         path: 'appointments',
         loadComponent: () =>
           import('./feature/appointments/appointments-page/appointments-page').then(m => m.AppointmentsPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        // Fase 4 T3/T4: signos vitales del paciente. Se llega desde la ficha ("Signos vitales").
+        // Mismo criterio que encounters: authGuard; el acceso clínico lo decide la pantalla
+        // (profesional activo o clinical.void) y el backend.
+        path: 'patients/:patientId/measurements',
+        loadComponent: () =>
+          import('./feature/measurements/patient-measurements-page/patient-measurements-page')
+            .then(m => m.PatientMeasurementsPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        // Fase 4 Recetas T4/T5: recetas del paciente (con y sin encuentro). Se llega desde la ficha
+        // ("Recetas"). Mismo criterio que signos vitales: authGuard; el acceso clínico lo decide la
+        // pantalla (profesional activo o clinical.void) y el backend.
+        path: 'patients/:patientId/prescriptions',
+        loadComponent: () =>
+          import('./feature/prescriptions/patient-prescriptions-page/patient-prescriptions-page')
+            .then(m => m.PatientPrescriptionsPage),
         canActivate: [authGuard, clinicGuard],
       },
       {
