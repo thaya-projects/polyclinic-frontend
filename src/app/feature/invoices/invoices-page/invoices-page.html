@@ -1,0 +1,216 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-navy">Facturas</h2>
+      <p class="mt-1 text-sm text-muted">Listado de facturas emitidas a los pacientes de la clínica.</p>
+    </div>
+    <button type="button" (click)="openCreate()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nueva factura
+    </button>
+  </div>
+
+  <app-invoices-filters [(search)]="search" [(values)]="filters" [(dateFrom)]="dateFrom" [(dateTo)]="dateTo" />
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-10 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando facturas...
+    </div>
+  } @else {
+    <app-invoices-table [invoices]="filteredInvoices()" (view)="openDetail($event)" />
+  }
+</div>
+
+<!-- Alta de borrador -->
+<app-modal [open]="creating()" title="Nueva factura" size="lg" (closed)="closeCreate()">
+  <app-invoice-form [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
+</app-modal>
+
+<!-- Detalle / edición -->
+<app-modal [open]="selectedInvoice() !== null" title="Detalle de factura" size="lg" (closed)="closeDetail()">
+  @if (detailError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ detailError() }}
+    </div>
+  }
+
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+
+  @if (selectedInvoice(); as invoice) {
+    @if (editing()) {
+      <app-invoice-form
+        [invoice]="invoice"
+        [saving]="saving()"
+        [saveError]="actionError()"
+        (submitted)="onSaveEdit($event)"
+        (cancelled)="cancelEdit()" />
+    } @else {
+      <div class="flex flex-col gap-6">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-sm font-semibold text-text">{{ invoice.invoice_number || 'Sin emitir' }}</span>
+          <div class="flex items-center gap-3">
+            @if (invoice.status === 'borrador') {
+              <button type="button" (click)="openEdit()" class="text-xs font-medium text-brand hover:underline">
+                Editar
+              </button>
+              <button type="button" (click)="requestIssue()" [disabled]="selectedInvoiceItems().length === 0"
+                [title]="selectedInvoiceItems().length === 0 ? 'Agregá al menos un item para poder emitir' : ''"
+                class="flex h-9 items-center justify-center rounded-xl bg-brand px-4 text-xs font-medium text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50">
+                Emitir
+              </button>
+            }
+            @if (canVoid(invoice.status)) {
+              <button type="button" (click)="requestVoid()"
+                class="flex h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-medium text-navy transition-colors hover:border-red-400 hover:text-red-500">
+                Anular
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <p class="text-xs text-muted">Paciente</p>
+            <p class="text-sm text-text">{{ patientName(invoice.patient_id) }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-muted">Sucursal</p>
+            <p class="text-sm text-text">{{ branchName(invoice.branch_id) }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-muted">Impuesto</p>
+            <p class="text-sm text-text">{{ formatAmount(invoice.tax, invoice.currency) }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-muted">Creada</p>
+            <p class="text-sm text-text">{{ formatDate(invoice.issued_at) }}</p>
+          </div>
+        </div>
+        <div>
+          <p class="text-xs text-muted">Notas</p>
+          <p class="rounded-xl border border-border bg-surface p-3 text-sm whitespace-pre-line text-text">
+            {{ invoice.notes || 'Sin notas.' }}
+          </p>
+        </div>
+
+        <section class="flex flex-col gap-3 border-t border-border pt-4">
+          <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Items</h4>
+
+          @if (itemActionError()) {
+            <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <i class="ti ti-alert-circle"></i>
+              {{ itemActionError() }}
+            </div>
+          }
+
+          @if (invoice.status === 'borrador') {
+            <app-invoice-item-form [patientId]="invoice.patient_id" (added)="onItemAdded($event)" />
+          }
+
+          @if (itemsError()) {
+            <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <i class="ti ti-alert-circle"></i>
+              {{ itemsError() }}
+            </div>
+          }
+
+          @if (itemsLoading()) {
+            <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-8 text-sm text-muted">
+              <i class="ti ti-loader-2 animate-spin"></i>
+              Cargando items...
+            </div>
+          } @else {
+            <app-invoice-items-preview
+              [items]="selectedInvoiceItems()"
+              [readonly]="invoice.status !== 'borrador'"
+              (remove)="onItemRemoved($event)" />
+          }
+
+          <div class="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 text-sm">
+            <div class="flex justify-between text-muted">
+              <span>Subtotal</span>
+              <span>{{ formatAmount(invoice.subtotal, invoice.currency) }}</span>
+            </div>
+            <div class="flex justify-between text-muted">
+              <span>Impuesto</span>
+              <span>{{ formatAmount(invoice.tax, invoice.currency) }}</span>
+            </div>
+            <div class="flex justify-between font-bold text-navy">
+              <span>Total</span>
+              <span>{{ formatAmount(invoice.total, invoice.currency) }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Fase 8 T4: pagos -->
+        <section class="flex flex-col gap-3 border-t border-border pt-4">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Pagos</h4>
+            <span class="text-sm font-bold" [class]="selectedInvoiceBalance() > 0 ? 'text-red-500' : 'text-navy'">
+              Saldo pendiente: {{ formatAmount(selectedInvoiceBalance(), invoice.currency) }}
+            </span>
+          </div>
+
+          @if (paymentActionError()) {
+            <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <i class="ti ti-alert-circle"></i>
+              {{ paymentActionError() }}
+            </div>
+          }
+
+          @if (canRegisterPayment(invoice.status)) {
+            <app-payment-form [balance]="selectedInvoiceBalance()" (added)="onPaymentAdded($event)" />
+          }
+
+          @if (paymentsError()) {
+            <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <i class="ti ti-alert-circle"></i>
+              {{ paymentsError() }}
+            </div>
+          }
+
+          @if (paymentsLoading()) {
+            <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-8 text-sm text-muted">
+              <i class="ti ti-loader-2 animate-spin"></i>
+              Cargando pagos...
+            </div>
+          } @else {
+            <app-payments-list [payments]="selectedInvoicePayments()" />
+          }
+        </section>
+      </div>
+    }
+  }
+</app-modal>
+
+<app-confirm-dialog
+  [open]="confirmingIssue()"
+  title="Emitir factura"
+  message="Se le va a asignar un número de factura y ya no se van a poder editar los items. ¿Confirmás que querés emitirla?"
+  confirmLabel="Emitir"
+  (confirmed)="confirmIssue()"
+  (cancelled)="cancelIssue()" />
+
+<app-confirm-dialog
+  [open]="confirmingVoid()"
+  title="Anular factura"
+  message="Esta acción no se puede revertir. La factura va a quedar marcada como anulada, pero no se va a eliminar."
+  confirmLabel="Anular"
+  tone="danger"
+  (confirmed)="confirmVoid()"
+  (cancelled)="cancelVoid()" />
