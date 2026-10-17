@@ -149,8 +149,8 @@ export const routes: Routes = [
       },
       {
         // Fase 4 Recetas T4/T5: recetas del paciente (con y sin encuentro). Se llega desde la ficha
-        // ("Recetas"). Mismo criterio que signos vitales: authGuard; el acceso clínico lo decide la
-        // pantalla (profesional activo o clinical.void) y el backend.
+        // ("Recetas"). Mismo criterio que signos vitales: [authGuard, clinicGuard]; el acceso clínico
+        // lo decide la pantalla (profesional activo o clinical.void) y el backend.
         path: 'patients/:patientId/prescriptions',
         loadComponent: () =>
           import('./feature/prescriptions/patient-prescriptions-page/patient-prescriptions-page')

@@ -19,7 +19,7 @@
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="fieldId(field.name)">{{ field.label }} (opcional)</label>
         <input [id]="fieldId(field.name)" type="text" [formControlName]="field.name" [attr.data-testid]="'item-' + field.name"
-          [attr.maxlength]="limits.presentation" [readOnly]="busy()" [placeholder]="field.placeholder"
+          [attr.maxlength]="limits[field.name]" [readOnly]="busy()" [placeholder]="field.placeholder"
           [attr.aria-invalid]="showError(field.name)" [attr.aria-describedby]="describedBy(field.name)"
           [class]="inputClass(field.name)" />
         @if (showError(field.name)) {

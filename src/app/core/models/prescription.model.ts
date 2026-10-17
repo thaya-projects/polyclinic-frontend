@@ -78,9 +78,10 @@ export const PRESCRIPTION_ITEM_FIELD_LABEL: Record<keyof CreatePrescriptionItemD
   instructions: 'Indicaciones',
 };
 
-// Ventana de 24 h de una receta suelta (cálculo del cliente; el backend responde 409 igual si venció).
+// Ventana de 24 h de una receta suelta según el reloj del cliente. Solo informativo (el reloj local
+// puede estar adelantado): decide el backend, que acepta hasta exactamente issued_at + 24 h.
 export function isWithinStandaloneItemWindow(issuedAt: string, now: number = Date.now()): boolean {
   const issued = Date.parse(issuedAt);
   if (Number.isNaN(issued)) return false;
-  return now - issued < PRESCRIPTION_LIMITS.standaloneItemWindowMs;
+  return now - issued <= PRESCRIPTION_LIMITS.standaloneItemWindowMs;
 }

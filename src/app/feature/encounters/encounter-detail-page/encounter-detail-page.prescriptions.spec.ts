@@ -11,13 +11,19 @@ import { MockCie10Catalog } from '../../../testing/cie10-mock.catalog';
 import { MockEncountersRepository } from '../../../testing/encounters-mock.repository';
 import { MockMeasurementsRepository } from '../../../testing/measurements-mock.repository';
 import { MockPrescriptionsRepository } from '../../../testing/prescriptions-mock.repository';
+import { MockClinicalBackend } from '../../../testing/mock-clinical-backend';
 import { CreatedPrescription } from '../../../core/models/prescription.model';
 import { CreatedMeasurement } from '../../../core/models/measurement.model';
 import { ENCOUNTER_NOT_FOUND_MESSAGE } from '../../../shared/utils/encounters-error.util';
 import { ToastService } from '../../../core/services/toast.service';
 import {
-  PRESCRIPTION_CONFLICT_MESSAGE, PRESCRIPTION_ENCOUNTER_FORBIDDEN_MESSAGE,
+  PRESCRIPTION_CONCURRENCY_MESSAGE, PRESCRIPTION_CONFLICT_MESSAGE, PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE,
+  PRESCRIPTION_ENCOUNTER_FORBIDDEN_MESSAGE,
 } from '../../../shared/utils/prescriptions-error.util';
+
+const http409 = (detail?: string) => throwError(() => new HttpErrorResponse({ status: 409, error: detail ? { detail } : null }));
+const CONCURRENCY_DETAIL = 'The resource was modified by another request. Reload and try again.';
+const UNIQUE_DETAIL = "Unique constraint 'IX_prescriptions_encounter_id_position' on table 'prescriptions' was violated.";
 
 // Recetas T4/T5: sección "Recetas" del detalle, contra los mocks. Usuario del mock = prof-1 (dueño de
 // enc-1 open con rx-1 y enc-2 signed con rx-5); enc-3 (rx-4) es de prof-2.
@@ -204,6 +210,104 @@ describe('EncounterDetailPage: recetas (mock repositories)', () => {
     expect(getById).toHaveBeenCalledWith('enc-1');
     expect(q('item-error')?.textContent).toContain(PRESCRIPTION_CONFLICT_MESSAGE);
     expect(inSection('btn-add-item')).toEqual([]);
+  });
+
+  it.each([
+    ['concurrencia', CONCURRENCY_DETAIL],
+    ['índice único', UNIQUE_DETAIL],
+  ])('409 de %s al emitir: mensaje, recarga el encuentro (versión nueva) y sigue editable', async (_, detail) => {
+    await create('enc-1');
+    // Otro cambio subió la version del encounter en el backend.
+    TestBed.inject(MockClinicalBackend).bumpEncounterVersion('enc-1');
+    const getById = vi.spyOn(encounters, 'getById');
+    q('btn-new-prescription')!.click();
+    await settle();
+    vi.spyOn(repo, 'createForEncounter').mockReturnValueOnce(http409(detail));
+    typeIn(inSection<HTMLInputElement>('item-medication')[0], 'Amoxicilina');
+    q('btn-submit-prescription')!.click();
+    await settle();
+
+    expect(q('prescriptions-error')?.textContent).toContain(PRESCRIPTION_CONCURRENCY_MESSAGE);
+    expect(getById).toHaveBeenCalledWith('enc-1');
+    expect(fixture.componentInstance.encounter()?.version).toBe(2);
+    expect(fixture.componentInstance.encounter()?.status).toBe('open');
+    // No se bloquea nada: el formulario sigue abierto con lo escrito y se puede reintentar.
+    expect(q('prescription-form')).not.toBeNull();
+    expect(inSection<HTMLInputElement>('item-medication')[0].value).toBe('Amoxicilina');
+    q('btn-submit-prescription')!.click();
+    await settle();
+    expect(medications()).toEqual(['Ibuprofeno', 'Paracetamol', 'Amoxicilina']);
+    expect(fixture.componentInstance.encounter()?.version).toBe(3);
+  });
+
+  it.each([
+    ['concurrencia', CONCURRENCY_DETAIL],
+    ['índice único', UNIQUE_DETAIL],
+  ])('409 de %s al agregar un medicamento: mensaje en la receta, recarga el encuentro y NO bloquea la receta', async (_, detail) => {
+    await create('enc-1');
+    TestBed.inject(MockClinicalBackend).bumpEncounterVersion('enc-1');
+    const getById = vi.spyOn(encounters, 'getById');
+    vi.spyOn(repo, 'addItem').mockReturnValueOnce(http409(detail));
+    fixture.componentInstance.onAddPrescriptionItem({ prescriptionId: 'rx-1', dto: { medication: 'A' } });
+    await settle();
+    expect(q('item-error')?.textContent).toContain(PRESCRIPTION_CONCURRENCY_MESSAGE);
+    expect(getById).toHaveBeenCalledWith('enc-1');
+    expect(fixture.componentInstance.encounter()?.version).toBe(2);
+    expect(fixture.componentInstance.prescriptions.lockedReasons()).toEqual({});
+    expect(inSection<HTMLButtonElement>('btn-add-item')[0].disabled).toBe(false);
+    expect(inSection('add-item-reason')).toEqual([]);
+  });
+
+  it('bloqueo por encuentro cerrado: si al recargar el encuentro vuelve open, no queda pegado', async () => {
+    await create('enc-1');
+    // El backend respondió el 409 de estado, pero el encuentro recargado sigue open.
+    vi.spyOn(repo, 'addItem').mockReturnValueOnce(http409("Cannot add prescription items to an encounter with status 'signed'."));
+    fixture.componentInstance.onAddPrescriptionItem({ prescriptionId: 'rx-1', dto: { medication: 'A' } });
+    await settle();
+    expect(fixture.componentInstance.encounter()?.status).toBe('open');
+    expect(fixture.componentInstance.prescriptions.lockedReasons()).toEqual({});
+    expect(inSection<HTMLButtonElement>('btn-add-item')[0].disabled).toBe(false);
+
+    // Con el encuentro realmente firmado, el bloqueo se mantiene (y la sección pasa a solo lectura).
+    await firstValueFrom(encounters.sign('enc-1', { version: fixture.componentInstance.encounter()!.version }));
+    fixture.componentInstance.onAddPrescriptionItem({ prescriptionId: 'rx-1', dto: { medication: 'A' } });
+    await settle();
+    expect(fixture.componentInstance.prescriptions.lockedReasons()).toEqual({ 'rx-1': PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE });
+    expect(inSection('btn-add-item')).toEqual([]);
+  });
+
+  it('Cancelar el alta limpia el error: al reabrir no se ve el error viejo', async () => {
+    await create('enc-1');
+    vi.spyOn(repo, 'createForEncounter').mockReturnValueOnce(throwError(() => new HttpErrorResponse({
+      status: 403, error: { detail: "Only the user linked to the encounter's professional can add prescriptions to encounter 'enc-1'." },
+    })));
+    q('btn-new-prescription')!.click();
+    await settle();
+    typeIn(inSection<HTMLInputElement>('item-medication')[0], 'Amoxicilina');
+    q('btn-submit-prescription')!.click();
+    await settle();
+    expect(q('prescriptions-error')).not.toBeNull();
+
+    q('btn-cancel-prescription')!.click();
+    await settle();
+    expect(fixture.componentInstance.prescriptions.actionError()).toBeNull();
+    expect(q('prescriptions-error')).toBeNull();
+    expect(document.activeElement).toBe(q('btn-new-prescription'));
+    q('btn-new-prescription')!.click();
+    await settle();
+    expect(q('prescription-form')).not.toBeNull();
+    expect(q('prescriptions-error')).toBeNull();
+  });
+
+  it('foco: al cerrar el formulario de ítem vuelve a "Agregar medicamento" de esa receta', async () => {
+    await create('enc-1');
+    inSection('btn-add-item')[0].click();
+    await settle();
+    q('btn-cancel-item')!.click();
+    await settle();
+    expect(q('prescription-item-form')).toBeNull();
+    expect(document.activeElement).toBe(inSection('btn-add-item')[0]);
+    expect(document.activeElement?.id).toBe('prescription-rx-1-add-btn');
   });
 
   it('403 al emitir: mensaje en español', async () => {

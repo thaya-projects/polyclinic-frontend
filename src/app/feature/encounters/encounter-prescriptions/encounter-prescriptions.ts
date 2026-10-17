@@ -12,7 +12,7 @@ import { PrescriptionItemError } from '../../prescriptions/prescriptions.store';
 // `busy` = cualquier operación en curso (recetas, mediciones, diagnósticos o la nota): las altas
 // quedan deshabilitadas. Las guardas de reentrada viven en los formularios.
 // "Nueva receta" abre el formulario inline; se cierra solo tras un alta exitosa (`createdSeq`) o con
-// Cancelar, y entonces el foco vuelve al botón.
+// Cancelar (emite `cancelled`: el contenedor limpia el error del alta), y entonces el foco vuelve al botón.
 @Component({
   selector: 'app-encounter-prescriptions',
   imports: [PrescriptionForm, PrescriptionsList],
@@ -42,6 +42,7 @@ export class EncounterPrescriptions {
   create = output<CreatePrescriptionDto>();
   addItem = output<PrescriptionItemRequest>();
   retry = output<void>();
+  cancelled = output<void>();
 
   readonly formOpen = signal(false);
 
@@ -62,6 +63,11 @@ export class EncounterPrescriptions {
     if (!this.editable() || this.busy()) return;
     this.formOpen.set(true);
     afterNextRender(() => this.focus('encounter-prescription-form-anchor'), { injector: this.injector });
+  }
+
+  cancelForm(): void {
+    this.cancelled.emit();
+    this.closeForm();
   }
 
   closeForm(): void {

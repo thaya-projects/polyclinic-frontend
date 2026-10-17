@@ -11,11 +11,17 @@ import { PRESCRIPTION_LIMITS } from '../../core/models/prescription.model';
 // pantalla; un mismo status con causas distintas se separa por el detail:
 //   404 "Patient with id …" → 'patient_not_found'; "Encounter with id …" → 'not_found';
 //       "Prescription with id …" → 'prescription_not_found'; otro → genérico.
-//   409 ventana de 24 h de la receta suelta → 'window_closed' (se deshabilita "Agregar medicamento"
-//       en esa receta); el resto (encuentro no open) → 'conflict' (el detalle recarga el encuentro).
+//   409 se clasifica SOLO por el detail:
+//       "Cannot add prescriptions|prescription items to an encounter with status '…'" → 'conflict'
+//         (encuentro firmado/anulado: la receta se bloquea y el detalle recarga el encuentro);
+//       "Items can only be added within 24 hours …" → 'window_closed' (se bloquea esa receta);
+//       cualquier otro 409, o sin detail (concurrencia optimista, choque de índice único,
+//       inmutabilidad u otro texto propio del backend) → 'concurrency': aviso para reintentar, SIN
+//       bloquear nada; se recargan los datos (encuentro → versión nueva; paciente → la lista).
 //   403 → texto propio en español según la operación; 422 → mensaje del backend traducido o genérico.
 //   401 → 'unauthorized' (lo resuelve authInterceptor: la pantalla no muestra nada).
-export type PrescriptionErrorKind = EncounterErrorKind | 'patient_not_found' | 'prescription_not_found' | 'window_closed';
+export type PrescriptionErrorKind =
+  EncounterErrorKind | 'patient_not_found' | 'prescription_not_found' | 'window_closed' | 'concurrency';
 
 export interface PrescriptionError {
   kind: PrescriptionErrorKind;
@@ -42,6 +48,11 @@ export const PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE =
   'El encuentro de esta receta ya fue firmado o anulado: no admite más medicamentos.';
 export const PRESCRIPTION_WINDOW_CLOSED_MESSAGE =
   'Pasaron más de 24 h desde la emisión de esta receta suelta: ya no se le pueden agregar medicamentos.';
+// Pista del cliente (no bloquea): según el reloj local la ventana venció, pero decide el backend.
+export const PRESCRIPTION_WINDOW_LIKELY_CLOSED_MESSAGE =
+  'Probablemente ya pasaron 24 h desde la emisión de esta receta suelta: el sistema podría rechazar medicamentos nuevos.';
+// 409 que no es de estado ni de la ventana (concurrencia, choque de índice único, inmutabilidad…).
+export const PRESCRIPTION_CONCURRENCY_MESSAGE = 'Otro cambio se guardó al mismo tiempo. Reintentá.';
 export const PRESCRIPTION_MAX_ITEMS_MESSAGE =
   `Una receta puede tener como máximo ${PRESCRIPTION_LIMITS.maxItems} medicamentos.`;
 export const PRESCRIPTION_VALIDATION_MESSAGE =
@@ -67,17 +78,27 @@ function fieldText(field: string, index: string | undefined): string {
   return index !== undefined ? `${label} (medicamento ${Number(index) + 1})` : label;
 }
 
-// 409 de la ventana de 24 h (texto confirmado en el contrato).
+// 409 de la ventana de 24 h y del encuentro no open (textos del backend).
 const WINDOW_CLOSED_DETAIL = /^Items can only be added within 24 hours of issuing a standalone prescription\.?$/i;
+const ENCOUNTER_NOT_OPEN_DETAIL = /^Cannot add (?:prescriptions|prescription items) to an encounter with status '(\w+)'\.?$/i;
 
-// Mensajes del backend → español. NO CONFIRMADOS (Polyclinic.Domain/Exceptions/Prescriptions y
-// Entities/Prescription*.cs todavía no existen): siguen el estilo de los demás mensajes del backend
-// (EncounterActionNotAllowedForUserException con ClinicalChildOperation, ClinicalMeasurement…,
-// NullCharacterGuard, ArgumentException con "(Parameter 'x')"). Los patrones son tolerantes
-// (variantes de redacción) y lo que no matchea cae en los genéricos de encounters y, si tampoco, en
+// Mensajes del backend → español (el sufijo "(Parameter 'x')" lo quita normalizeBackendMessage).
+// Lo que no matchea cae en los genéricos de encounters y, si tampoco, en
 // PRESCRIPTION_VALIDATION_MESSAGE: nunca se muestra el texto crudo en inglés.
 export const PRESCRIPTION_MESSAGES: KnownMessage[] = [
   { pattern: WINDOW_CLOSED_DETAIL, translate: () => PRESCRIPTION_WINDOW_CLOSED_MESSAGE },
+  // Ítem nulo en el alta ("items[2] cannot be null.") o al agregar ("item cannot be null.").
+  { pattern: /^items\[(\d+)\] cannot be null\.?$/i,
+    translate: m => `Faltan los datos del medicamento ${Number(m[1]) + 1}.` },
+  { pattern: new RegExp(`^${ITEM_PREFIX}item cannot be null\\.?$`, 'i'),
+    translate: m => (m[1] !== undefined ? `Faltan los datos del medicamento ${Number(m[1]) + 1}.` : 'Faltan los datos del medicamento.') },
+  // NullCharacterGuard sobre el body completo o sobre los textos (con o sin el prefijo items[n].).
+  { pattern: new RegExp(`^${ITEM_PREFIX}Request body cannot contain the null character.*$`, 'i'),
+    translate: () => 'La receta contiene un carácter inválido. Revisá los textos e intentá de nuevo.' },
+  { pattern: new RegExp(`^${ITEM_PREFIX}Text values cannot contain the null character.*$`, 'i'),
+    translate: m => (m[1] !== undefined
+      ? `Un texto del medicamento ${Number(m[1]) + 1} contiene un carácter inválido.`
+      : 'Un texto de la receta contiene un carácter inválido.') },
   // Máximo de ítems por receta.
   { pattern: /^A prescription cannot have more than (\d+) items\.?$/i,
     translate: m => `Una receta puede tener como máximo ${m[1]} medicamentos.` },
@@ -90,8 +111,7 @@ export const PRESCRIPTION_MESSAGES: KnownMessage[] = [
     translate: () => PRESCRIPTION_FORBIDDEN_MESSAGE },
   { pattern: /^Professional with id '.*' is inactive\.?$/i, translate: () => PRESCRIPTION_INACTIVE_PROFESSIONAL_MESSAGE },
   // 409 del encuentro no open.
-  { pattern: /^Cannot add (?:prescriptions|prescription items) to an encounter with status '(\w+)'\.?$/i,
-    translate: () => PRESCRIPTION_CONFLICT_MESSAGE },
+  { pattern: ENCOUNTER_NOT_OPEN_DETAIL, translate: () => PRESCRIPTION_CONFLICT_MESSAGE },
   // NullCharacterGuard, largos y obligatorios (con o sin el prefijo items[n].).
   { pattern: new RegExp(`^${ITEM_PREFIX}(\\w+) cannot contain the null character.*$`, 'i'),
     translate: m => `El campo ${fieldText(m[2], m[1])} contiene un carácter inválido.` },
@@ -120,10 +140,6 @@ function detail(err: HttpErrorResponse): string {
   return normalizeBackendMessage(backendMessages(err)[0] ?? '');
 }
 
-export function isWindowClosedDetail(text: string): boolean {
-  return WINDOW_CLOSED_DETAIL.test(normalizeBackendMessage(text));
-}
-
 const FORBIDDEN_BY_OPERATION: Record<PrescriptionOperation, string> = {
   read: PRESCRIPTIONS_ACCESS_DENIED_MESSAGE,
   create_encounter: PRESCRIPTION_ENCOUNTER_FORBIDDEN_MESSAGE,
@@ -134,12 +150,10 @@ const FORBIDDEN_BY_OPERATION: Record<PrescriptionOperation, string> = {
 export interface PrescriptionErrorOptions {
   fallback?: string;
   operation?: PrescriptionOperation;
-  // add_item: la receta es de un encuentro (el 409 habla del encuentro y no de las 24 h).
-  encounterContext?: boolean;
 }
 
 export function prescriptionError(err: unknown, options: PrescriptionErrorOptions = {}): PrescriptionError {
-  const { fallback = 'No se pudo completar la operación.', operation = 'read', encounterContext = true } = options;
+  const { fallback = 'No se pudo completar la operación.', operation = 'read' } = options;
   if (!(err instanceof HttpErrorResponse)) return { kind: 'other', message: fallback };
   switch (err.status) {
     case 403:
@@ -158,15 +172,16 @@ export function prescriptionError(err: unknown, options: PrescriptionErrorOption
       return { kind: 'other', message: PRESCRIPTION_RESOURCE_NOT_FOUND_MESSAGE };
     }
     case 409: {
-      if (isWindowClosedDetail(detail(err))) return { kind: 'window_closed', message: PRESCRIPTION_WINDOW_CLOSED_MESSAGE };
-      // Sin detail reconocible: en una receta suelta solo puede ser la ventana de 24 h.
-      if (operation === 'add_item' && !encounterContext) {
-        return { kind: 'window_closed', message: PRESCRIPTION_WINDOW_CLOSED_MESSAGE };
+      const text = detail(err);
+      if (WINDOW_CLOSED_DETAIL.test(text)) return { kind: 'window_closed', message: PRESCRIPTION_WINDOW_CLOSED_MESSAGE };
+      // Una receta suelta no tiene encuentro: ahí nunca aplica el 409 de estado.
+      if (ENCOUNTER_NOT_OPEN_DETAIL.test(text) && operation !== 'create_standalone') {
+        return {
+          kind: 'conflict',
+          message: operation === 'add_item' ? PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE : PRESCRIPTION_CONFLICT_MESSAGE,
+        };
       }
-      return {
-        kind: 'conflict',
-        message: operation === 'add_item' ? PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE : PRESCRIPTION_CONFLICT_MESSAGE,
-      };
+      return { kind: 'concurrency', message: PRESCRIPTION_CONCURRENCY_MESSAGE };
     }
     case 422: return { kind: 'validation', message: translated(err) ?? PRESCRIPTION_VALIDATION_MESSAGE };
     default: return encounterError(err, fallback);
