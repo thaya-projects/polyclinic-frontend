@@ -1,8 +1,28 @@
-import { Routes } from '@angular/router';
+import { Route, Routes } from '@angular/router';
 import { Shell } from './layout/shell/shell';
 import { roleGuard } from './core/guards/role.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { featureEnabledGuard } from './core/guards/feature.guard';
+import { ODONTOGRAM_DISABLED_MESSAGE } from './shared/utils/module-disabled.util';
+import type { ModuleDisabledRouteData } from './shared/components/module-disabled-page/module-disabled-page';
+
+// Fase 6 FF: rutas del módulo "odontogram". Cada una matchea solo con el módulo activo (canMatch); si
+// está apagado, el router cae en el fallback del mismo path → "Módulo no habilitado" (no un 403 crudo).
+// Ambas llevan authGuard: sin sesión, el fallback también redirige a login.
+export function odontologyRoutes(routes: Route[]): Route[] {
+  const data: ModuleDisabledRouteData = { moduleTitle: 'Odontología', message: ODONTOGRAM_DISABLED_MESSAGE };
+  return routes.flatMap(route => [
+    { ...route, canMatch: [featureEnabledGuard('odontogram')] },
+    {
+      path: route.path,
+      loadComponent: () =>
+        import('./shared/components/module-disabled-page/module-disabled-page').then(m => m.ModuleDisabledPage),
+      canActivate: [authGuard],
+      data,
+    },
+  ]);
+}
 
 export const routes: Routes = [
   {
@@ -115,30 +135,32 @@ export const routes: Routes = [
         // B6: si la nota tiene cambios sin guardar, pregunta antes de salir.
         canDeactivate: [(page: { canLeave(): boolean | Promise<boolean> }) => page.canLeave()],
       },
-      {
-        // Fase 6 T5: Odontología > Catálogo de condiciones dentales. authGuard; el backend aplica
-        // la policy TenantUser y el feature flag "odontogram" (403 si está apagado).
-        path: 'odontology/catalog',
-        loadComponent: () =>
-          import('./feature/odontology/dental-conditions/dental-conditions-page/dental-conditions-page')
-            .then(m => m.DentalConditionsPage),
-        canActivate: [authGuard],
-      },
-      {
-        // Fase 6 T5: Odontología > Odontograma desde el menú (sin paciente): selector de paciente.
-        path: 'odontology/odontogram',
-        loadComponent: () =>
-          import('./feature/odontology/odontogram/odontogram-page/odontogram-page').then(m => m.OdontogramPage),
-        canActivate: [authGuard],
-      },
-      {
-        // Fase 6 T5: odontograma current del paciente (desde la ficha del paciente, el detalle del
-        // encounter con ?encounter_id= o el selector de arriba).
-        path: 'patients/:patientId/odontogram',
-        loadComponent: () =>
-          import('./feature/odontology/odontogram/odontogram-page/odontogram-page').then(m => m.OdontogramPage),
-        canActivate: [authGuard],
-      },
+      ...odontologyRoutes([
+        {
+          // Fase 6 T5: Odontología > Catálogo de condiciones dentales. authGuard; el backend aplica
+          // la policy TenantUser y el feature flag "odontogram" (403 si está apagado).
+          path: 'odontology/catalog',
+          loadComponent: () =>
+            import('./feature/odontology/dental-conditions/dental-conditions-page/dental-conditions-page')
+              .then(m => m.DentalConditionsPage),
+          canActivate: [authGuard],
+        },
+        {
+          // Fase 6 T5: Odontología > Odontograma desde el menú (sin paciente): selector de paciente.
+          path: 'odontology/odontogram',
+          loadComponent: () =>
+            import('./feature/odontology/odontogram/odontogram-page/odontogram-page').then(m => m.OdontogramPage),
+          canActivate: [authGuard],
+        },
+        {
+          // Fase 6 T5: odontograma current del paciente (desde la ficha del paciente, el detalle del
+          // encounter con ?encounter_id= o el selector de arriba).
+          path: 'patients/:patientId/odontogram',
+          loadComponent: () =>
+            import('./feature/odontology/odontogram/odontogram-page/odontogram-page').then(m => m.OdontogramPage),
+          canActivate: [authGuard],
+        },
+      ]),
       {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando

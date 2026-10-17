@@ -63,8 +63,8 @@ describe('Sidebar: entrada Encuentros', () => {
   });
 });
 
-// Fase 6: grupo Odontología > Catálogo, gated por el feature 'odontogram'.
-describe('Sidebar: Odontología > Catálogo', () => {
+// Fase 6: grupo Odontología (Catálogo, Odontograma), gated por el feature 'odontogram'.
+describe('Sidebar: Odontología', () => {
   let fixture: ComponentFixture<Sidebar>;
   let http: HttpTestingController;
 
@@ -102,9 +102,26 @@ describe('Sidebar: Odontología > Catálogo', () => {
     expect(link.getAttribute('href')).toBe('/odontology/catalog');
   });
 
-  it('feature apagado: el grupo entero se oculta', async () => {
+  it('feature activo: "Odontograma" ya no es "Pronto" y enlaza a /odontology/odontogram', async () => {
+    await renderWith(true);
+    const link = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a'))
+      .find(a => a.textContent?.trim() === 'Odontograma') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/odontology/odontogram');
+    expect(link.textContent).not.toContain('Pronto');
+  });
+
+  it('feature apagado: el grupo entero se oculta (Catálogo y Odontograma)', async () => {
     await renderWith(false);
     expect(labels()).not.toContain('Odontología');
     expect(labels()).not.toContain('Catálogo');
+    expect(labels()).not.toContain('Odontograma');
+  });
+
+  it('features sin cargar todavía: el grupo queda oculto (cerrado por default)', async () => {
+    fixture = TestBed.createComponent(Sidebar);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(labels()).not.toContain('Odontología');
   });
 });

@@ -14,6 +14,11 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
+    // Fase 6 FF: las rutas de odontología dependen del módulo del tenant (canMatch con la sesión).
+    path: 'odontology/**',
+    renderMode: RenderMode.Client,
+  },
+  {
     // Fase 6: odontograma por paciente — ruta con parámetro, sin datos para prerenderizar.
     path: 'patients/:patientId/odontogram',
     renderMode: RenderMode.Client,
