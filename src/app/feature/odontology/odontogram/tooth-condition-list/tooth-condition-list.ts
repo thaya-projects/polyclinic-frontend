@@ -31,6 +31,8 @@ export class ToothConditionList {
   catalog = input<DentalCondition[]>([]);
   editingId = input<string | null>(null);
   disabled = input(false);
+  // Odontograma histórico: solo se listan, sin editar / eliminar.
+  readOnly = input(false);
 
   edit = output<ToothCondition>();
   remove = output<ToothCondition>();

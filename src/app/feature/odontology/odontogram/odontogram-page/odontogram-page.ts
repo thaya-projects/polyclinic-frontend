@@ -47,6 +47,10 @@ const NO_CLINICAL_RECORD_MESSAGE =
 // [toothActions]) hace las altas / ediciones / bajas y emite el resultado; la grilla se repinta con el
 // default_color de cada condición sin recargar. Click en una cara de la grilla → pieza + cara
 // preseleccionada en el formulario.
+//
+// T6: las condiciones van contra el backend (HttpToothConditionsRepository). Un odontograma histórico
+// (is_current = false) se muestra en solo lectura; si una escritura recibe 409 (el mostrado dejó de
+// ser current) se avisa y se recarga el current.
 @Component({
   selector: 'app-odontogram-page',
   imports: [OdontogramChart, SelectedToothPanel, ToothConditionsPanel, PatientPicker, StatusChip, Modal, RouterLink],
@@ -210,6 +214,12 @@ export class OdontogramPage {
 
   onToothConditionRemoved(id: string): void {
     this.teeth.update(list => list.filter(i => i.id !== id));
+  }
+
+  // 409 al escribir una condición: el odontograma mostrado ya es histórico → avisar y recargar el current.
+  onOdontogramHistoric(message: string): void {
+    this.notice.set(message);
+    this.load();
   }
 
   searchPatients(q: string): void {

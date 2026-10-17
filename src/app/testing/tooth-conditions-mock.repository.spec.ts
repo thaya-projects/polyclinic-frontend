@@ -39,10 +39,14 @@ describe('MockToothConditionsRepository', () => {
 
   it('create: tooth_fdi según la dentición del odontograma → 422', async () => {
     // odo-2 permanente: 51 (temporal) y 19 (inexistente) no van.
-    for (const fdi of [51, 19, 10]) {
+    // Textos reales del backend: FDI de otra dentición (ToothFdiNotInDentitionException) vs no-FDI (ToothFdi).
+    const other = await errorOf(firstValueFrom(repo.create('odo-2', { tooth_fdi: 51, condition_id: 'dc-1' })));
+    expect(other.status).toBe(422);
+    expect(other.error.detail).toBe("tooth_fdi 51 is not valid for a 'permanente' dentition.");
+    for (const fdi of [19, 10]) {
       const err = await errorOf(firstValueFrom(repo.create('odo-2', { tooth_fdi: fdi, condition_id: 'dc-1' })));
       expect(err.status).toBe(422);
-      expect(err.error.detail).toBe(`Tooth ${fdi} is not valid for dentition 'permanente'.`);
+      expect(err.error.detail).toMatch(new RegExp(`^tooth_fdi ${fdi} is not a valid FDI tooth number`));
     }
     // odo-3 mixta: ambas.
     await expect(firstValueFrom(repo.create('odo-3', { tooth_fdi: 85, condition_id: 'dc-1' }))).resolves.toBeTruthy();
@@ -94,5 +98,17 @@ describe('MockToothConditionsRepository', () => {
       expect(err.status).toBe(403);
       expect(err.error).toBeNull();
     }
+  });
+
+  it('markHistoric: create / update / remove → 409; list sigue andando', async () => {
+    repo.markHistoric('odo-2');
+    for (const call of [
+      repo.create('odo-2', { tooth_fdi: 11, condition_id: 'dc-1' }),
+      repo.update('odo-2', 'tc-1', { state: 'realizado' }),
+      repo.remove('odo-2', 'tc-1'),
+    ]) {
+      expect((await errorOf(firstValueFrom(call as Observable<unknown>))).status).toBe(409);
+    }
+    await expect(firstValueFrom(repo.list('odo-2'))).resolves.toHaveLength(3);
   });
 });

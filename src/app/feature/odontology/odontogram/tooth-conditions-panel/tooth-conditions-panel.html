@@ -8,11 +8,18 @@
   }
 
   <app-tooth-condition-list [items]="toothItems()" [catalog]="catalog()" [editingId]="editing()?.id ?? null"
-    [disabled]="saving()" (edit)="startEdit($event)" (remove)="remove($event)" />
+    [disabled]="saving()" [readOnly]="readOnly()" (edit)="startEdit($event)" (remove)="remove($event)" />
 
-  <div class="border-t border-border pt-3">
-    <app-tooth-condition-form [tooth]="tooth()" [dentition]="dentition()" [catalog]="catalog()"
-      [presetSurface]="surface()" [item]="editing()" [saving]="saving()"
-      (created)="create($event)" (saved)="save($event)" (cancelled)="cancelEdit()" />
-  </div>
+  @if (readOnly()) {
+    <p class="flex items-center gap-2 border-t border-border pt-3 text-xs text-muted" data-testid="tooth-conditions-readonly">
+      <i class="ti ti-lock"></i>
+      Odontograma histórico: solo lectura. Para marcar condiciones usá el odontograma actual.
+    </p>
+  } @else {
+    <div class="border-t border-border pt-3">
+      <app-tooth-condition-form [tooth]="tooth()" [dentition]="dentition()" [catalog]="catalog()"
+        [presetSurface]="surface()" [item]="editing()" [saving]="saving()"
+        (created)="create($event)" (saved)="save($event)" (cancelled)="cancelEdit()" />
+    </div>
+  }
 </div>

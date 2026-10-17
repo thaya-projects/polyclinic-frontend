@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { OdontogramPage } from './odontogram-page';
 import { ODONTOGRAM_REPOSITORY } from '../../../../core/services/odontogram-repository';
 import { MockOdontogramRepository } from '../../../../testing/odontogram-mock.repository';
@@ -10,7 +10,7 @@ import { TOOTH_CONDITIONS_REPOSITORY } from '../../../../core/services/tooth-con
 import { MockToothConditionsRepository } from '../../../../testing/tooth-conditions-mock.repository';
 import { firstValueFrom } from 'rxjs';
 import {
-  ODONTOGRAM_CONFLICT_MESSAGE, ODONTOGRAM_DISABLED_MESSAGE,
+  ODONTOGRAM_CONFLICT_MESSAGE, ODONTOGRAM_DISABLED_MESSAGE, TOOTH_CONDITION_HISTORIC_MESSAGE,
 } from '../../../../shared/utils/odontogram-error.util';
 
 // La pantalla corre contra el mock (desacoplada de la fuente de datos).
@@ -287,6 +287,32 @@ describe('OdontogramPage', () => {
     q('tooth-condition-submit')!.click();
     fixture.detectChanges();
     expect(q('tooth-conditions-error')?.textContent).toContain(ODONTOGRAM_DISABLED_MESSAGE);
+    expect(fill('face-11-top')).toBe('none');
+  });
+  it('odontograma histórico (is_current = false): listado sí, sin formulario ni editar / eliminar', async () => {
+    const historic = await firstValueFrom(repo.getById('odo-2'));
+    vi.spyOn(repo, 'getCurrent').mockReturnValue(of({ ...historic, is_current: false }));
+    await render('pat-1');
+    q('tooth-36')!.click();
+    fixture.detectChanges();
+    expect(q('tooth-condition-tc-2')!.textContent).toContain('Corona');
+    expect(q('tooth-conditions-readonly')).not.toBeNull();
+    expect(q('tooth-condition-submit')).toBeNull();
+    expect(q('edit')).toBeNull();
+    expect(q('remove')).toBeNull();
+  });
+
+  it('409 al marcar (el odontograma pasó a histórico): avisa y recarga el current', async () => {
+    await render('pat-1');
+    q('tooth-11')!.click();
+    fixture.detectChanges();
+    teethRepo.markHistoric('odo-2');
+    const getCurrent = vi.spyOn(repo, 'getCurrent');
+    choose('condition-select', 'dc-1');
+    q('tooth-condition-submit')!.click();
+    fixture.detectChanges();
+    expect(q('notice')?.textContent).toContain(TOOTH_CONDITION_HISTORIC_MESSAGE);
+    expect(getCurrent).toHaveBeenCalledWith('pat-1');
     expect(fill('face-11-top')).toBe('none');
   });
 });

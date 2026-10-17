@@ -19,6 +19,10 @@ import {
 // altas / ediciones / bajas vía TOOTH_CONDITIONS_REPOSITORY (mock o HTTP). No guarda la lista: emite
 // el resultado (added / updated / removed) y la página actualiza su estado, con lo que la grilla se
 // repinta sin recargar. 404 (ya no existe) → emite `stale` para que la página recargue.
+//
+// T6: odontograma histórico (`readOnly`, is_current = false) → solo el listado: sin formulario ni
+// editar / eliminar. Si igual llega un 409 (el odontograma dejó de ser current mientras se editaba)
+// se muestra el aviso y se emite `historic` para que la página recargue el current.
 @Component({
   selector: 'app-tooth-conditions-panel',
   imports: [ToothConditionForm, ToothConditionList],
@@ -35,11 +39,13 @@ export class ToothConditionsPanel {
   surface = input<ToothSurface | null>(null);
   catalog = input<DentalCondition[]>([]);
   items = input<ToothCondition[]>([]);
+  readOnly = input(false);
 
   added = output<ToothCondition>();
   updated = output<ToothCondition>();
   removed = output<string>();
   stale = output<void>();
+  historic = output<string>();
 
   private form = viewChild(ToothConditionForm);
 
@@ -62,6 +68,7 @@ export class ToothConditionsPanel {
   }
 
   startEdit(item: ToothCondition): void {
+    if (this.readOnly()) return;
     this.error.set(null);
     this.editing.set(item);
   }
@@ -71,7 +78,7 @@ export class ToothConditionsPanel {
   }
 
   create(dto: CreateToothConditionDto): void {
-    if (this.saving()) return;
+    if (this.saving() || this.readOnly()) return;
     this.begin();
     this.repo.create(this.odontogramId(), dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: created => {
@@ -85,7 +92,7 @@ export class ToothConditionsPanel {
 
   save(dto: UpdateToothConditionDto): void {
     const item = this.editing();
-    if (!item || this.saving()) return;
+    if (!item || this.saving() || this.readOnly()) return;
     if (Object.keys(dto).length === 0) {
       this.editing.set(null);
       return;
@@ -102,7 +109,7 @@ export class ToothConditionsPanel {
   }
 
   remove(item: ToothCondition): void {
-    if (this.saving()) return;
+    if (this.saving() || this.readOnly()) return;
     this.begin();
     this.repo.remove(this.odontogramId(), item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
@@ -122,12 +129,16 @@ export class ToothConditionsPanel {
   private fail(err: unknown, fallback: string): void {
     this.saving.set(false);
     const { kind, message } = odontogramError(err, fallback, {
-      operation: 'write', odontogramEnabled: this.repo.odontogramEnabled(),
+      operation: 'write', odontogramEnabled: this.repo.odontogramEnabled(), resource: 'tooth_condition',
     });
     this.error.set(kind === 'forbidden' ? TOOTH_CONDITION_WRITE_FORBIDDEN_MESSAGE : message);
     if (kind === 'not_found') {
       this.editing.set(null);
       this.stale.emit();
+    }
+    if (kind === 'historic') {
+      this.editing.set(null);
+      this.historic.emit(message);
     }
   }
 }

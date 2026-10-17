@@ -19,14 +19,22 @@ export { ODONTOGRAM_DISABLED_MESSAGE } from './module-disabled.util';
 //   - ForbiddenException del dominio → ProblemDetails con otro detail.
 // Si el body identifica el módulo apagado, manda; si trae otro ProblemDetails, es falta de permiso;
 // sin body se usa el estado del módulo conocido por la sesión (`odontogramEnabled`): en lecturas un
-// 403 sin body con estado desconocido se atribuye al módulo (igual que el catálogo dental).
+// 403 sin body con estado desconocido se atribuye al módulo (igual que el catálogo dental). El
+// ProblemDetails real es "El módulo de odontología no está habilitado para este tenant.".
+//
+// 409 depende del recurso:
+//   - odontograma (alta) → `conflict`: otro request dejó un current nuevo (carrera).
+//   - condiciones por pieza (/tenants/odontograms/{id}/teeth) → `historic`: se intentó escribir en un
+//     odontograma que ya no es el current (is_current = false).
 export type OdontogramErrorKind =
-  | 'unauthorized' | 'feature_disabled' | 'forbidden' | 'no_current' | 'not_found' | 'conflict' | 'validation'
-  | 'other';
+  | 'unauthorized' | 'feature_disabled' | 'forbidden' | 'no_current' | 'not_found' | 'conflict' | 'historic'
+  | 'validation' | 'other';
 
 export interface OdontogramErrorContext {
   operation?: 'read' | 'write';
   odontogramEnabled?: boolean | null;
+  // Recurso de la llamada (default odontogram): cambia la lectura del 409.
+  resource?: 'odontogram' | 'tooth_condition';
 }
 
 export interface OdontogramError {
@@ -47,9 +55,10 @@ export const ODONTOGRAM_LOAD_ERROR_MESSAGE = 'No se pudo cargar el odontograma.'
 export const TOOTH_CONDITION_NOT_FOUND_MESSAGE = 'La condición marcada ya no existe. Se recargó la pieza.';
 export const TOOTH_CONDITION_WRITE_FORBIDDEN_MESSAGE =
   'Solo un profesional activo puede marcar condiciones en el odontograma.';
+export const TOOTH_CONDITION_HISTORIC_MESSAGE = 'Este odontograma es histórico; creá uno nuevo o volvé al actual';
 export const ODONTOGRAM_SESSION_EXPIRED_MESSAGE = 'Tu sesión expiró. Iniciá sesión de nuevo.';
 
-type KnownMessage = { pattern: RegExp; translate: () => string };
+type KnownMessage = { pattern: RegExp; translate: (match: RegExpMatchArray) => string };
 
 const NOT_FOUND_MESSAGES: KnownMessage[] = [
   { pattern: /has no current odontogram/i, translate: () => ODONTOGRAM_NO_CURRENT_MESSAGE },
@@ -57,6 +66,7 @@ const NOT_FOUND_MESSAGES: KnownMessage[] = [
   { pattern: /^ClinicalRecord with id '.*' was not found\.?$/i,
     translate: () => 'No se encontró la historia clínica del paciente.' },
   { pattern: /^Encounter with id '.*' was not found\.?$/i, translate: () => 'El encuentro indicado no existe.' },
+  { pattern: /^Odontogram with id '.*' was not found\.?$/i, translate: () => ODONTOGRAM_NOT_FOUND_MESSAGE },
   { pattern: /^ToothCondition with id '.*' was not found\.?$/i, translate: () => TOOTH_CONDITION_NOT_FOUND_MESSAGE },
 ];
 
@@ -70,12 +80,20 @@ const VALIDATION_MESSAGES: KnownMessage[] = [
     translate: () => 'El encuentro indicado no corresponde a este paciente.' },
   { pattern: /^dentition must be one of: permanente, temporal, mixta\.?$/i,
     translate: () => 'La dentición debe ser permanente, temporal o mixta.' },
-  // Condiciones por pieza (/tenants/odontograms/{id}/teeth).
-  { pattern: /^Tooth \d+ is not valid for dentition '.*'\.?$/i,
-    translate: () => 'La pieza no corresponde a la dentición del odontograma.' },
+  // Condiciones por pieza (/tenants/odontograms/{id}/teeth): ToothFdi, ToothCondition,
+  // ToothConditionService y sus excepciones (ToothFdiNotInDentition, ToothConditionDentalConditionNotFound).
+  { pattern: /^tooth_fdi is required\.?$/i, translate: () => 'Elegí la pieza a marcar.' },
+  { pattern: /^tooth_fdi (-?\d+) is not a valid FDI tooth number\b.*$/i,
+    translate: m => `La pieza ${m[1]} no es un número FDI válido (11-18, 21-28, 31-38, 41-48, 51-55, 61-65, 71-75, 81-85).` },
+  { pattern: /^tooth_fdi (\d+) is not valid for a '(permanente|temporal|mixta)' dentition\.?$/i,
+    translate: m => `La pieza ${m[1]} no corresponde a la dentición ${m[2].toLowerCase()} de este odontograma.` },
   { pattern: /^condition_id (is required|cannot be empty)\.?$/i, translate: () => 'Elegí una condición del catálogo.' },
-  { pattern: /^surface must be one of: .*$/i, translate: () => 'La cara elegida no es válida.' },
-  { pattern: /^state must be one of: .*$/i, translate: () => 'El estado elegido no es válido.' },
+  { pattern: /^condition_id '.*' does not exist in the dental condition catalog\.?$/i,
+    translate: () => 'La condición elegida ya no existe en el catálogo dental. Recargá la página y elegí otra.' },
+  { pattern: /^surface (must be one of: .*|cannot be null\.?)$/i, translate: () => 'La cara elegida no es válida.' },
+  { pattern: /^state (must be one of: .*|cannot be null\.?)$/i, translate: () => 'El estado elegido no es válido.' },
+  { pattern: /^note cannot exceed (\d+) characters\.?$/i,
+    translate: m => `La nota no puede superar los ${m[1]} caracteres.` },
 ];
 
 function detailOf(err: HttpErrorResponse): string {
@@ -84,7 +102,11 @@ function detailOf(err: HttpErrorResponse): string {
 }
 
 function translate(detail: string, known: KnownMessage[]): string | null {
-  return known.find(k => k.pattern.test(detail))?.translate() ?? null;
+  for (const k of known) {
+    const match = detail.match(k.pattern);
+    if (match) return k.translate(match);
+  }
+  return null;
 }
 
 function forbiddenError(err: HttpErrorResponse, context: OdontogramErrorContext): OdontogramError {
@@ -116,7 +138,9 @@ export function odontogramError(
     case 401: return { kind: 'unauthorized', message: ODONTOGRAM_SESSION_EXPIRED_MESSAGE };
     case 403: return forbiddenError(err, context);
     case 404: return notFoundError(err);
-    case 409: return { kind: 'conflict', message: ODONTOGRAM_CONFLICT_MESSAGE };
+    case 409: return context.resource === 'tooth_condition'
+      ? { kind: 'historic', message: TOOTH_CONDITION_HISTORIC_MESSAGE }
+      : { kind: 'conflict', message: ODONTOGRAM_CONFLICT_MESSAGE };
     case 422: return {
       kind: 'validation', message: translate(detailOf(err), VALIDATION_MESSAGES) ?? ODONTOGRAM_VALIDATION_MESSAGE,
     };

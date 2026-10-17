@@ -106,7 +106,8 @@
           <app-tooth-conditions-panel toothActions [odontogramId]="o.id" [dentition]="o.dentition" [tooth]="fdi"
             [surface]="selectedSurface()" [catalog]="catalog()" [items]="teeth()"
             (added)="onToothConditionAdded($event)" (updated)="onToothConditionUpdated($event)"
-            (removed)="onToothConditionRemoved($event)" (stale)="loadTeeth()" />
+            [readOnly]="!o.is_current" (removed)="onToothConditionRemoved($event)" (stale)="loadTeeth()"
+            (historic)="onOdontogramHistoric($event)" />
         }
       </app-selected-tooth-panel>
     </div>

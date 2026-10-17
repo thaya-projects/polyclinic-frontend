@@ -35,13 +35,14 @@ function httpError(status: number, detail: string): Observable<never> {
   return throwError(() => new HttpErrorResponse({ status, error: { detail } }));
 }
 
-// Fase 6 T5: condiciones por pieza en memoria (NO providedIn root; el token lo instancia por factory
-// mientras el backend de /teeth no exista). Imita el contrato esperado:
+// Fase 6 T5: condiciones por pieza en memoria (NO providedIn root; el default del token es
+// HttpToothConditionsRepository — este mock queda para tests/demo). Imita el contrato del backend:
 //   list: las del odontograma, por created_at.
-//   create: tooth_fdi según la dentición del odontograma (422) → condition_id requerido (422) →
+//   create: tooth_fdi FDI válido y según la dentición del odontograma (422, textos reales del backend) → condition_id requerido (422) →
 //           surface / state válidos (422). Defaults: surface whole, state existente. note vacía = null.
 //   update: 404 (inexistente o de otro odontograma) → PATCH parcial; note null = quitar. tooth_fdi inmutable.
 //   remove: 404 → borra.
+//   markHistoric(id): create / update / remove en ese odontograma → 409 (odontograma histórico).
 //   Módulo "odontogram" apagado (setOdontogramEnabled(false)): toda llamada → 403 sin body.
 // La dentición se conoce para los odontogramas sembrados y los registrados con registerOdontogram();
 // para un id desconocido (p. ej. uno real del backend en la demo) se acepta cualquier FDI válido
@@ -53,6 +54,7 @@ export class MockToothConditionsRepository implements ToothConditionsRepository 
   private dentitions: Record<string, Dentition> = { ...SEED_DENTITIONS };
   private nextId = 100;
   private moduleEnabled = true;
+  private historic = new Set<string>();
 
   // Helper para tests/demo: prende o apaga el módulo "odontogram" del tenant.
   setOdontogramEnabled(enabled: boolean): void {
@@ -62,6 +64,11 @@ export class MockToothConditionsRepository implements ToothConditionsRepository 
   // Helper para tests/demo: fija la dentición de un odontograma (valida tooth_fdi al crear).
   registerOdontogram(odontogramId: string, dentition: Dentition): void {
     this.dentitions[odontogramId] = dentition;
+  }
+
+  // Helper para tests/demo: el odontograma pasa a histórico (is_current = false) → escrituras 409.
+  markHistoric(odontogramId: string): void {
+    this.historic.add(odontogramId);
   }
 
   odontogramEnabled(): boolean | null {
@@ -79,8 +86,13 @@ export class MockToothConditionsRepository implements ToothConditionsRepository 
   create(odontogramId: string, dto: CreateToothConditionDto): Observable<ToothCondition> {
     if (!this.moduleEnabled) return moduleDisabled();
     const dentition = this.dentitions[odontogramId] ?? 'mixta';
+    if (this.historic.has(odontogramId)) return historic(odontogramId);
+    if (!isValidFdiForDentition(dto.tooth_fdi, 'mixta')) {
+      return httpError(422, `tooth_fdi ${dto.tooth_fdi} is not a valid FDI tooth number `
+        + '(11-18, 21-28, 31-38, 41-48, 51-55, 61-65, 71-75, 81-85).');
+    }
     if (!isValidFdiForDentition(dto.tooth_fdi, dentition)) {
-      return httpError(422, `Tooth ${dto.tooth_fdi} is not valid for dentition '${dentition}'.`);
+      return httpError(422, `tooth_fdi ${dto.tooth_fdi} is not valid for a '${dentition}' dentition.`);
     }
     const conditionId = (dto.condition_id ?? '').trim();
     if (!conditionId) return httpError(422, 'condition_id is required.');
@@ -102,6 +114,7 @@ export class MockToothConditionsRepository implements ToothConditionsRepository 
     if (!this.moduleEnabled) return moduleDisabled();
     const current = this.items.find(i => i.id === toothConditionId && i.odontogram_id === odontogramId);
     if (!current) return notFound(toothConditionId);
+    if (this.historic.has(odontogramId)) return historic(odontogramId);
     if (dto.surface !== undefined && !TOOTH_SURFACES.includes(dto.surface)) return invalidSurface();
     if (dto.state !== undefined && !TOOTH_CONDITION_STATES.includes(dto.state)) return invalidState();
     if (dto.condition_id !== undefined && !dto.condition_id.trim()) return httpError(422, 'condition_id cannot be empty.');
@@ -122,6 +135,7 @@ export class MockToothConditionsRepository implements ToothConditionsRepository 
     if (!this.items.some(i => i.id === toothConditionId && i.odontogram_id === odontogramId)) {
       return notFound(toothConditionId);
     }
+    if (this.historic.has(odontogramId)) return historic(odontogramId);
     this.items = this.items.filter(i => i.id !== toothConditionId);
     return of(undefined);
   }
@@ -129,6 +143,10 @@ export class MockToothConditionsRepository implements ToothConditionsRepository 
 
 function notFound(id: string): Observable<never> {
   return httpError(404, `ToothCondition with id '${id}' was not found.`);
+}
+
+function historic(odontogramId: string): Observable<never> {
+  return httpError(409, `Odontogram '${odontogramId}' is not current; tooth conditions can only be changed on the current odontogram.`);
 }
 
 function invalidSurface(): Observable<never> {
