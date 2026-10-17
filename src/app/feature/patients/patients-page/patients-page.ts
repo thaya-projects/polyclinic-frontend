@@ -11,6 +11,7 @@ import { PatientsService } from '../../../core/services/patients.service';
 import { CreatePatientDto, Patient, PatientsQuery } from '../../../core/models/patient.model';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { EncounterLookupsService } from '../../../core/services/encounter-lookups.service';
+import { FeaturesService } from '../../../core/services/features.service';
 import { patientDeactivateErrorMessage, patientSaveErrorMessage } from '../../../shared/utils/patients-error.util';
 
 const PAGE_SIZE = 8;
@@ -39,6 +40,10 @@ export class PatientsPage {
       default: return null;
     }
   });
+
+  // Fase 6: acceso al odontograma del paciente solo con el módulo "odontogram" activo.
+  private features = inject(FeaturesService);
+  readonly odontogramEnabled = computed(() => this.features.enabledMap()['odontogram'] === true);
 
   // "Nueva nota" solo para el usuario vinculado a un profesional habilitado (el backend da 403 si no).
   // Motivo por el que "Nueva nota" está deshabilitada para ese paciente (null = habilitada):
@@ -181,6 +186,12 @@ export class PatientsPage {
     this.router.navigate(['/encounters'], {
       queryParams: create ? { patient_id: patient.id, new: 1 } : { patient_id: patient.id },
     });
+  }
+
+  // Fase 6: odontograma del paciente. Cierra el modal antes de navegar (libera el scroll lock).
+  goToOdontogram(patient: Patient): void {
+    this.closeModal();
+    this.router.navigate(['/patients', patient.id, 'odontogram']);
   }
 
   requestDeactivate(patient: Patient): void {

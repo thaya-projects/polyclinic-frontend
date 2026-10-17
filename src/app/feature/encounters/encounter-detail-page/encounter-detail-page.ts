@@ -15,6 +15,7 @@ import { EncounterLookupsService } from '../../../core/services/encounter-lookup
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthStore } from '../../../core/services/auth-store.service';
+import { FeaturesService } from '../../../core/services/features.service';
 import { Encounter, EncounterNotePatch } from '../../../core/models/encounter.model';
 import { CreateDiagnosisDto } from '../../../core/models/diagnosis.model';
 import {
@@ -93,6 +94,10 @@ export class EncounterDetailPage {
   // canDeactivate con cambios sin guardar → ConfirmDialog (convención del proyecto, no confirm()).
   leaveConfirmOpen = signal(false);
   private leaveResolver: ((leave: boolean) => void) | null = null;
+
+  // Fase 6: acceso al odontograma del paciente (asociando este encounter) con el módulo activo.
+  private features = inject(FeaturesService);
+  readonly odontogramEnabled = computed(() => this.features.enabledMap()['odontogram'] === true);
 
   readonly patientName = computed(() => {
     const e = this.encounter();

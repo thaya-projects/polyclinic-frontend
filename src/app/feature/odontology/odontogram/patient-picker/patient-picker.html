@@ -1,0 +1,29 @@
+<div class="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4" data-testid="patient-picker">
+  <label class="flex flex-col gap-1.5">
+    <span class="text-sm font-medium text-navy">Paciente</span>
+    <div class="relative">
+      <i class="ti ti-search pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted"></i>
+      <input type="search" [value]="search()" (input)="onInput($event)" placeholder="Buscar por nombre o documento..."
+        data-testid="patient-search"
+        class="h-11 w-full rounded-xl border border-border bg-surface pr-3 pl-9 text-sm text-text outline-none focus:border-brand" />
+    </div>
+  </label>
+
+  @if (loading()) {
+    <p class="flex items-center gap-2 text-sm text-muted"><i class="ti ti-loader-2 animate-spin"></i>Buscando...</p>
+  } @else if (patients().length === 0) {
+    <p class="text-sm text-muted">No hay pacientes que coincidan con la búsqueda.</p>
+  } @else {
+    <ul class="flex flex-col divide-y divide-border">
+      @for (p of patients(); track p.id) {
+        <li>
+          <button type="button" (click)="picked.emit(p)" [attr.data-testid]="'pick-' + p.id"
+            class="flex w-full items-center justify-between gap-3 px-2 py-2.5 text-left text-sm text-text transition-colors hover:bg-surface-alt">
+            <span>{{ p.label }}</span>
+            <i class="ti ti-chevron-right text-muted"></i>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</div>

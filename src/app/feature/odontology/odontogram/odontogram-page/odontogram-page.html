@@ -1,0 +1,72 @@
+<div class="flex flex-col gap-6">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      @if (patientId()) {
+        <a routerLink="/odontology/odontogram" class="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand">
+          <i class="ti ti-arrow-left"></i>
+          Elegir otro paciente
+        </a>
+      }
+      <h2 class="mt-1 text-2xl font-bold text-navy">Odontograma</h2>
+      @if (patientId()) {
+        <p class="mt-1 text-sm text-muted" data-testid="patient-name">{{ patient()?.label ?? 'Paciente' }}</p>
+      } @else {
+        <p class="mt-1 text-sm text-muted">Elegí un paciente para ver su odontograma actual.</p>
+      }
+    </div>
+  </div>
+
+  @if (!patientId()) {
+    <app-patient-picker [patients]="patientOptions()" [loading]="patientsLoading()"
+      [search]="patientSearch()" (searchChange)="searchPatients($event)" (picked)="pickPatient($event)" />
+  } @else if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando odontograma...
+    </div>
+  } @else if (moduleDisabled()) {
+    <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800"
+      role="alert" data-testid="module-disabled">
+      <i class="ti ti-lock mt-0.5"></i>
+      <div>
+        <p class="font-semibold">Odontología no habilitada</p>
+        <p class="mt-0.5">{{ loadError() }}</p>
+      </div>
+    </div>
+  } @else if (loadError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" role="alert"
+      data-testid="load-error">
+      <i class="ti ti-alert-circle"></i>
+      <span class="flex-1">{{ loadError() }}</span>
+      <button type="button" (click)="load()" class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium hover:border-red-400">
+        Reintentar
+      </button>
+    </div>
+  } @else if (noCurrent()) {
+    <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-surface px-6 py-14 text-center"
+      data-testid="empty-state">
+      <i class="ti ti-dental text-3xl text-muted"></i>
+      <p class="text-sm font-medium text-navy">Este paciente todavía no tiene odontograma.</p>
+    </div>
+  } @else if (odontogram(); as o) {
+    <div class="flex flex-wrap items-center gap-3" data-testid="odontogram-meta">
+      <app-status-chip [label]="dentitionText()" tone="neutral" />
+      @if (o.is_current) {
+        <app-status-chip label="Actual" tone="ok" />
+      } @else {
+        <app-status-chip label="Histórico" tone="wait" />
+      }
+      <span class="flex items-center gap-1.5 text-sm text-muted" data-testid="snapshot-date">
+        <i class="ti ti-calendar"></i>
+        Snapshot del {{ formatDate(o.snapshot_date) }}
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <app-odontogram-chart [dentition]="o.dentition" [selectedTooth]="selectedTooth()" (toothSelected)="selectTooth($event)" />
+      </div>
+      <app-selected-tooth-panel [tooth]="selectedTooth()" (cleared)="clearSelection()" />
+    </div>
+  }
+</div>

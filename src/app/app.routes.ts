@@ -125,6 +125,21 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        // Fase 6 T5: Odontología > Odontograma desde el menú (sin paciente): selector de paciente.
+        path: 'odontology/odontogram',
+        loadComponent: () =>
+          import('./feature/odontology/odontogram/odontogram-page/odontogram-page').then(m => m.OdontogramPage),
+        canActivate: [authGuard],
+      },
+      {
+        // Fase 6 T5: odontograma current del paciente (desde la ficha del paciente, el detalle del
+        // encounter con ?encounter_id= o el selector de arriba).
+        path: 'patients/:patientId/odontogram',
+        loadComponent: () =>
+          import('./feature/odontology/odontogram/odontogram-page/odontogram-page').then(m => m.OdontogramPage),
+        canActivate: [authGuard],
+      },
+      {
         // T12: sin guard a propósito — todavía no hay panel de clínica
         // (app_user) real ni sesión con la que probarlo. Se ajusta cuando
         // exista ese panel.

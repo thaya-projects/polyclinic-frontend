@@ -43,7 +43,7 @@ const NAV_ITEMS: NavEntry[] = [
   {
     kind: 'group', label: 'Odontología', icon: 'dental', children: [
       { kind: 'leaf', label: 'Catálogo', icon: 'list-details', route: '/odontology/catalog', moduleKey: 'odontogram' },
-      { kind: 'leaf', label: 'Odontograma', icon: 'dental', comingSoon: true, moduleKey: 'odontogram' },
+      { kind: 'leaf', label: 'Odontograma', icon: 'dental', route: '/odontology/odontogram', moduleKey: 'odontogram' },
     ],
   },
   { kind: 'leaf', label: 'Configuración', icon: 'settings', comingSoon: true },
