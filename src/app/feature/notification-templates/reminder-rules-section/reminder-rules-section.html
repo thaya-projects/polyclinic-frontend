@@ -1,0 +1,40 @@
+<div class="flex flex-col gap-4">
+  <div class="flex items-center justify-end">
+    <button type="button" (click)="openCreate()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nueva regla
+    </button>
+  </div>
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-10 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando reglas...
+    </div>
+  } @else {
+    <app-reminder-rules-table [rules]="ruleRows()" (view)="openDetail($event)" />
+  }
+</div>
+
+<app-modal [open]="creating()" title="Nueva regla de recordatorio" size="lg" (closed)="closeCreate()">
+  <app-reminder-rule-form [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
+</app-modal>
+
+<app-modal [open]="selectedRule() !== null" title="Regla de recordatorio" size="lg" (closed)="closeDetail()">
+  @if (selectedRule(); as rule) {
+    <app-reminder-rule-form
+      [rule]="rule"
+      [saving]="saving()"
+      [saveError]="actionError()"
+      (submitted)="onSaveEdit($event)"
+      (cancelled)="closeDetail()" />
+  }
+</app-modal>

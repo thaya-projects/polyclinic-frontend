@@ -1,0 +1,69 @@
+<form [formGroup]="form" class="flex flex-col gap-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Evento</span>
+      <select formControlName="event_type" [class]="inputClass(form.controls.event_type)">
+        @for (e of eventTypes; track e) {
+          <option [value]="e">{{ eventTypeLabels[e] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Canal</span>
+      <select formControlName="channel" [class]="inputClass(form.controls.channel)">
+        @for (c of channels; track c) {
+          <option [value]="c">{{ channelLabels[c] }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Cuándo enviar</span>
+    <div class="grid grid-cols-3 gap-3">
+      <input type="number" min="0" formControlName="offset_value" [class]="inputClass(form.controls.offset_value)" />
+      <select formControlName="offset_unit" [class]="inputClass(form.controls.offset_unit)">
+        @for (u of units; track u) {
+          <option [value]="u">{{ unitLabels[u] }}</option>
+        }
+      </select>
+      <select formControlName="offset_direction" [class]="inputClass(form.controls.offset_direction)">
+        <option value="before">Antes del evento</option>
+        <option value="after">Después del evento</option>
+      </select>
+    </div>
+    <span class="text-xs text-muted">Se va a guardar como: {{ offsetPreview() }}</span>
+  </div>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Plantilla</span>
+    <select formControlName="template_id" [class]="inputClass(form.controls.template_id)">
+      <option value="">Sin plantilla</option>
+      @for (t of templateOptions(); track t.id) {
+        <option [value]="t.id">{{ t.name }}</option>
+      }
+    </select>
+    @if (templateOptions().length === 0) {
+      <span class="text-xs text-muted">No hay plantillas activas para este canal todavía.</span>
+    }
+  </label>
+
+  @if (saveError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ saveError() }}
+    </div>
+  }
+
+  <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
+    <button type="button" (click)="cancel()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : (rule() ? 'Guardar cambios' : 'Crear regla') }}
+    </button>
+  </div>
+</form>

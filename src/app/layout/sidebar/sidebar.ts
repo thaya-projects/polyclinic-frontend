@@ -51,6 +51,9 @@ const CLINIC_NAV_ITEMS: NavEntry[] = [
   },
   // Fase 8: gated por feature 'invoicing' — mismo criterio que Odontología.
   { kind: 'leaf', label: 'Facturas', icon: 'file-invoice', route: '/invoices', moduleKey: 'invoicing' },
+  // Fase 9: gated por feature 'whatsapp' (es la key existente más cercana
+  // a "notificaciones" — no hay un FeatureKey 'notifications' propio).
+  { kind: 'leaf', label: 'Notificaciones', icon: 'message-2', route: '/notification-templates', moduleKey: 'whatsapp' },
 ];
 
 // Extra solo para role.code === 'admin'. Sucursales/Especialidades/

@@ -1,0 +1,28 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Todavía no llegaron mensajes.">
+  <ng-template appDataTableCell="from_address" let-row>
+    <span class="font-medium text-text">{{ row.from_address }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="patient_name" let-row>
+    @if (row.patient_name) {
+      <span class="text-text">{{ row.patient_name }}</span>
+    } @else {
+      <span class="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+        <i class="ti ti-user-question"></i>
+        Sin paciente asociado
+      </span>
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="body" let-row>
+    <span class="text-sm text-text">{{ row.body || '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="received_at" let-row>
+    <span class="text-muted">{{ formatDate(row.received_at) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="processed" let-row>
+    <app-status-chip [label]="row.processed ? 'Procesado' : 'Sin procesar'" [tone]="row.processed ? 'ok' : 'wait'" />
+  </ng-template>
+</app-data-table>
