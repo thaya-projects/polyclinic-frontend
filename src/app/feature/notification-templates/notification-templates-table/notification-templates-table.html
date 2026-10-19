@@ -1,0 +1,38 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Todavía no hay plantillas.">
+  <ng-template appDataTableCell="channel" let-row>
+    <span class="font-semibold text-text">{{ channelLabel(row.channel) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="code" let-row>
+    <code class="text-xs text-muted">{{ row.code }}</code>
+  </ng-template>
+
+  <ng-template appDataTableCell="name" let-row>
+    {{ row.name }}
+  </ng-template>
+
+  <ng-template appDataTableCell="language" let-row>
+    <span class="text-xs text-muted uppercase">{{ row.language }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="scope" let-row>
+    @if (row.tenant_id === null) {
+      <app-status-chip label="Global" tone="neutral" />
+    } @else {
+      <app-status-chip label="Clínica" tone="ok" />
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="is_active" let-row>
+    <app-status-chip [label]="row.is_active ? 'Activa' : 'Inactiva'" [tone]="row.is_active ? 'ok' : 'neutral'" />
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex justify-end">
+      <button type="button" (click)="view.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        {{ row.tenant_id === null ? 'Ver' : 'Editar' }}
+      </button>
+    </div>
+  </ng-template>
+</app-data-table>

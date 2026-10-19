@@ -1,0 +1,36 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Todavía no se enviaron notificaciones.">
+  <ng-template appDataTableCell="to_address" let-row>
+    <span class="font-medium text-text">{{ row.to_address }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="patient_name" let-row>
+    @if (row.patient_name) {
+      <span class="text-text">{{ row.patient_name }}</span>
+    } @else {
+      <span class="text-xs text-muted italic">Sin paciente</span>
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="channel" let-row>
+    {{ channelLabel(row.channel) }}
+  </ng-template>
+
+  <ng-template appDataTableCell="template_name" let-row>
+    <span class="text-muted">{{ row.template_name }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="status" let-row>
+    <app-status-chip [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+    @if (row.status === 'failed' && row.error_message) {
+      <p class="mt-1 text-xs text-red-500" [title]="row.error_message">{{ row.error_message }}</p>
+    }
+  </ng-template>
+
+  <ng-template appDataTableCell="scheduled_for" let-row>
+    <span class="text-muted">{{ formatDate(row.scheduled_for) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="attempts" let-row>
+    {{ row.attempts }}
+  </ng-template>
+</app-data-table>

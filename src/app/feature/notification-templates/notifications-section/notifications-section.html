@@ -1,0 +1,19 @@
+<div class="flex flex-col gap-4">
+  <app-notifications-filters [(search)]="search" [(values)]="filterValues" [(dateFrom)]="dateFrom" [(dateTo)]="dateTo" />
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-10 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando notificaciones...
+    </div>
+  } @else {
+    <app-notifications-table [notifications]="rows()" />
+  }
+</div>

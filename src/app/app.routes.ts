@@ -136,6 +136,22 @@ export const routes: Routes = [
         loadComponent: () => import('./feature/invoices/invoices-page/invoices-page').then(m => m.InvoicesPage),
         canActivate: [authGuard, clinicGuard],
       },
+      {
+        // Fase 9: plantillas de notificación del tenant.
+        path: 'notification-templates',
+        loadComponent: () =>
+          import('./feature/notification-templates/notification-templates-page/notification-templates-page')
+            .then(m => m.NotificationTemplatesPage),
+        canActivate: [authGuard, clinicGuard],
+      },
     ],
+  },
+  {
+    // Wildcard — tiene que ser la última entry. Sin esto, cualquier URL
+    // que no matchee ningún route de arriba (ej. tipeada a mano) no la
+    // resuelve el Router, y el SSR (server.ts) cae al 404 genérico de
+    // Express ("Cannot GET ...") en vez de mostrar una página propia.
+    path: '**',
+    loadComponent: () => import('./feature/not-found/not-found-page/not-found-page').then(m => m.NotFoundPage),
   },
 ];
