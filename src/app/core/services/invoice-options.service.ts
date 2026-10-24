@@ -1,11 +1,5 @@
 import { Injectable, signal } from '@angular/core';
 
-export interface InvoicePatientOption {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
-
 export interface InvoiceBranchOption {
   id: string;
   name: string;
@@ -27,17 +21,7 @@ export interface InvoiceTreatmentPlanItemOption {
   unit_price: number;
 }
 
-// Mock (T1/T2), propio de este ticket — a propósito NO reutiliza
-// PatientsService/BranchesService/ServicesService reales (ya conectados a
-// HTTP en sus módulos) ni TreatmentPlanItemsService (Fase 7, también
-// real) para que el form de facturas siga siendo 100% mock, sin disparar
-// ninguna llamada real (eso es T5).
-const MOCK_PATIENTS: InvoicePatientOption[] = [
-  { id: 'inv-patient-1', first_name: 'Lucía', last_name: 'Fernández' },
-  { id: 'inv-patient-2', first_name: 'Martín', last_name: 'Gómez' },
-  { id: 'inv-patient-3', first_name: 'Sofía', last_name: 'Ramírez' },
-];
-
+// Mock (T1/T2) — pendiente de conectar a BranchesService/ServicesService/TreatmentPlanItemsService reales.
 const MOCK_BRANCHES: InvoiceBranchOption[] = [
   { id: 'inv-branch-centro', name: 'Sede Centro' },
   { id: 'inv-branch-norte', name: 'Sede Norte' },
@@ -57,14 +41,9 @@ const MOCK_TREATMENT_PLAN_ITEMS: InvoiceTreatmentPlanItemOption[] = [
 
 @Injectable({ providedIn: 'root' })
 export class InvoiceOptionsService {
-  private readonly patientsSignal = signal<InvoicePatientOption[]>(MOCK_PATIENTS);
   private readonly branchesSignal = signal<InvoiceBranchOption[]>(MOCK_BRANCHES);
   private readonly servicesSignal = signal<InvoiceServiceOption[]>(MOCK_SERVICES);
   private readonly treatmentPlanItemsSignal = signal<InvoiceTreatmentPlanItemOption[]>(MOCK_TREATMENT_PLAN_ITEMS);
-
-  patients() {
-    return this.patientsSignal.asReadonly();
-  }
 
   branches() {
     return this.branchesSignal.asReadonly();

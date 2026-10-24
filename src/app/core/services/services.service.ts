@@ -27,8 +27,8 @@ export class ServicesService {
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     this.api.getAll().subscribe({
-      next: services => {
-        this.records.set(services);
+      next: res => {
+        this.records.set(res.items);
         this.loadingSignal.set(false);
       },
       error: err => {

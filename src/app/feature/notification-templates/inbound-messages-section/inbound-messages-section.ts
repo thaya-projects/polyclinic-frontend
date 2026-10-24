@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { InboundMessagesTable, InboundMessageRow } from '../inbound-messages-table/inbound-messages-table';
 import { InboundMessagesFilters } from '../inbound-messages-filters/inbound-messages-filters';
 import { InboundMessagesService } from '../../../core/services/inbound-messages.service';
-import { NotificationOptionsService } from '../../../core/services/notification-options.service';
+import { PatientsService } from '../../../core/services/patients.service';
 import { InboundMessagesQuery } from '../../../core/models/inbound-message.model';
 
 @Component({
@@ -13,12 +13,12 @@ import { InboundMessagesQuery } from '../../../core/models/inbound-message.model
 })
 export class InboundMessagesSection {
   private inboundSvc = inject(InboundMessagesService);
-  private optionsSvc = inject(NotificationOptionsService);
+  private patientsSvc = inject(PatientsService);
 
   private allMessages = this.inboundSvc.getAll();
   readonly listLoading = this.inboundSvc.loading;
   readonly listError = this.inboundSvc.error;
-  private patients = this.optionsSvc.patients();
+  private patients = this.patientsSvc.getAll();
 
   search = signal('');
   filterValues = signal<Record<string, string>>({});
@@ -45,6 +45,8 @@ export class InboundMessagesSection {
   });
 
   constructor() {
+    this.patientsSvc.load({ page: 1, limit: 100 });
+
     // GET /tenants/inbound-messages?patient_id=&processed=&from=&to=
     effect(() => {
       this.inboundSvc.load(this.query());

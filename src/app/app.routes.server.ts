@@ -5,7 +5,7 @@ export const serverRoutes: ServerRoute[] = [
   // backend (token en localStorage) — no tiene sentido prerenderizarlo ni
   // pedir los datos en el servidor, así que se renderiza solo en cliente.
   {
-    path: 'admin/**',
+    path: 'superadmin/**',
     renderMode: RenderMode.Client,
   },
   {

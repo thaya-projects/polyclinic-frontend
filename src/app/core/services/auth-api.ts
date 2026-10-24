@@ -25,4 +25,8 @@ export class AuthApi {
   me(): Observable<MeResponseDto> {
     return this.http.get<MeResponseDto>(`${environment.apiUrl}/auth/me`);
   }
+
+  logout(): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/logout`, {});
+  }
 }

@@ -1,10 +1,27 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import {
   CreateProfessionalDto, Professional, UpdateProfessionalDto,
 } from '../../../../core/models/professional.model';
 import { Specialty } from '../../../../core/models/specialty.model';
 import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+
+// create_login_account=true requiere email.
+function emailRequiredForLoginValidator(group: AbstractControl): ValidationErrors | null {
+  const createLogin = group.get('create_login_account');
+  const email = group.get('email');
+  if (!createLogin || !email) return null;
+
+  const otherErrors = { ...email.errors };
+  delete otherErrors['requiredForLogin'];
+
+  if (createLogin.value && !(email.value as string)?.trim()) {
+    email.setErrors({ ...otherErrors, requiredForLogin: true });
+  } else {
+    email.setErrors(Object.keys(otherErrors).length ? otherErrors : null);
+  }
+  return null;
+}
 
 // Reutilizable: si `professional` viene → edit (emit saved). Si null → create (emit created).
 // Las specialties se manejan aparte porque el backend las expone en un endpoint PUT dedicado —
@@ -36,12 +53,16 @@ export class ProfessionalForm {
   // simple con signals que con FormArray para este caso).
   readonly selectedSpecialtyIds = signal<Set<string>>(new Set());
 
-  form = this.fb.group({
-    full_name: ['', Validators.required],
-    license_number: [''],
-    email: ['', Validators.email],
-    phone: [''],
-  });
+  form = this.fb.group(
+    {
+      full_name: ['', Validators.required],
+      license_number: [''],
+      email: ['', Validators.email],
+      phone: [''],
+      create_login_account: [false],
+    },
+    { validators: emailRequiredForLoginValidator },
+  );
 
   constructor() {
     effect(() => {
@@ -52,10 +73,14 @@ export class ProfessionalForm {
           license_number: p.license_number ?? '',
           email: p.email ?? '',
           phone: p.phone ?? '',
+          create_login_account: false,
         }, { emitEvent: false });
         this.selectedSpecialtyIds.set(new Set(p.specialty_ids));
       } else {
-        this.form.reset({ full_name: '', license_number: '', email: '', phone: '' }, { emitEvent: false });
+        this.form.reset(
+          { full_name: '', license_number: '', email: '', phone: '', create_login_account: false },
+          { emitEvent: false },
+        );
         this.selectedSpecialtyIds.set(new Set());
       }
     });
@@ -108,6 +133,7 @@ export class ProfessionalForm {
       phone,
       user_id: null,
       specialty_ids: specialtyIds,
+      create_login_account: raw.create_login_account ?? false,
     };
     this.created.emit({ dto });
   }

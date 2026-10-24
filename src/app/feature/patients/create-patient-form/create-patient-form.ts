@@ -1,8 +1,33 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CreatePatientDto, Patient } from '../../../core/models/patient.model';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { CreatePatientDto, Patient, PatientSex } from '../../../core/models/patient.model';
 import { DOCUMENT_TYPES, SEX_OPTIONS } from '../../../core/constants/patient-options.const';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import {
+  fieldErrorMessage,
+  fieldInputClass,
+  isFieldInvalid,
+  notFutureDateValidator,
+  requiredNotBlankValidator,
+} from '../../../shared/utils/form-validation.util';
+
+// Si document_number viene con valor, document_type se vuelve obligatorio.
+function documentRequiresTypeValidator(group: AbstractControl): ValidationErrors | null {
+  const docType = group.get('document_type');
+  const docNumber = group.get('document_number');
+  if (!docType || !docNumber) return null;
+
+  const hasNumber = !!(docNumber.value as string)?.trim();
+  const hasType = !!(docType.value as string)?.trim();
+  const otherErrors = { ...docType.errors };
+  delete otherErrors['requiredWithDocumentNumber'];
+
+  if (hasNumber && !hasType) {
+    docType.setErrors({ ...otherErrors, requiredWithDocumentNumber: true });
+  } else {
+    docType.setErrors(Object.keys(otherErrors).length ? otherErrors : null);
+  }
+  return null;
+}
 
 @Component({
   selector: 'app-create-patient-form',
@@ -26,21 +51,26 @@ export class CreatePatientForm {
   readonly isInvalid = isFieldInvalid;
   readonly errorMessage = fieldErrorMessage;
 
+  readonly todayStr = new Date().toISOString().slice(0, 10);
+
   // Solo first_name/last_name son obligatorios (T6) — el resto queda
   // opcional a propósito.
-  form = this.fb.group({
-    first_name: ['', Validators.required],
-    last_name: ['', Validators.required],
-    document_type: [''],
-    document_number: [''],
-    birth_date: [''],
-    sex: [''],
-    whatsapp_phone: [''],
-    phone_alt: [''],
-    email: ['', Validators.email],
-    address: [''],
-    notes: [''],
-  });
+  form = this.fb.group(
+    {
+      first_name: ['', requiredNotBlankValidator],
+      last_name: ['', requiredNotBlankValidator],
+      document_type: [''],
+      document_number: [''],
+      birth_date: ['', notFutureDateValidator],
+      sex: [''],
+      whatsapp_phone: [''],
+      phone_alt: [''],
+      email: ['', Validators.email],
+      address: [''],
+      notes: [''],
+    },
+    { validators: documentRequiresTypeValidator },
+  );
 
   constructor() {
     effect(() => {
@@ -50,11 +80,11 @@ export class CreatePatientForm {
         {
           first_name: p.first_name,
           last_name: p.last_name,
-          document_type: p.document_type,
-          document_number: p.document_number,
+          document_type: p.document_type ?? '',
+          document_number: p.document_number ?? '',
           birth_date: p.birth_date ?? '',
-          sex: p.sex,
-          whatsapp_phone: p.whatsapp_phone,
+          sex: p.sex ?? '',
+          whatsapp_phone: p.whatsapp_phone ?? '',
           phone_alt: p.phone_alt ?? '',
           email: p.email ?? '',
           address: p.address ?? '',
@@ -70,6 +100,19 @@ export class CreatePatientForm {
       this.form.markAllAsTouched();
       return;
     }
-    this.submitted.emit(this.form.getRawValue() as CreatePatientDto);
+    const raw = this.form.getRawValue();
+    this.submitted.emit({
+      first_name: (raw.first_name ?? '').trim(),
+      last_name: (raw.last_name ?? '').trim(),
+      document_type: raw.document_type || null,
+      document_number: raw.document_number || null,
+      birth_date: raw.birth_date || null,
+      sex: (raw.sex || null) as PatientSex | null,
+      whatsapp_phone: raw.whatsapp_phone || null,
+      phone_alt: raw.phone_alt || null,
+      email: raw.email || null,
+      address: raw.address || null,
+      notes: raw.notes || null,
+    });
   }
 }

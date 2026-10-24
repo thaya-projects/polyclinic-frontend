@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, model } from '@angular/core';
 import { ListFilters } from '../../../shared/components/list-filters/list-filters';
 import { ListFilterConfig } from '../../../shared/components/list-filters/list-filter.model';
-import { NotificationOptionsService } from '../../../core/services/notification-options.service';
+import { PatientsService } from '../../../core/services/patients.service';
 
 const PROCESSED_OPTIONS = [
   { value: 'true', label: 'Procesado' },
@@ -15,8 +15,8 @@ const PROCESSED_OPTIONS = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InboundMessagesFilters {
-  private optionsSvc = inject(NotificationOptionsService);
-  private patients = this.optionsSvc.patients();
+  private patientsSvc = inject(PatientsService);
+  private patients = this.patientsSvc.getAll();
 
   // El search es parte del componente compartido ListFilters (siempre se
   // muestra) — lo uso para buscar por número/texto del mensaje, aunque

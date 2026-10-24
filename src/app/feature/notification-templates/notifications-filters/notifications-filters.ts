@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, model } from '@angular/core';
 import { ListFilters } from '../../../shared/components/list-filters/list-filters';
 import { ListFilterConfig } from '../../../shared/components/list-filters/list-filter.model';
-import { NotificationOptionsService } from '../../../core/services/notification-options.service';
+import { PatientsService } from '../../../core/services/patients.service';
 import { NOTIFICATION_CHANNELS, NOTIFICATION_CHANNEL_LABELS } from '../../../core/constants/notification-channel.const';
 import { NOTIFICATION_STATUSES, NOTIFICATION_STATUS_LABELS, NOTIFICATION_STATUS_TONES } from '../../../core/constants/notification-status.const';
 
@@ -20,8 +20,8 @@ const CHANNEL_OPTIONS = NOTIFICATION_CHANNELS.map(value => ({ value, label: NOTI
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotificationsFilters {
-  private optionsSvc = inject(NotificationOptionsService);
-  private patients = this.optionsSvc.patients();
+  private patientsSvc = inject(PatientsService);
+  private patients = this.patientsSvc.getAll();
 
   // Igual criterio que en mensajes entrantes: ListFilters siempre muestra
   // el buscador, así que lo uso para texto libre sobre to_address.

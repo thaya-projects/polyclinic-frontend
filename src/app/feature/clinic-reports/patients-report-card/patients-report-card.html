@@ -1,0 +1,13 @@
+@if (error()) {
+  <div class="flex h-full items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+    <i class="ti ti-alert-circle"></i>
+    {{ error() }}
+  </div>
+} @else if (loading()) {
+  <div class="flex h-full items-center justify-center gap-2 rounded-xl border border-border bg-surface p-5 text-sm text-muted">
+    <i class="ti ti-loader-2 animate-spin"></i>
+    Cargando...
+  </div>
+} @else {
+  <app-stat-card label="Pacientes nuevos" [value]="count() ?? 0" icon="user-plus" />
+}

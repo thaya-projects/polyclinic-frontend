@@ -1,0 +1,40 @@
+@if (error()) {
+  <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+    <i class="ti ti-alert-circle"></i>
+    {{ error() }}
+  </div>
+} @else if (loading()) {
+  <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface p-5 text-sm text-muted">
+    <i class="ti ti-loader-2 animate-spin"></i>
+    Cargando...
+  </div>
+} @else if (summary(); as s) {
+  <div class="rounded-xl border border-border bg-surface p-5">
+    <h3 class="mb-4 text-xs font-semibold tracking-wide text-muted uppercase">Clínicas (tenants)</h3>
+
+    <div class="mb-5 grid grid-cols-2 gap-3">
+      <div class="rounded-lg bg-bg px-3 py-2">
+        <p class="text-2xl font-bold text-navy">{{ s.active_count }}</p>
+        <p class="text-xs text-muted">Activas</p>
+      </div>
+      <div class="rounded-lg bg-bg px-3 py-2">
+        <p class="text-2xl font-bold text-navy">{{ s.suspended_count }}</p>
+        <p class="text-xs text-muted">Suspendidas</p>
+      </div>
+    </div>
+
+    <h4 class="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Por país</h4>
+    @if (s.by_country.length === 0) {
+      <p class="text-sm text-muted">Sin datos.</p>
+    } @else {
+      <div class="flex flex-col gap-2">
+        @for (c of s.by_country; track c.country_code) {
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-text">{{ countryLabel(c.country_code) }}</span>
+            <span class="font-semibold text-navy">{{ c.count }}</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

@@ -8,6 +8,8 @@ export interface Professional {
   is_active: boolean;
   created_at: string;
   specialty_ids: string[];
+  // Solo viene con valor si falló el envío del correo con la clave — es la única vez que se expone.
+  temporary_password: string | null;
 }
 
 export interface CreateProfessionalDto {
@@ -17,6 +19,8 @@ export interface CreateProfessionalDto {
   phone: string | null;
   user_id: string | null;
   specialty_ids: string[];
+  // true crea una cuenta de acceso; requiere email y excluye user_id.
+  create_login_account: boolean;
 }
 
 // PATCH tri-state: campo ausente = no tocar, null = quitar (o unlink en user_id).

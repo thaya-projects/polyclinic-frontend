@@ -1,0 +1,42 @@
+@if (error()) {
+  <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+    <i class="ti ti-alert-circle"></i>
+    {{ error() }}
+  </div>
+} @else if (loading()) {
+  <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface p-5 text-sm text-muted">
+    <i class="ti ti-loader-2 animate-spin"></i>
+    Cargando...
+  </div>
+} @else if (summary(); as s) {
+  <div class="rounded-xl border border-border bg-surface p-5">
+    <h3 class="mb-4 text-xs font-semibold tracking-wide text-muted uppercase">Suscripciones por estado</h3>
+
+    @if (s.by_status.length === 0) {
+      <p class="text-sm text-muted">Sin datos.</p>
+    } @else {
+      <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        @for (item of s.by_status; track item.status) {
+          <div class="flex flex-col gap-0.5 rounded-lg border-l-4 bg-bg px-3 py-2" [class]="borderClass(item.status)">
+            <span class="text-xl font-bold text-navy">{{ item.count }}</span>
+            <span class="text-xs text-muted">{{ statusLabel(item.status) }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    <h4 class="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Por plan</h4>
+    @if (s.by_plan.length === 0) {
+      <p class="text-sm text-muted">Sin datos.</p>
+    } @else {
+      <div class="flex flex-col gap-2">
+        @for (p of s.by_plan; track p.plan_id) {
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-text">{{ p.plan_name }}</span>
+            <span class="font-semibold text-navy">{{ p.count }}</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

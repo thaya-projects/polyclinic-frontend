@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, model } from '@an
 import { ListFilters } from '../../../shared/components/list-filters/list-filters';
 import { ListFilterConfig } from '../../../shared/components/list-filters/list-filter.model';
 import { INVOICE_STATUSES, INVOICE_STATUS_LABELS, INVOICE_STATUS_TONES } from '../../../core/constants/invoice-status.const';
-import { InvoiceOptionsService } from '../../../core/services/invoice-options.service';
+import { PatientsService } from '../../../core/services/patients.service';
 
 const STATUS_OPTIONS = INVOICE_STATUSES.map(value => ({
   value,
@@ -17,8 +17,8 @@ const STATUS_OPTIONS = INVOICE_STATUSES.map(value => ({
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InvoicesFilters {
-  private optionsSvc = inject(InvoiceOptionsService);
-  private patients = this.optionsSvc.patients();
+  private patientsSvc = inject(PatientsService);
+  private patients = this.patientsSvc.getAll();
 
   search = model('');
   values = model<Record<string, string>>({});

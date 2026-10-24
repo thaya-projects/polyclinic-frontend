@@ -2,15 +2,18 @@
 // document_number, birth_date, sex, whatsapp_phone, phone_alt, email,
 // address, notes, is_active. Solo estos campos — nada de otras tablas de
 // Fase 3 (professional, appointment, invoice, odontogram, notification).
+// sex: el backend solo acepta "m" | "f" | "x" (minúscula) o null.
+export type PatientSex = 'm' | 'f' | 'x';
+
 export interface Patient {
   id: string;
   first_name: string;
   last_name: string;
-  document_type: string;
-  document_number: string;
+  document_type: string | null;
+  document_number: string | null;
   birth_date: string | null;
-  sex: string;
-  whatsapp_phone: string;
+  sex: PatientSex | null;
+  whatsapp_phone: string | null;
   phone_alt: string | null;
   email: string | null;
   address: string | null;

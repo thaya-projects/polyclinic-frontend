@@ -27,6 +27,9 @@
             <option [value]="opt.value">{{ opt.label }}</option>
           }
         </select>
+        @if (isInvalid(form.controls.document_type)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.document_type) }}</span>
+        }
       </label>
 
       <label class="flex flex-col gap-1.5">
@@ -36,7 +39,10 @@
 
       <label class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-muted">Fecha de nacimiento</span>
-        <input type="date" formControlName="birth_date" [class]="inputClass(form.controls.birth_date)" />
+        <input type="date" formControlName="birth_date" [max]="todayStr" [class]="inputClass(form.controls.birth_date)" />
+        @if (isInvalid(form.controls.birth_date)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.birth_date) }}</span>
+        }
       </label>
 
       <label class="flex flex-col gap-1.5">

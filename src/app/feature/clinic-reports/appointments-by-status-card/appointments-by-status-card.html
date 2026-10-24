@@ -1,0 +1,46 @@
+<div class="rounded-xl border border-border bg-surface p-5">
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">Citas por estado</h3>
+    <div class="flex flex-wrap gap-2">
+      <select [value]="professionalId()" (change)="onProfessionalChange($any($event.target).value)"
+        class="rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-text focus:border-brand focus:outline-none">
+        <option value="">Todos los profesionales</option>
+        @for (p of professionals(); track p.id) {
+          <option [value]="p.id">{{ p.full_name }}</option>
+        }
+      </select>
+      <select [value]="status()" (change)="onStatusChange($any($event.target).value)"
+        class="rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-text focus:border-brand focus:outline-none">
+        <option value="">Todos los estados</option>
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ statusLabels[s] }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  } @else if (loading()) {
+    <div class="flex items-center justify-center gap-2 py-8 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando...
+    </div>
+  } @else if (breakdown(); as items) {
+    @if (items.length === 0) {
+      <p class="text-sm text-muted">No hubo citas en el rango y filtros elegidos.</p>
+    } @else {
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        @for (item of items; track item.status) {
+          <div class="flex flex-col gap-0.5 rounded-lg border-l-4 bg-bg px-3 py-2" [class]="borderClass(item.status)">
+            <span class="text-xl font-bold text-navy">{{ item.count }}</span>
+            <span class="text-xs text-muted">{{ statusLabels[item.status] }}</span>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

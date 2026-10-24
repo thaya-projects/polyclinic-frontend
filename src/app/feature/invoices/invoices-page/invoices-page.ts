@@ -13,6 +13,7 @@ import { InvoicesService } from '../../../core/services/invoices.service';
 import { InvoiceItemsService } from '../../../core/services/invoice-items.service';
 import { InvoiceOptionsService } from '../../../core/services/invoice-options.service';
 import { PaymentsService } from '../../../core/services/payments.service';
+import { PatientsService } from '../../../core/services/patients.service';
 import { Invoice, InvoicesQuery, InvoiceStatus } from '../../../core/models/invoice.model';
 import { InvoiceItemDto } from '../../../core/models/invoice-item.model';
 import { PaymentDto } from '../../../core/models/payment.model';
@@ -45,11 +46,12 @@ export class InvoicesPage {
   private itemsSvc = inject(InvoiceItemsService);
   private optionsSvc = inject(InvoiceOptionsService);
   private paymentsSvc = inject(PaymentsService);
+  private patientsSvc = inject(PatientsService);
 
   private allInvoices = this.invoicesSvc.getAll();
   private allItems = this.itemsSvc.getAll();
   private allPayments = this.paymentsSvc.getAll();
-  private patients = this.optionsSvc.patients();
+  private patients = this.patientsSvc.getAll();
   private branches = this.optionsSvc.branches();
 
   search = signal('');
@@ -138,6 +140,8 @@ export class InvoicesPage {
 
   constructor() {
     inject(PageTitleService).set('Facturas');
+
+    this.patientsSvc.load({ page: 1, limit: 100 });
 
     effect(() => {
       this.invoicesSvc.load(this.currentQuery());

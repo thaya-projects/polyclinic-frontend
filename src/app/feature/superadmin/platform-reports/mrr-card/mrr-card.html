@@ -1,0 +1,36 @@
+@if (error()) {
+  <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+    <i class="ti ti-alert-circle"></i>
+    {{ error() }}
+  </div>
+} @else if (loading()) {
+  <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface p-5 text-sm text-muted">
+    <i class="ti ti-loader-2 animate-spin"></i>
+    Cargando...
+  </div>
+} @else if (summary(); as s) {
+  <div class="rounded-xl border border-border bg-surface p-5">
+    <div class="mb-1 flex items-center gap-2">
+      <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">MRR mensual</h3>
+      <span class="rounded-full bg-chip-wait-bg px-2 py-0.5 text-[0.65rem] font-bold tracking-wide text-chip-wait-fg uppercase">
+        Estimado
+      </span>
+    </div>
+    <p class="mb-4 text-xs text-muted">
+      Calculado a partir del precio de los planes activos/trial — no es el monto efectivamente cobrado.
+    </p>
+
+    @if (s.by_currency.length === 0) {
+      <p class="text-sm text-muted">Sin datos.</p>
+    } @else {
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        @for (m of s.by_currency; track m.currency) {
+          <div class="rounded-lg bg-bg p-4">
+            <p class="text-xl font-bold text-navy">{{ formatAmount(m.mrr_estimated, m.currency) }}</p>
+            <p class="text-xs text-muted">MRR estimado · {{ m.currency }}</p>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

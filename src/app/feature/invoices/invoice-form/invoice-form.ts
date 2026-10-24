@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { InvoiceItemForm } from '../invoice-item-form/invoice-item-form';
 import { InvoiceItemsPreview, InvoiceItemDraft } from '../invoice-items-preview/invoice-items-preview';
 import { InvoiceOptionsService } from '../../../core/services/invoice-options.service';
+import { PatientsService } from '../../../core/services/patients.service';
 import { CURRENCIES } from '../../../core/constants/currencies.const';
 import { Invoice, InvoiceDto } from '../../../core/models/invoice.model';
 import { InvoiceItemDto } from '../../../core/models/invoice-item.model';
@@ -28,6 +29,7 @@ let nextTempId = 1;
 export class InvoiceForm {
   private fb = inject(FormBuilder);
   private optionsSvc = inject(InvoiceOptionsService);
+  private patientsSvc = inject(PatientsService);
 
   // null => alta de factura nueva; con valor => edición de esa factura.
   invoice = input<Invoice | null>(null);
@@ -37,7 +39,7 @@ export class InvoiceForm {
   submitted = output<InvoiceSubmitPayload>();
   cancelled = output<void>();
 
-  readonly patients = this.optionsSvc.patients();
+  readonly patients = this.patientsSvc.getAll();
   readonly branches = this.optionsSvc.branches();
   readonly currencies = CURRENCIES;
   readonly inputClass = fieldInputClass;

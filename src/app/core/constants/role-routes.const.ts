@@ -6,5 +6,5 @@ import { SessionUser } from '../models/auth.model';
 // distinto por rol.
 export function homeRouteForUser(user: SessionUser | null | undefined): string {
   if (!user) return '/login';
-  return user.is_superadmin ? '/admin/tenants' : '/appointments';
+  return user.is_superadmin ? '/superadmin/tenants' : '/appointments';
 }
