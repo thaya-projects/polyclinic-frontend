@@ -1,16 +1,5 @@
 <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
   <label class="flex flex-col gap-1.5">
-    <span class="text-xs font-medium text-muted">Clínica (tenant)</span>
-    <input type="text" formControlName="tenant_slug" placeholder="mi-clinica" autocomplete="organization"
-      [class]="inputClass(form.controls.tenant_slug)" />
-    @if (isInvalid(form.controls.tenant_slug)) {
-      <span class="text-xs text-red-500">{{ errorMessage(form.controls.tenant_slug) }}</span>
-    } @else {
-      <span class="text-xs text-muted">Es el identificador corto de tu clínica (lo ves en la URL).</span>
-    }
-  </label>
-
-  <label class="flex flex-col gap-1.5">
     <span class="text-xs font-medium text-muted">Correo</span>
     <input type="email" formControlName="email" placeholder="tu@clinica.com" autocomplete="email"
       [class]="inputClass(form.controls.email)" />

@@ -32,7 +32,7 @@ export const routes: Routes = [
     canActivate: [guestGuard],
   },
   {
-    path: 'admin/login',
+    path: 'superadmin/login',
     loadComponent: () =>
       import('./feature/auth/superadmin-login/superadmin-login-page').then(m => m.SuperAdminLoginPage),
     canActivate: [guestGuard],
@@ -41,23 +41,32 @@ export const routes: Routes = [
     path: '',
     component: Shell,
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'admin/tenants' },
+      { path: '', pathMatch: 'full', redirectTo: 'superadmin/tenants' },
       {
-        path: 'admin/tenants',
+        path: 'superadmin/tenants',
         loadComponent: () =>
           import('./feature/superadmin/tenants/tenants-page/tenants-page').then(m => m.TenantsPage),
         canActivate: [authGuard, superadminGuard],
       },
       {
-        path: 'admin/plans',
+        path: 'superadmin/plans',
         loadComponent: () =>
           import('./feature/superadmin/plans/plans-page/plans-page').then(m => m.PlansPage),
         canActivate: [authGuard, superadminGuard],
       },
       {
+        // Fase 10 T3: reportes de plataforma (tenants/suscripciones/MRR). Protegida por
+        // superadminGuard — criterio de aceptación: "la ruta se oculta y se protege".
+        path: 'superadmin/reports',
+        loadComponent: () =>
+          import('./feature/superadmin/platform-reports/platform-reports-page/platform-reports-page')
+            .then(m => m.PlatformReportsPage),
+        canActivate: [authGuard, superadminGuard],
+      },
+      {
         // T8/T9: panel super admin de subscription de un tenant específico. No aparece en el
         // sidebar — se llega desde el detalle del tenant o navegando directo con el id.
-        path: 'admin/tenants/:id/subscription',
+        path: 'superadmin/tenants/:id/subscription',
         loadComponent: () =>
           import('./feature/superadmin/subscriptions/subscription-admin-page/subscription-admin-page')
             .then(m => m.SubscriptionAdminPage),
@@ -65,7 +74,7 @@ export const routes: Routes = [
       },
       {
         // T7 FF: panel super admin de módulos del tenant (toggles enabled_modules).
-        path: 'admin/tenants/:id/settings',
+        path: 'superadmin/tenants/:id/settings',
         loadComponent: () =>
           import('./feature/superadmin/tenants/tenant-settings-modules-page/tenant-settings-modules-page')
             .then(m => m.TenantSettingsModulesPage),
@@ -225,6 +234,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./feature/notification-templates/notification-templates-page/notification-templates-page')
             .then(m => m.NotificationTemplatesPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        // Fase 10: reportes operativos de la clínica.
+        path: 'reports',
+        loadComponent: () => import('./feature/clinic-reports/clinic-reports-page/clinic-reports-page').then(m => m.ClinicReportsPage),
         canActivate: [authGuard, clinicGuard],
       },
     ],

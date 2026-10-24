@@ -19,7 +19,7 @@ export class PatientDetail {
     return `${documentTypeLabel(patient.document_type)} ${patient.document_number}`.trim();
   }
 
-  sexLabel(value: string): string {
+  sexLabel(value: string | null): string {
     return value ? sexLabel(value) : '—';
   }
 

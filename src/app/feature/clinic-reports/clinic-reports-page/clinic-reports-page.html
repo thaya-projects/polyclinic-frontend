@@ -1,0 +1,25 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h2 class="text-2xl font-bold text-navy">Reportes</h2>
+    <p class="mt-1 text-sm text-muted">Resumen operativo de la clínica y auditoría de acciones sensibles.</p>
+  </div>
+
+  <div class="flex gap-2 border-b border-border">
+    <button type="button" (click)="setTab('summary')"
+      class="border-b-2 px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'summary' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
+      Resumen
+    </button>
+    <button type="button" (click)="setTab('audit')"
+      class="border-b-2 px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'audit' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
+      Auditoría
+    </button>
+  </div>
+
+  @if (activeTab() === 'summary') {
+    <app-clinic-reports-summary-section />
+  } @else {
+    <app-audit-log-section />
+  }
+</div>

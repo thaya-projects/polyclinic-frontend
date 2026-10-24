@@ -1,0 +1,30 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="No hay registros de auditoría para el rango y filtros elegidos.">
+  <ng-template appDataTableCell="created_at" let-row>
+    <span class="text-muted">{{ formatDate(row.created_at) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="actor_name" let-row>
+    <span [class]="row.actor_id ? 'text-text' : 'text-xs text-muted italic'">{{ row.actor_name }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="action" let-row>
+    <code class="text-xs text-text">{{ row.action }}</code>
+  </ng-template>
+
+  <ng-template appDataTableCell="entity" let-row>
+    {{ row.entity }}
+  </ng-template>
+
+  <ng-template appDataTableCell="entity_id" let-row>
+    <span class="text-xs text-muted">{{ row.entity_id || '—' }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <div class="flex justify-end">
+      <button type="button" (click)="view.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        Ver detalle
+      </button>
+    </div>
+  </ng-template>
+</app-data-table>

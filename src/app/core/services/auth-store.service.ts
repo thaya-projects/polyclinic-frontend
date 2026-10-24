@@ -2,6 +2,8 @@ import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core
 import { isPlatformBrowser } from '@angular/common';
 import { AuthTokenResponse, MeResponseDto, SessionTenant, SessionUser } from '../models/auth.model';
 import { TenantStatus } from '../models/tenant.model';
+import { decodeJwtPayload } from '../../shared/utils/jwt.util';
+import { AuthTokenService } from './auth-token.service';
 
 const SESSION_KEY = 'mc_session';
 
@@ -18,6 +20,7 @@ interface StoredSession {
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private platformId = inject(PLATFORM_ID);
+  private tokens = inject(AuthTokenService);
   private restored = this.restore();
 
   private readonly userSignal = signal<SessionUser | null>(this.restored?.user ?? null);
@@ -25,6 +28,8 @@ export class AuthStore {
   private readonly subscriptionStatusSignal = signal<TenantStatus | null>(
     this.restored?.subscriptionStatus ?? null,
   );
+
+  private readonly impersonatedBySignal = signal<string | null>(this.readImpersonatedBy());
 
   // No se persiste — es solo un flag de UI mientras authGuard/el initializer
   // están esperando un GET /auth/me (T17).
@@ -36,6 +41,7 @@ export class AuthStore {
   readonly subscriptionStatus = this.subscriptionStatusSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.userSignal() !== null);
   readonly verifying = this.verifyingSignal.asReadonly();
+  readonly impersonatedBy = this.impersonatedBySignal.asReadonly();
 
   setVerifying(value: boolean): void {
     this.verifyingSignal.set(value);
@@ -45,6 +51,7 @@ export class AuthStore {
   setSession(res: AuthTokenResponse): void {
     this.userSignal.set(res.user ?? null);
     this.tenantSignal.set(res.tenant ?? null);
+    this.impersonatedBySignal.set(this.readImpersonatedBy());
     this.persist();
   }
 
@@ -53,6 +60,7 @@ export class AuthStore {
     this.userSignal.set(res.user);
     this.tenantSignal.set(res.tenant ?? null);
     this.subscriptionStatusSignal.set(res.subscription_status ?? null);
+    this.impersonatedBySignal.set(this.readImpersonatedBy());
     this.persist();
   }
 
@@ -60,7 +68,15 @@ export class AuthStore {
     this.userSignal.set(null);
     this.tenantSignal.set(null);
     this.subscriptionStatusSignal.set(null);
+    this.impersonatedBySignal.set(null);
     if (isPlatformBrowser(this.platformId)) localStorage.removeItem(SESSION_KEY);
+  }
+
+  private readImpersonatedBy(): string | null {
+    const token = this.tokens.getAccessToken();
+    if (!token) return null;
+    const payload = decodeJwtPayload<{ impersonated_by?: string | null }>(token);
+    return payload?.impersonated_by ?? null;
   }
 
   private persist(): void {

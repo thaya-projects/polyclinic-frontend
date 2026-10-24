@@ -20,3 +20,12 @@ export type ServiceDto = Pick<Service, 'name' | 'category_id' | 'duration_minute
 // Body de PATCH (T6) — el form manda los 5 campos de siempre; la acción
 // de activar/desactivar manda un PATCH parcial con solo is_active.
 export type ServiceUpdateDto = Partial<ServiceDto> & Partial<Pick<Service, 'is_active'>>;
+
+// GET /tenants/services devuelve esto, no un array plano.
+export interface ServicesPageResult {
+  items: Service[];
+  total_count: number;
+  current_page: number;
+  page_size: number;
+  total_pages: number;
+}

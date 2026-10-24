@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { of, switchMap } from 'rxjs';
 import { ProfessionalsTable } from '../professionals-table/professionals-table';
 import { ProfessionalForm } from '../professional-form/professional-form';
@@ -11,6 +11,8 @@ import {
   CreateProfessionalDto, Professional, UpdateProfessionalDto,
 } from '../../../../core/models/professional.model';
 import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { professionalSaveErrorMessage } from '../../../../shared/utils/professionals-error.util';
+import { copyToClipboard } from '../../../../shared/utils/clipboard.util';
 
 type ModalMode = 'none' | 'create' | 'edit';
 
@@ -44,8 +46,13 @@ export class ProfessionalsPage {
   modalMode = signal<ModalMode>('none');
   selectedProfessional = signal<Professional | null>(null);
 
+  private createFormRef = viewChild<ProfessionalForm>('createForm');
+
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  temporaryPassword = signal<string | null>(null);
+  temporaryPasswordCopied = signal(false);
 
   professionalToDeactivate = signal<Professional | null>(null);
   deactivating = signal(false);
@@ -75,21 +82,39 @@ export class ProfessionalsPage {
     this.modalMode.set('none');
     this.selectedProfessional.set(null);
     this.actionError.set(null);
+    this.temporaryPassword.set(null);
   }
 
   onCreate(payload: { dto: CreateProfessionalDto }): void {
     this.saving.set(true);
     this.actionError.set(null);
     this.professionalsSvc.create(payload.dto).subscribe({
-      next: () => {
+      next: (professional) => {
         this.saving.set(false);
-        this.closeModal();
+        if (professional.temporary_password) {
+          this.temporaryPassword.set(professional.temporary_password);
+        } else {
+          this.closeModal();
+        }
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(professionalSaveErrorMessage(err));
       },
     });
+  }
+
+  submitCreateForm(): void {
+    this.createFormRef()?.submit();
+  }
+
+  async copyTemporaryPassword(): Promise<void> {
+    const password = this.temporaryPassword();
+    if (!password) return;
+    const ok = await copyToClipboard(password);
+    if (!ok) return;
+    this.temporaryPasswordCopied.set(true);
+    setTimeout(() => this.temporaryPasswordCopied.set(false), 1500);
   }
 
   onSaveEdit(
@@ -125,7 +150,7 @@ export class ProfessionalsPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(professionalSaveErrorMessage(err));
       },
     });
   }

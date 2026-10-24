@@ -23,7 +23,6 @@ export class LoginForm {
   readonly errorMessage = fieldErrorMessage;
 
   form = this.fb.group({
-    tenant_slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });

@@ -15,5 +15,5 @@ export const clinicGuard: CanActivateFn = () => {
 
   // Logueado pero es superadmin (sin tenant): a su panel, no a un login.
   // Sin sesión (o sin tenant igual): al login de clínica.
-  return router.parseUrl(user?.is_superadmin ? '/admin/tenants' : '/login');
+  return router.parseUrl(user?.is_superadmin ? '/superadmin/tenants' : '/login');
 };

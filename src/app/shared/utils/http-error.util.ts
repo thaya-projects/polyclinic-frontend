@@ -27,8 +27,8 @@ export function loginErrorMessage(err: unknown): string {
 export function clinicLoginErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
     if (err.status === 401) return 'Credenciales inválidas.';
-    if (err.status === 403) return 'Usuario o clínica inactiva.';
-    if (err.status === 404) return 'Clínica no encontrada.';
+    if (err.status === 403) return 'Tu usuario o tu clínica están inactivos.';
+    if (err.status === 404) return 'Credenciales inválidas.';
     if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
     if (err.status === 0) return 'No se pudo conectar con el servidor.';
     return err.error?.message ?? 'Ocurrió un error inesperado. Intentá de nuevo.';

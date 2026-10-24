@@ -3,7 +3,7 @@ import { NotificationsTable, NotificationRow } from '../notifications-table/noti
 import { NotificationsFilters } from '../notifications-filters/notifications-filters';
 import { NotificationsService } from '../../../core/services/notifications.service';
 import { NotificationTemplatesService } from '../../../core/services/notification-templates.service';
-import { NotificationOptionsService } from '../../../core/services/notification-options.service';
+import { PatientsService } from '../../../core/services/patients.service';
 import { NotificationStatus, NotificationsQuery } from '../../../core/models/notification.model';
 
 @Component({
@@ -15,13 +15,13 @@ import { NotificationStatus, NotificationsQuery } from '../../../core/models/not
 export class NotificationsSection {
   private notificationsSvc = inject(NotificationsService);
   private templatesSvc = inject(NotificationTemplatesService);
-  private optionsSvc = inject(NotificationOptionsService);
+  private patientsSvc = inject(PatientsService);
 
   private allNotifications = this.notificationsSvc.getAll();
   readonly listLoading = this.notificationsSvc.loading;
   readonly listError = this.notificationsSvc.error;
   private templates = this.templatesSvc.getAll();
-  private patients = this.optionsSvc.patients();
+  private patients = this.patientsSvc.getAll();
 
   search = signal('');
   filterValues = signal<Record<string, string>>({});
@@ -51,6 +51,7 @@ export class NotificationsSection {
 
   constructor() {
     this.templatesSvc.load();
+    this.patientsSvc.load({ page: 1, limit: 100 });
 
     // GET /tenants/notifications?patient_id=&status=&channel=&from=&to=
     effect(() => {

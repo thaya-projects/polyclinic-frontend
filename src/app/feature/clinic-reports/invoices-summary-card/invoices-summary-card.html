@@ -1,0 +1,52 @@
+<div class="rounded-xl border border-border bg-surface p-5">
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">Facturación</h3>
+    <select [value]="status()" (change)="onStatusChange($any($event.target).value)"
+      class="rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-text focus:border-brand focus:outline-none">
+      <option value="">Todos los estados</option>
+      @for (s of statuses; track s) {
+        <option [value]="s">{{ statusLabels[s] }}</option>
+      }
+    </select>
+  </div>
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  } @else if (loading()) {
+    <div class="flex items-center justify-center gap-2 py-8 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando...
+    </div>
+  } @else if (summaries(); as items) {
+    @if (items.length === 0) {
+      <p class="text-sm text-muted">No se emitieron facturas en el rango y filtros elegidos.</p>
+    } @else {
+      <div class="flex flex-col gap-4">
+        @for (s of items; track s.currency) {
+          <div class="flex flex-col gap-2 rounded-lg bg-bg p-4">
+            <span class="text-xs font-semibold tracking-wide text-muted uppercase">{{ s.currency }}</span>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <p class="text-lg font-bold text-navy">{{ s.issued_count }}</p>
+                <p class="text-xs text-muted">Emitidas</p>
+              </div>
+              <div>
+                <p class="text-lg font-bold text-navy">{{ formatAmount(s.collected_total, s.currency) }}</p>
+                <p class="text-xs text-muted">Cobrado</p>
+              </div>
+              <div>
+                <p class="text-lg font-bold" [class]="s.balance_total > 0 ? 'text-red-500' : 'text-navy'">
+                  {{ formatAmount(s.balance_total, s.currency) }}
+                </p>
+                <p class="text-xs text-muted">Saldo</p>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

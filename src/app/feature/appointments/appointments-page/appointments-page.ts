@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { CalendarToolbar } from '../calendar-toolbar/calendar-toolbar';
 import { CalendarView } from '../calendar-view/calendar-view';
 import { AppointmentForm } from '../appointment-form/appointment-form';
@@ -8,7 +8,8 @@ import { AppointmentsService } from '../../../core/services/appointments.service
 import { BranchesService } from '../../../core/services/branches.service';
 import { ProfessionalsService } from '../../../core/services/professionals.service';
 import { RoomsService } from '../../../core/services/rooms.service';
-import { AppointmentOptionsService } from '../../../core/services/appointment-options.service';
+import { ServicesService } from '../../../core/services/services.service';
+import { PatientsService } from '../../../core/services/patients.service';
 import { Appointment, AppointmentDto } from '../../../core/models/appointment.model';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { appointmentSaveErrorMessage } from '../../../shared/utils/appointments-error.util';
@@ -26,13 +27,14 @@ export class AppointmentsPage {
   private branchesSvc = inject(BranchesService);
   private professionalsSvc = inject(ProfessionalsService);
   private roomsSvc = inject(RoomsService);
-  private optionsSvc = inject(AppointmentOptionsService);
+  private servicesSvc = inject(ServicesService);
+  private patientsSvc = inject(PatientsService);
 
   readonly branches = this.branchesSvc.getAll();
   readonly professionals = this.professionalsSvc.getAll();
   readonly rooms = this.roomsSvc.getAll();
-  readonly patients = this.optionsSvc.patients();
-  readonly services = this.optionsSvc.services();
+  readonly patients = this.patientsSvc.getAll();
+  readonly services = computed(() => this.servicesSvc.getAll()().filter(s => s.is_active));
 
   // Ya vienen filtradas por el backend (criterio de aceptación de T6) —
   // el calendario solo renderiza lo que devolvió el último GET.
@@ -52,6 +54,9 @@ export class AppointmentsPage {
 
   constructor() {
     inject(PageTitleService).set('Agenda');
+
+    this.patientsSvc.load({ page: 1, limit: 100 });
+    this.servicesSvc.load();
 
     // GET /tenants/appointments — se vuelve a pedir cada vez que cambia el
     // rango visible (día/semana, navegación) o los filtros de

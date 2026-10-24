@@ -28,8 +28,11 @@ const COLLAPSE_KEY = 'mc_sidebar_collapsed';
 // Nunca se le muestra el menú de clínica (ni pacientes ni agenda).
 const SUPERADMIN_NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
-  { kind: 'leaf', label: 'Clínicas', icon: 'building-hospital', route: '/admin/tenants' },
-  { kind: 'leaf', label: 'Planes', icon: 'package', route: '/admin/plans' },
+  { kind: 'leaf', label: 'Clínicas', icon: 'building-hospital', route: '/superadmin/tenants' },
+  { kind: 'leaf', label: 'Planes', icon: 'package', route: '/superadmin/plans' },
+  // Fase 10 T3: solo aparece acá (nunca en CLINIC_NAV_ITEMS) — junto con
+  // superadminGuard en la ruta, cumple "la ruta se oculta y se protege".
+  { kind: 'leaf', label: 'Reportes', icon: 'report-analytics', route: '/superadmin/reports' },
 ];
 
 // Sidebar de clínica v1: mismo menú para admin/recepcion/profesional — no
@@ -67,6 +70,9 @@ const CLINIC_ADMIN_EXTRA_NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Salas', icon: 'door', route: '/rooms' },
   { kind: 'leaf', label: 'Horarios', icon: 'calendar-time', route: '/schedules' },
   { kind: 'leaf', label: 'Roles', icon: 'shield-lock', route: '/roles' },
+  // Fase 10: reportes con datos financieros (facturación) — mismo
+  // criterio que Roles/Sucursales, solo admin.
+  { kind: 'leaf', label: 'Reportes', icon: 'report-analytics', route: '/reports' },
   { kind: 'leaf', label: 'Configuración', icon: 'settings', comingSoon: true },
 ];
 

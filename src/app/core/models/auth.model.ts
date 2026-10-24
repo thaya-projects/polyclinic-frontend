@@ -1,10 +1,7 @@
 import { SessionRoleCode } from './role.model';
 import { TenantStatus } from './tenant.model';
 
-// Snake_case a propósito: T14 conecta esto contra el DTO real del backend
-// (ver T1). Por ahora (T13) es solo el contrato del formulario.
 export interface LoginDto {
-  tenant_slug: string;
   email: string;
   password: string;
 }

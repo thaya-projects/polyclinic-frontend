@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Sidebar } from '../sidebar/sidebar';
 import { Header } from '../header/header';
+import { ImpersonationBanner } from '../impersonation-banner/impersonation-banner';
 import { FeaturesService } from '../../core/services/features.service';
 
 @Component({
   selector: 'app-shell',
-  imports: [Sidebar, Header, RouterOutlet],
+  imports: [Sidebar, Header, ImpersonationBanner, RouterOutlet],
   templateUrl: './shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

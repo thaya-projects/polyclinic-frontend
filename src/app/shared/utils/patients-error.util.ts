@@ -27,7 +27,9 @@ export function patientsListErrorMessage(err: unknown): string {
 export function patientSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
     if (err.status === 409) return 'Ya existe un paciente con ese número de documento.';
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
+    if (err.status === 400 || err.status === 422) {
+      return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
+    }
     return (
       basePatientsMessage(err) ??
       (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo guardar el paciente.')
