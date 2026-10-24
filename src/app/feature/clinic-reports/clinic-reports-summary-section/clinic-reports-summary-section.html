@@ -1,0 +1,12 @@
+<div class="flex flex-col gap-4">
+  <app-clinic-reports-filters [(from)]="from" [(to)]="to" />
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <app-patients-report-card [from]="from()" [to]="to()" />
+    <app-encounters-report-card [from]="from()" [to]="to()" />
+  </div>
+
+  <app-appointments-by-status-card [from]="from()" [to]="to()" />
+
+  <app-invoices-summary-card [from]="from()" [to]="to()" />
+</div>

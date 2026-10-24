@@ -1,0 +1,36 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Correo</span>
+    <input type="email" formControlName="email" placeholder="tu@clinica.com" autocomplete="email"
+      [class]="inputClass(form.controls.email)" />
+    @if (isInvalid(form.controls.email)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.email) }}</span>
+    }
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Contraseña</span>
+    <div class="relative">
+      <input [type]="showPassword() ? 'text' : 'password'" formControlName="password" placeholder="••••••••"
+        autocomplete="current-password" class="w-full pr-11!" [class]="inputClass(form.controls.password)" />
+      <button type="button" (click)="showPassword.set(!showPassword())"
+        [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+        class="absolute top-1/2 right-3.5 -translate-y-1/2 text-muted transition-colors hover:text-brand">
+        <i class="ti" [class.ti-eye]="!showPassword()" [class.ti-eye-off]="showPassword()"></i>
+      </button>
+    </div>
+    @if (isInvalid(form.controls.password)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.password) }}</span>
+    }
+  </label>
+
+  <button type="submit" [disabled]="loading()"
+    class="mt-2 flex h-12 items-center justify-center gap-2 rounded-xl bg-brand text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70">
+    @if (loading()) {
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Ingresando...
+    } @else {
+      Ingresar
+    }
+  </button>
+</form>

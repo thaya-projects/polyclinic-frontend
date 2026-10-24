@@ -1,0 +1,9 @@
+@if (impersonatedBy()) {
+  <div class="flex items-center justify-center gap-3 bg-amber-500 px-4 py-2 text-sm font-medium text-white">
+    <i class="ti ti-user-shield"></i>
+    <span>Estás viendo como {{ impersonatedBy() }}.</span>
+    <button type="button" (click)="exit()" class="underline underline-offset-2 hover:text-amber-100">
+      Salir
+    </button>
+  </div>
+}

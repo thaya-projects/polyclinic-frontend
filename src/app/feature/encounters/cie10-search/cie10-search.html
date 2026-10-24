@@ -1,0 +1,53 @@
+<div class="relative">
+  <div class="relative">
+    <i class="ti ti-search pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted"></i>
+    <input type="text" role="combobox" autocomplete="off" data-testid="cie10-input"
+      aria-label="Buscar código CIE-10" aria-autocomplete="list"
+      [attr.aria-expanded]="listVisible()"
+      [attr.aria-controls]="listVisible() ? listId : null"
+      [attr.aria-activedescendant]="listVisible() && activeIndex() >= 0 ? optionId(activeIndex()) : null"
+      [value]="query()" [disabled]="disabled()" [attr.maxlength]="maxChars"
+      (input)="onInput($any($event.target).value)" (keydown)="onKeydown($event)"
+      (focus)="onFocus()" (blur)="close()"
+      placeholder="Buscar CIE-10 por código o descripción (ej: J06, migraña)"
+      class="h-11 w-full rounded-xl border border-border bg-surface pr-3.5 pl-10 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none disabled:opacity-60" />
+  </div>
+
+  <span class="sr-only" aria-live="polite" role="status" data-testid="cie10-status">{{ statusText() }}</span>
+
+  @if (open() && query().trim()) {
+    <!-- mousedown con preventDefault: ni la barra de scroll ni un clic en el popup sacan el foco del input. -->
+    <div class="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-border bg-surface shadow-lg"
+      data-testid="cie10-popup" (mousedown)="$event.preventDefault()">
+      @switch (state()) {
+        @case ('short') {
+          <p class="px-3.5 py-2.5 text-xs text-muted" data-testid="cie10-hint">Escribí al menos {{ minChars }} caracteres.</p>
+        }
+        @case ('error') {
+          <p class="px-3.5 py-2.5 text-xs text-red-500" data-testid="cie10-error">{{ error() }}</p>
+        }
+        @default {
+          @if (state() === 'loading' && results().length === 0) {
+            <p class="flex items-center gap-2 px-3.5 py-2.5 text-xs text-muted"><i class="ti ti-loader-2 animate-spin"></i>Buscando…</p>
+          } @else if (state() === 'ready' && results().length === 0) {
+            <p class="px-3.5 py-2.5 text-xs text-muted" data-testid="cie10-empty">Sin resultados.</p>
+          }
+        }
+      }
+      @if (listVisible()) {
+        <ul role="listbox" [id]="listId" aria-label="Resultados CIE-10" class="max-h-64 overflow-y-auto py-1"
+          [class.opacity-60]="state() === 'loading'" data-testid="cie10-results">
+          @for (entry of results(); track entry.code; let i = $index) {
+            <li role="option" [id]="optionId(i)" [attr.aria-selected]="i === activeIndex()"
+              data-testid="cie10-option"
+              (mousedown)="pick(entry)" (mouseenter)="state() === 'ready' && activeIndex.set(i)"
+              class="cursor-pointer px-3.5 py-2 text-sm text-text"
+              [class.bg-surface-alt]="i === activeIndex()">
+              <span class="font-semibold">{{ entry.code }}</span> — {{ entry.description }}
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</div>

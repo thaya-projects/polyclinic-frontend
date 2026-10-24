@@ -1,0 +1,100 @@
+@if (readonlyMode()) {
+  <!-- Plantilla global (de la plataforma) — solo lectura (criterio de aceptación T1) -->
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <p class="text-xs text-muted">Canal</p>
+        <p class="text-sm text-text">{{ channelLabels[template()!.channel] }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted">Código</p>
+        <p class="text-sm text-text">{{ template()!.code }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted">Nombre</p>
+        <p class="text-sm text-text">{{ template()!.name }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted">Idioma</p>
+        <p class="text-sm text-text uppercase">{{ template()!.language }}</p>
+      </div>
+    </div>
+    <div>
+      <p class="text-xs text-muted">Variables</p>
+      <p class="text-sm text-text">{{ template()!.variables.join(', ') || '—' }}</p>
+    </div>
+    <div>
+      <p class="text-xs text-muted">Mensaje</p>
+      <p class="rounded-xl border border-border bg-surface p-3 text-sm whitespace-pre-line text-text">
+        {{ template()!.body || 'Sin contenido.' }}
+      </p>
+    </div>
+  </div>
+} @else {
+  <form [formGroup]="form" class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Canal</span>
+        <select formControlName="channel" [class]="inputClass(form.controls.channel)">
+          @for (c of channels; track c) {
+            <option [value]="c">{{ channelLabels[c] }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Idioma</span>
+        <select formControlName="language" [class]="inputClass(form.controls.language)">
+          @for (lang of languages; track lang) {
+            <option [value]="lang">{{ lang.toUpperCase() }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Código</span>
+        <input type="text" formControlName="code" placeholder="ej. appointment_reminder" [class]="inputClass(form.controls.code)" />
+        @if (isInvalid(form.controls.code)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.code) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Nombre</span>
+        <input type="text" formControlName="name" [class]="inputClass(form.controls.name)" />
+        @if (isInvalid(form.controls.name)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.name) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5 sm:col-span-2">
+        <span class="text-xs font-medium text-muted">Variables (separadas por coma)</span>
+        <input type="text" formControlName="variables" placeholder="patient_name, appointment_date" [class]="inputClass(form.controls.variables)" />
+      </label>
+    </div>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Mensaje</span>
+      <textarea formControlName="body" rows="4" placeholder="Hola {{ '{{patient_name}}' }}, ..."
+        class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+    </label>
+
+    @if (saveError()) {
+      <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ saveError() }}
+      </div>
+    }
+
+    <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
+      <button type="button" (click)="cancel()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+      <button type="button" (click)="submit()" [disabled]="saving()"
+        class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : (template() ? 'Guardar cambios' : 'Crear plantilla') }}
+      </button>
+    </div>
+  </form>
+}

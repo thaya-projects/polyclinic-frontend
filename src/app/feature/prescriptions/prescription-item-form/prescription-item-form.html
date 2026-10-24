@@ -1,0 +1,21 @@
+<form [formGroup]="form" (ngSubmit)="submit()" [attr.aria-label]="label()" class="flex flex-col gap-3 rounded-xl border border-border bg-surface-alt/30 p-3"
+  data-testid="prescription-item-form" novalidate>
+  <app-prescription-item-fields
+    [group]="form"
+    [idPrefix]="id"
+    [showErrors]="submittedOnce()"
+    [busy]="busy()"
+    [tick]="tick()" />
+
+  <div class="flex justify-end gap-3">
+    <button type="button" data-testid="btn-cancel-item" (click)="cancelled.emit()" [disabled]="busy()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cerrar
+    </button>
+    <button type="submit" data-testid="btn-save-item" [disabled]="busy()"
+      class="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      <i class="ti ti-plus" aria-hidden="true"></i>
+      {{ saving() ? 'Agregando...' : 'Agregar' }}
+    </button>
+  </div>
+</form>

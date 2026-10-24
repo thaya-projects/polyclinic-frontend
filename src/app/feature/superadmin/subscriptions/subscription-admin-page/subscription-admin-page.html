@@ -1,0 +1,129 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <a [routerLink]="['/superadmin/tenants']" class="text-xs text-muted hover:text-brand">← Tenants</a>
+      <h2 class="mt-1 text-2xl font-bold text-navy">Suscripción del tenant</h2>
+      <p class="mt-1 text-sm text-muted">Cambiar plan, extender trial o cancelar. No cobra.</p>
+    </div>
+  </div>
+
+  @if (loadError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ loadError() }}
+    </div>
+  }
+  @if (actionError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando suscripción...
+    </div>
+  } @else if (subscription(); as sub) {
+    <div class="grid gap-4 md:grid-cols-3">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <div class="text-xs font-medium text-muted uppercase tracking-wide">Plan actual</div>
+        <div class="mt-1 text-lg font-semibold text-text">{{ planName(sub.plan_id) }}</div>
+        <div class="mt-1 font-mono text-xs text-muted">{{ sub.plan_id }}</div>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <div class="text-xs font-medium text-muted uppercase tracking-wide">Estado</div>
+        <div class="mt-1 text-lg font-semibold text-text">{{ sub.status }}</div>
+        @if (sub.cancel_at_period_end) {
+          <div class="mt-1 text-xs text-amber-600">Cancelación al fin del período</div>
+        }
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <div class="text-xs font-medium text-muted uppercase tracking-wide">Trial hasta</div>
+        <div class="mt-1 text-lg font-semibold text-text">
+          {{ sub.trial_ends_at ? (sub.trial_ends_at | date:'mediumDate') : '—' }}
+        </div>
+        @if (sub.current_period_end) {
+          <div class="mt-1 text-xs text-muted">Periodo actual: hasta {{ sub.current_period_end | date:'shortDate' }}</div>
+        }
+      </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <h3 class="text-sm font-semibold text-text">Cambiar plan</h3>
+        <p class="mt-1 text-xs text-muted">Actualiza plan_id sin cobrar ni ajustar el ciclo actual.</p>
+        <div class="mt-3 flex items-center gap-2">
+          <select [ngModel]="selectedPlanId()" (ngModelChange)="selectedPlanId.set($event)"
+            class="h-10 flex-1 rounded-xl border border-border bg-surface px-3 text-sm">
+            <option value="">Elegir plan…</option>
+            @for (p of plans(); track p.id) {
+              <option [value]="p.id">{{ p.name }} ({{ p.code }})</option>
+            }
+          </select>
+          <button type="button" (click)="onChangePlan()" [disabled]="!selectedPlanId() || actionInFlight()"
+            class="flex h-10 items-center justify-center rounded-xl bg-brand px-4 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50">
+            Cambiar
+          </button>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <h3 class="text-sm font-semibold text-text">Extender trial</h3>
+        <p class="mt-1 text-xs text-muted">Solo válido durante status = trialing.</p>
+        <div class="mt-3 flex items-center gap-2">
+          <input type="number" min="1" [ngModel]="extendDays()" (ngModelChange)="extendDays.set($event)"
+            class="h-10 w-24 rounded-xl border border-border bg-surface px-3 text-sm" />
+          <span class="text-sm text-muted">días</span>
+          <button type="button" (click)="onExtendTrial()" [disabled]="extendDays() <= 0 || actionInFlight()"
+            class="ml-auto flex h-10 items-center justify-center rounded-xl bg-brand px-4 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50">
+            Extender
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <h3 class="text-sm font-semibold text-text">Conectar cobro con Stripe</h3>
+        <p class="mt-1 text-xs text-muted">
+          Crea un customer en Stripe y abre el checkout hosted para dejar registrado un método de pago.
+        </p>
+        <button type="button" (click)="onCreateCheckout()" [disabled]="actionInFlight()"
+          class="mt-3 flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50">
+          <i class="ti ti-credit-card"></i>
+          Iniciar checkout
+        </button>
+      </div>
+
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <h3 class="text-sm font-semibold text-text">Cancelar suscripción</h3>
+        <label class="mt-2 flex items-center gap-2 text-xs text-muted cursor-pointer">
+          <input type="checkbox" [ngModel]="cancelAtPeriodEnd()"
+            (ngModelChange)="cancelAtPeriodEnd.set($event)" class="h-4 w-4 accent-brand" />
+          Cancelar al final del período (mantiene el servicio hasta que se venza)
+        </label>
+        <button type="button" (click)="requestCancel()" [disabled]="actionInFlight()"
+          class="mt-3 flex h-10 items-center justify-center rounded-xl border border-red-300 px-4 text-sm font-medium text-red-600 hover:border-red-500 disabled:opacity-50">
+          Cancelar suscripción
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div class="rounded-xl border border-border bg-surface p-6 text-sm text-muted">
+      Este tenant no tiene suscripción vigente.
+    </div>
+  }
+</div>
+
+<app-confirm-dialog
+  [open]="confirmingCancel()"
+  title="Cancelar suscripción"
+  [message]="cancelAtPeriodEnd()
+    ? 'La suscripción quedará marcada para cancelarse al fin del período actual. El servicio sigue vigente hasta esa fecha.'
+    : 'La suscripción quedará cancelada inmediatamente. Esta acción no se puede deshacer desde este panel.'"
+  confirmLabel="Cancelar suscripción"
+  [tone]="cancelTone"
+  (confirmed)="confirmCancel()"
+  (cancelled)="cancelCancel()" />

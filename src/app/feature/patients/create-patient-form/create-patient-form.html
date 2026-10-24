@@ -1,0 +1,93 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-6">
+
+  <section class="flex flex-col gap-4">
+    <h3 class="text-base font-semibold text-navy">Datos personales</h3>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Nombre</span>
+        <input type="text" formControlName="first_name" [class]="inputClass(form.controls.first_name)" />
+        @if (isInvalid(form.controls.first_name)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.first_name) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Apellido</span>
+        <input type="text" formControlName="last_name" [class]="inputClass(form.controls.last_name)" />
+        @if (isInvalid(form.controls.last_name)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.last_name) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Tipo de documento</span>
+        <select formControlName="document_type" [class]="inputClass(form.controls.document_type)">
+          <option value="">Sin especificar</option>
+          @for (opt of documentTypes; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+        @if (isInvalid(form.controls.document_type)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.document_type) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">N° de documento</span>
+        <input type="text" formControlName="document_number" [class]="inputClass(form.controls.document_number)" />
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Fecha de nacimiento</span>
+        <input type="date" formControlName="birth_date" [max]="todayStr" [class]="inputClass(form.controls.birth_date)" />
+        @if (isInvalid(form.controls.birth_date)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.birth_date) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Sexo</span>
+        <select formControlName="sex" [class]="inputClass(form.controls.sex)">
+          <option value="">Sin especificar</option>
+          @for (opt of sexOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-4">
+    <h3 class="text-base font-semibold text-navy">Contacto</h3>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">WhatsApp</span>
+        <input type="tel" formControlName="whatsapp_phone" [class]="inputClass(form.controls.whatsapp_phone)" />
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Teléfono alternativo</span>
+        <input type="tel" formControlName="phone_alt" [class]="inputClass(form.controls.phone_alt)" />
+      </label>
+
+      <label class="flex flex-col gap-1.5 sm:col-span-2">
+        <span class="text-xs font-medium text-muted">Correo</span>
+        <input type="email" formControlName="email" [class]="inputClass(form.controls.email)" />
+        @if (isInvalid(form.controls.email)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.email) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5 sm:col-span-2">
+        <span class="text-xs font-medium text-muted">Dirección</span>
+        <input type="text" formControlName="address" [class]="inputClass(form.controls.address)" />
+      </label>
+
+      <label class="flex flex-col gap-1.5 sm:col-span-2">
+        <span class="text-xs font-medium text-muted">Notas</span>
+        <textarea formControlName="notes" rows="3"
+          class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+      </label>
+    </div>
+  </section>
+</form>

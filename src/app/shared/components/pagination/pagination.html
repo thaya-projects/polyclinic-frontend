@@ -1,0 +1,40 @@
+@if (total() > 0) {
+  <div class="flex flex-wrap items-center justify-between gap-3 pt-2 text-sm text-fg-muted">
+    <span>Mostrando {{ start() }}–{{ end() }} de {{ total() }}</span>
+
+    <div class="flex items-center gap-1.5">
+      <button type="button"
+        class="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-fg-muted transition-colors hover:bg-icon-soft hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+        [disabled]="page() <= 1" (click)="goTo(page() - 1)" aria-label="Página anterior">
+        <i class="ti ti-chevron-left"></i>
+      </button>
+
+      @for (p of pageNumbers(); track p) {
+        <button type="button"
+          class="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition-colors"
+          [class]="p === page() ? 'bg-brand text-white' : 'text-fg-muted hover:bg-icon-soft hover:text-text'"
+          (click)="goTo(p)">
+          {{ p }}
+        </button>
+      }
+
+      <button type="button"
+        class="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-fg-muted transition-colors hover:bg-icon-soft hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+        [disabled]="page() >= totalPages()" (click)="goTo(page() + 1)" aria-label="Página siguiente">
+        <i class="ti ti-chevron-right"></i>
+      </button>
+
+      <div class="ml-2 flex items-center gap-1.5 border-l border-border pl-3">
+        <span class="whitespace-nowrap">Ir a página</span>
+        <input type="number" min="1" [max]="totalPages()"
+          [ngModel]="jumpValue()" (ngModelChange)="jumpValue.set($event)"
+          (keydown.enter)="submitJump()"
+          class="h-8 w-16 rounded-lg border border-border bg-surface px-2 text-center text-sm text-text focus:ring-2 focus:ring-brand/30 focus:outline-none" />
+        <button type="button" (click)="submitJump()"
+          class="flex h-8 items-center justify-center rounded-lg border border-border px-3 text-sm font-medium text-fg-muted transition-colors hover:bg-icon-soft hover:text-text">
+          Ir
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,152 @@
+<div class="flex flex-col gap-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-navy">Encuentros clínicos</h2>
+      <p class="mt-1 text-sm text-muted">Notas de evolución de los pacientes de la clínica.</p>
+    </div>
+    @if (accessView() === 'allowed') {
+    <div class="flex flex-col items-end gap-1">
+      <button type="button" (click)="openCreate()" data-testid="btn-new-encounter"
+        [disabled]="!canCreate()" [title]="createDisabledReason()"
+        class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand">
+        <i class="ti ti-plus"></i>
+        Nuevo encuentro
+      </button>
+      @if (lookups.professionalsLoading()) {
+        <span class="text-xs text-muted" data-testid="professionals-loading">Cargando…</span>
+      } @else if (lookups.professionalsError(); as profError) {
+        <span class="flex items-center gap-2 text-xs text-red-600" data-testid="professionals-error">
+          {{ profError }}
+          <button type="button" (click)="lookups.loadProfessionals()" data-testid="professionals-retry"
+            class="font-medium underline underline-offset-2 hover:text-red-700">Reintentar</button>
+        </span>
+      } @else if (!canCreate()) {
+        <span class="text-xs text-muted" data-testid="no-professional-hint">{{ createDisabledReason() }}</span>
+      }
+    </div>
+    }
+  </div>
+
+  @if (accessView() === 'loading') {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-loading">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando…
+    </div>
+  } @else if (accessView() === 'error') {
+    <div class="flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 py-10 text-sm text-red-600" data-testid="access-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ lookups.professionalsError() }}</span>
+      <button type="button" (click)="lookups.loadProfessionals()" data-testid="access-retry"
+        class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+        Reintentar
+      </button>
+    </div>
+  } @else if (accessView() === 'denied') {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-denied">
+      <i class="ti ti-lock"></i>
+      {{ accessDeniedMessage }}
+    </div>
+  } @else {
+
+  @if (notice()) {
+    <div class="flex items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="notice">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ notice() }}</span>
+      <button type="button" (click)="dismissNotice()" aria-label="Cerrar aviso" class="text-red-400 hover:text-red-600">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+  }
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="list-error">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+
+  @if (lookups.patientsError(); as patError) {
+    <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="patients-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle"></i>{{ patError }}</span>
+      <button type="button" (click)="lookups.loadPatients()"
+        class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+        Reintentar
+      </button>
+    </div>
+  }
+
+  <!-- Filtros (reflejados en la URL) -->
+  <div class="flex flex-wrap items-center gap-3">
+    <select aria-label="Filtrar por paciente" data-testid="filter-patient" [value]="patientFilter()" (change)="setPatientFilter($any($event.target).value)"
+      [class]="selectClass + ' min-w-56'">
+      <option value="">Todos los pacientes</option>
+      @for (p of patientFilterOptions(); track p.id) {
+        <option [value]="p.id" [selected]="p.id === patientFilter()">{{ p.label }}</option>
+      }
+    </select>
+
+    <select aria-label="Filtrar por profesional" data-testid="filter-professional" [value]="professionalFilter()" (change)="setProfessionalFilter($any($event.target).value)"
+      [class]="selectClass + ' min-w-48'">
+      <option value="">Todos los profesionales</option>
+      @for (p of lookups.professionals(); track p.id) {
+        <option [value]="p.id" [selected]="p.id === professionalFilter()">{{ p.label }}</option>
+      }
+    </select>
+
+    <select aria-label="Filtrar por estado" data-testid="filter-status" [value]="statusFilter()" (change)="setStatusFilter($any($event.target).value)"
+      [class]="selectClass + ' min-w-40'">
+      <option value="">Todos los estados</option>
+      @for (s of statusOptions; track s.value) {
+        <option [value]="s.value" [selected]="s.value === statusFilter()">{{ s.label }}</option>
+      }
+    </select>
+
+    @if (patientFilter() || professionalFilter() || statusFilter()) {
+      <button type="button" (click)="clearFilters()" class="text-xs font-medium text-muted underline-offset-2 hover:text-brand hover:underline">
+        Limpiar filtros
+      </button>
+    }
+  </div>
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando encuentros...
+    </div>
+  } @else {
+    <app-encounters-table [encounters]="encounters()"
+      [patientNameById]="lookups.patientNameById()"
+      [professionalNameById]="lookups.professionalNameById()"
+      (view)="openDetail($event)" />
+
+    <app-pagination [page]="page()" (pageChange)="setPage($event)" [pageSize]="pageSize" [total]="total()" />
+  }
+  }
+</div>
+
+<!-- Alta de encuentro -->
+<app-modal [open]="createOpen()" title="Nuevo encuentro" size="md" (closed)="closeCreate()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="create-error">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <app-encounter-create-form #createForm
+    [patients]="createPatientOptions()"
+    [professional]="lookups.currentProfessional()"
+    [disabledReason]="lookups.createDisabledReason()"
+    [initialPatientId]="createPatientId()"
+    [saving]="saving()"
+    (patientSearch)="onPatientSearch($event)"
+    (submitted)="onCreate($event)" />
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeCreate()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="createForm.submit()" [disabled]="saving() || !canCreate()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Creando...' : 'Crear y abrir nota' }}
+    </button>
+  </div>
+</app-modal>

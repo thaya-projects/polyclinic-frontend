@@ -1,0 +1,48 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h2 class="text-2xl font-bold text-navy">Mi suscripción</h2>
+    <p class="mt-1 text-sm text-muted">Plan y estado actual de tu clínica.</p>
+  </div>
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando…
+    </div>
+  } @else if (subscription(); as sub) {
+    <div class="grid gap-4 md:grid-cols-3">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <div class="text-xs font-medium text-muted uppercase tracking-wide">Plan</div>
+        <div class="mt-1 font-mono text-xs text-muted">{{ sub.plan_id }}</div>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <div class="text-xs font-medium text-muted uppercase tracking-wide">Estado</div>
+        <div class="mt-1 text-lg font-semibold text-text">{{ sub.status }}</div>
+        @if (sub.cancel_at_period_end) {
+          <div class="mt-1 text-xs text-amber-600">Se cancela al fin del período actual.</div>
+        }
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <div class="text-xs font-medium text-muted uppercase tracking-wide">Trial hasta</div>
+        <div class="mt-1 text-lg font-semibold text-text">
+          {{ sub.trial_ends_at ? (sub.trial_ends_at | date:'mediumDate') : '—' }}
+        </div>
+        @if (sub.current_period_end) {
+          <div class="mt-1 text-xs text-muted">Periodo actual hasta {{ sub.current_period_end | date:'shortDate' }}</div>
+        }
+      </div>
+    </div>
+    <p class="text-xs text-muted">Para cambiar de plan, contactá con el super administrador.</p>
+  } @else {
+    <div class="rounded-xl border border-border bg-surface p-6 text-sm text-muted">
+      Todavía no tenés una suscripción activa.
+    </div>
+  }
+</div>

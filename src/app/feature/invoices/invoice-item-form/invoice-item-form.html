@@ -1,0 +1,55 @@
+<form [formGroup]="form" class="flex flex-col gap-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Servicio</span>
+      <select formControlName="service_id" (change)="onServiceChange($any($event.target).value)" [class]="inputClass(form.controls.service_id)">
+        <option value="">Sin servicio</option>
+        @for (s of services(); track s.id) {
+          <option [value]="s.id">{{ s.name }} ({{ s.base_price.toFixed(2) }} {{ s.currency }})</option>
+        }
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Item de plan de tratamiento</span>
+      <select formControlName="treatment_plan_item_id" (change)="onPlanItemChange($any($event.target).value)" [class]="inputClass(form.controls.treatment_plan_item_id)">
+        <option value="">Sin item de plan</option>
+        @for (i of treatmentPlanItemOptions(); track i.id) {
+          <option [value]="i.id">{{ i.description }} ({{ i.unit_price.toFixed(2) }})</option>
+        }
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1.5 sm:col-span-2">
+      <span class="text-xs font-medium text-muted">Descripción</span>
+      <input type="text" formControlName="description" [class]="inputClass(form.controls.description)" />
+      @if (isInvalid(form.controls.description)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.description) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Cantidad</span>
+      <input type="number" min="1" formControlName="quantity" [class]="inputClass(form.controls.quantity)" />
+      @if (isInvalid(form.controls.quantity)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.quantity) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Precio unitario</span>
+      <input type="number" min="0" step="0.01" formControlName="unit_price" [class]="inputClass(form.controls.unit_price)" />
+      @if (isInvalid(form.controls.unit_price)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.unit_price) }}</span>
+      }
+    </label>
+  </div>
+
+  <div>
+    <button type="button" (click)="add()"
+      class="flex h-10 items-center justify-center gap-2 rounded-xl border border-dashed border-brand px-4 text-sm font-medium text-brand transition-colors hover:bg-brand/5">
+      <i class="ti ti-plus"></i>
+      Agregar item
+    </button>
+  </div>
+</form>

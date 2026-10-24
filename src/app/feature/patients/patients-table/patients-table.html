@@ -1,0 +1,24 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="No hay pacientes para mostrar.">
+  <ng-template appDataTableCell="name" let-row>
+    <span class="font-semibold text-text">{{ row.first_name }} {{ row.last_name }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="document" let-row>
+    <span class="text-muted">{{ documentLabel(row) }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="whatsapp_phone" let-row>
+    {{ row.whatsapp_phone || '—' }}
+  </ng-template>
+
+  <ng-template appDataTableCell="is_active" let-row>
+    <app-status-chip [label]="row.is_active ? 'Sí' : 'No'" [tone]="row.is_active ? 'ok' : 'neutral'" />
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <button type="button" (click)="view.emit(row)"
+      class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+      Ver
+    </button>
+  </ng-template>
+</app-data-table>

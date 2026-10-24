@@ -1,0 +1,77 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4" data-testid="prescription-form" novalidate
+  aria-label="Nueva receta">
+  <span class="sr-only" aria-live="polite" role="status" data-testid="prescription-form-status">{{ liveMessage() }}</span>
+
+  @if (showRowsError()) {
+    <span role="alert" class="text-xs text-red-500" data-testid="prescription-rows-error">
+      Revisá los medicamentos: cada uno necesita al menos el nombre del medicamento.
+    </span>
+  }
+
+  <!-- Notas generales -->
+  <div class="flex flex-col gap-1.5">
+    <div class="flex items-center justify-between">
+      <label class="text-xs font-medium tracking-wide text-muted uppercase" [for]="id + '-notes'">Notas generales (opcional)</label>
+      <span class="text-xs" [class]="notesLength() > notesLimit ? 'text-red-500' : 'text-muted'" data-testid="prescription-notes-counter">
+        {{ notesLength() }}/{{ notesLimit }}
+      </span>
+    </div>
+    <textarea [id]="id + '-notes'" rows="2" formControlName="notes" data-testid="prescription-notes"
+      [readOnly]="busy()" [attr.maxlength]="notesLimit"
+      [attr.aria-invalid]="notesInvalid()" [attr.aria-describedby]="notesInvalid() ? id + '-notes-error' : null"
+      class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:ring-3 focus:outline-none"
+      [class]="notesInvalid() ? 'border-red-400 focus:border-red-400 focus:ring-red-400/18' : 'border-border focus:border-brand focus:ring-brand/18'"></textarea>
+    @if (notesInvalid()) {
+      <span role="alert" [id]="id + '-notes-error'" class="text-xs text-red-500" data-testid="prescription-notes-error">{{ notesErrorText() }}</span>
+    }
+  </div>
+
+  <!-- Medicamentos iniciales -->
+  <div class="flex flex-col gap-3">
+    @if (rowCount() === 0) {
+      <p class="text-sm text-muted" data-testid="prescription-no-rows">Sin medicamentos: podés emitir la receta solo con notas o agregar medicamentos.</p>
+    }
+    @for (row of rows; track rowIds()[$index]; let i = $index) {
+      <fieldset class="relative flex flex-col gap-3 rounded-xl border border-border p-3 pt-12" data-testid="prescription-row">
+        <legend class="absolute top-4 left-3 text-sm font-semibold text-navy">Medicamento {{ i + 1 }}</legend>
+        <button type="button" (click)="removeRow(i)" [disabled]="busy()" data-testid="btn-remove-row"
+          [attr.aria-label]="'Quitar medicamento ' + (i + 1)"
+          class="absolute top-2.5 right-3 flex h-8 items-center justify-center gap-1 rounded-lg border border-border px-2.5 text-xs font-medium text-muted transition-colors hover:border-red-400 hover:text-red-500 disabled:opacity-50">
+          <i class="ti ti-trash" aria-hidden="true"></i>
+          Quitar
+        </button>
+        <app-prescription-item-fields
+          [group]="row"
+          [idPrefix]="rowPrefix(i)"
+          [showErrors]="submittedOnce()"
+          [busy]="busy()"
+          [tick]="tick()" />
+      </fieldset>
+    }
+    <div class="flex flex-wrap items-center gap-2">
+      <button type="button" [id]="id + '-add-row'" (click)="addRow()" [disabled]="busy() || rowCount() >= maxItems" data-testid="btn-add-row"
+        [attr.aria-describedby]="rowCount() >= maxItems ? id + '-max-rows' : null"
+        class="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50">
+        <i class="ti ti-plus" aria-hidden="true"></i>
+        Agregar medicamento
+      </button>
+      @if (rowCount() >= maxItems) {
+        <span [id]="id + '-max-rows'" class="text-xs text-muted" data-testid="prescription-max-rows">Máximo {{ maxItems }} medicamentos por receta.</span>
+      }
+    </div>
+  </div>
+
+  @if (showSubmit()) {
+    <div class="flex justify-end gap-3">
+      <button type="button" data-testid="btn-cancel-prescription" (click)="cancelled.emit()" [disabled]="busy()"
+        class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+        Cancelar
+      </button>
+      <button type="submit" data-testid="btn-submit-prescription" [disabled]="busy()"
+        class="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+        <i class="ti ti-file-plus" aria-hidden="true"></i>
+        {{ saving() ? 'Emitiendo...' : submitLabel() }}
+      </button>
+    </div>
+  }
+</form>

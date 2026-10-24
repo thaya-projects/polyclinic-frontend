@@ -1,0 +1,37 @@
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="No hay tenants con esos filtros.">
+  <ng-template appDataTableCell="name" let-row>
+    <div class="flex items-center gap-3">
+      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-icon-soft text-brand">
+        <i class="ti ti-building"></i>
+      </div>
+      <span class="font-semibold text-text">{{ row.name }}</span>
+    </div>
+  </ng-template>
+
+  <ng-template appDataTableCell="slug" let-row>
+    <span class="text-muted">{{ row.slug }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="plan" let-row>
+    {{ planLabel(row.plan) }}
+  </ng-template>
+
+  <ng-template appDataTableCell="status" let-row>
+    <app-status-chip [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+  </ng-template>
+
+  <ng-template appDataTableCell="isActive" let-row>
+    <app-status-chip [label]="row.isActive ? 'Sí' : 'No'" [tone]="row.isActive ? 'ok' : 'neutral'" />
+  </ng-template>
+
+  <ng-template appDataTableCell="createdAt" let-row>
+    {{ formatDate(row.createdAt) }}
+  </ng-template>
+
+  <ng-template appDataTableCell="actions" let-row>
+    <button type="button" (click)="view.emit(row)"
+      class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+      Ver
+    </button>
+  </ng-template>
+</app-data-table>

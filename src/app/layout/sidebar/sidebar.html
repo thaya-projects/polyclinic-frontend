@@ -1,0 +1,106 @@
+<aside class="relative flex h-screen flex-col bg-sidebar transition-[width] duration-200 ease-out" [class]="widthClass()">
+  <button type="button"
+    class="absolute top-10.5 -right-3 z-40 flex h-6 w-6 items-center justify-center rounded-full border border-white/25 bg-sidebar text-xs text-sidebar-fg-muted shadow-md transition-all hover:bg-sidebar-hover hover:text-sidebar-fg hover:scale-105"
+    (click)="toggleCollapsed()"
+    [attr.aria-label]="collapsed() ? 'Expandir menú' : 'Colapsar menú'">
+    <i class="ti" [class.ti-chevron-right]="collapsed()" [class.ti-chevron-left]="!collapsed()"></i>
+  </button>
+
+  <div [class]="headerClass()">
+    <div class="flex min-w-0 items-center gap-2.5 overflow-hidden">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white">
+        <i class="ti ti-heart-rate-monitor text-brand"></i>
+      </div>
+      @if (!collapsed()) {
+        <span class="overflow-hidden text-ellipsis whitespace-nowrap text-[0.95rem] font-bold text-sidebar-fg">MedConnect</span>
+      }
+    </div>
+  </div>
+
+  <nav [class]="navClass()">
+    @for (item of navItems(); track item.label) {
+      @if (item.kind === 'leaf') {
+        @if (item.comingSoon) {
+          <span [class]="navDisabledClass()" [title]="collapsed() ? item.label + ' — Próximamente' : 'Próximamente'">
+            <i [class]="'ti ti-' + item.icon"></i>
+            @if (!collapsed()) {
+              <span class="min-w-0 flex-1">{{ item.label }}</span>
+              <span class="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-sidebar-fg-muted">Pronto</span>
+            }
+          </span>
+        } @else {
+          <a [routerLink]="item.route" routerLinkActive="bg-sidebar-active text-white" [class]="navLinkClass()"
+             [title]="collapsed() ? item.label : null">
+            <i [class]="'ti ti-' + item.icon"></i>
+            @if (!collapsed()) { <span class="min-w-0 flex-1">{{ item.label }}</span> }
+          </a>
+        }
+      } @else {
+        <div class="relative"
+          (mouseenter)="onGroupMouseEnter($event, item)"
+          (mouseleave)="onGroupMouseLeave()">
+          <button type="button" [class]="groupHeaderClass()" (click)="onGroupHeaderClick($event, item)"
+            [title]="collapsed() ? item.label : null">
+            <i [class]="'ti ti-' + item.icon"></i>
+            @if (!collapsed()) {
+              <span class="min-w-0 flex-1">{{ item.label }}</span>
+              <i class="ti ti-chevron-down text-xs transition-transform" [class.rotate-180]="isExpanded(item.label)"></i>
+            }
+          </button>
+          @if (!collapsed() && isExpanded(item.label)) {
+            <div class="mb-1 flex flex-col gap-[0.1rem] pl-3.5">
+              @for (child of item.children; track child.label) {
+                @if (child.comingSoon) {
+                  <span [class]="navDisabledChildClass" title="Próximamente">
+                    <i [class]="'ti ti-' + child.icon"></i>
+                    <span class="min-w-0 flex-1">{{ child.label }}</span>
+                    <span class="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-sidebar-fg-muted">Pronto</span>
+                  </span>
+                } @else {
+                  <a [routerLink]="child.route" routerLinkActive="bg-sidebar-active text-white" [class]="navLinkChildClass">
+                    <i [class]="'ti ti-' + child.icon"></i>
+                    <span class="min-w-0 flex-1">{{ child.label }}</span>
+                  </a>
+                }
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </nav>
+
+  <div [class]="footerClass()">
+    <button type="button" [class]="footerBtnClass()" (click)="theme.toggle()"
+      [title]="collapsed() ? (theme.dark() ? 'Modo claro' : 'Modo oscuro') : null">
+      <i [class]="'ti ti-' + (theme.dark() ? 'sun' : 'moon')"></i>
+      @if (!collapsed()) { <span class="min-w-0 flex-1">{{ theme.dark() ? 'Modo claro' : 'Modo oscuro' }}</span> }
+    </button>
+    <button type="button" [class]="logoutBtnClass()" (click)="logout()"
+      [title]="collapsed() ? 'Cerrar sesión' : null">
+      <i class="ti ti-logout"></i>
+      @if (!collapsed()) { <span class="min-w-0 flex-1">Cerrar sesión</span> }
+    </button>
+  </div>
+</aside>
+
+@if (openFlyout(); as fo) {
+  <div class="fixed z-2000 flex min-w-52.5 flex-col gap-[0.1rem] rounded-lg border border-border bg-surface p-2 shadow-xl animate-flyout-in"
+    [style.top.px]="fo.top" [style.left.px]="fo.left"
+    (mouseenter)="cancelClose()" (mouseleave)="scheduleClose()">
+    <div class="px-2.5 pb-2 pt-1 text-[0.68rem] font-bold uppercase tracking-wide text-fg-subtle">{{ fo.item.label }}</div>
+    @for (child of fo.item.children; track child.label) {
+      @if (child.comingSoon) {
+        <span [class]="flyoutDisabledClass" title="Próximamente">
+          {{ child.label }}
+          <span class="rounded bg-card-accent px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-fg-subtle">Pronto</span>
+        </span>
+      } @else {
+        <a [routerLink]="child.route" routerLinkActive="bg-card-accent text-fg" [class]="flyoutLinkClass"
+           (click)="openFlyout.set(null)">
+          {{ child.label }}
+        </a>
+      }
+    }
+  </div>
+}

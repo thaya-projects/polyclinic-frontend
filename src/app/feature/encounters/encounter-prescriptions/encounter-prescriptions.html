@@ -1,0 +1,59 @@
+<section class="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4" data-testid="prescriptions-section"
+  aria-labelledby="encounter-prescriptions-title">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h3 id="encounter-prescriptions-title" class="text-lg font-semibold text-navy">Recetas</h3>
+    @if (editable() && !formOpen()) {
+      <button type="button" id="btn-new-prescription" data-testid="btn-new-prescription" (click)="openForm()" [disabled]="busy()"
+        class="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+        <i class="ti ti-file-plus" aria-hidden="true"></i>
+        Nueva receta
+      </button>
+    }
+  </div>
+
+  @if (error()) {
+    <div role="alert" class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="prescriptions-error">
+      <i class="ti ti-alert-circle" aria-hidden="true"></i>
+      {{ error() }}
+    </div>
+  }
+
+  @if (editable() && formOpen()) {
+    <div class="flex flex-col gap-3 rounded-xl border border-border p-4" id="encounter-prescription-form-anchor" tabindex="-1">
+      <h4 class="text-sm font-semibold text-navy">Nueva receta</h4>
+      <app-prescription-form
+        [busy]="busy()"
+        [saving]="saving()"
+        [createdSeq]="createdSeq()"
+        (submitted)="create.emit($event)"
+        (cancelled)="cancelForm()" />
+    </div>
+  }
+
+  @if (loadError()) {
+    <div role="alert" class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="prescriptions-load-error">
+      <span class="flex items-center gap-2"><i class="ti ti-alert-circle" aria-hidden="true"></i>{{ loadError() }}</span>
+      @if (loadRetryable()) {
+        <button type="button" (click)="retry.emit()" data-testid="prescriptions-retry"
+          class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:border-red-400">
+          Reintentar
+        </button>
+      }
+    </div>
+  } @else if (loading() && prescriptions().length === 0) {
+    <p class="flex items-center gap-2 text-sm text-muted"><i class="ti ti-loader-2 animate-spin" aria-hidden="true"></i>Cargando recetas...</p>
+  } @else {
+    <app-prescriptions-list
+      [prescriptions]="prescriptions()"
+      [locale]="locale()"
+      [professionalNames]="professionalNames()"
+      [addItemReasons]="editable() ? addItemReasons() : null"
+      [busy]="busy()"
+      [addingItemTo]="addingItemTo()"
+      [itemError]="itemError()"
+      [itemAddedSeq]="itemAddedSeq()"
+      [headingLevel]="4"
+      emptyMessage="Sin recetas emitidas en este encuentro."
+      (addItem)="addItem.emit($event)" />
+  }
+</section>

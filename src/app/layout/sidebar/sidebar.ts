@@ -1,0 +1,261 @@
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { ThemeService } from '../../core/services/theme.service';
+import { SessionService } from '../../core/services/session.service';
+import { CurrentUserService } from '../../core/services/current-user.service';
+import { FeaturesService } from '../../core/services/features.service';
+import { FeatureKey } from '../../core/models/features.model';
+import { EncounterLookupsService } from '../../core/services/encounter-lookups.service';
+import { AuthStore } from '../../core/services/auth-store.service';
+
+interface NavLeaf {
+  kind: 'leaf'; label: string; icon: string; route?: string; comingSoon?: boolean;
+  // T6 FF: si viene, el sidebar oculta la entry cuando FeaturesService.enabled(key) es false.
+  // Sin key, la entry es siempre visible (menús admin como Clínicas/Planes).
+  moduleKey?: FeatureKey;
+  // Fase 4: visible solo si el usuario puede leer encounters (profesional activo o clinical.void).
+  requiresEncountersAccess?: boolean;
+}
+interface NavGroup { kind: 'group'; label: string; icon: string; children: NavLeaf[]; }
+type NavEntry = NavLeaf | NavGroup;
+
+interface OpenFlyout { item: NavGroup; top: number; left: number; }
+
+const COLLAPSE_KEY = 'mc_sidebar_collapsed';
+
+// Sidebar de la plataforma (super admin): solo lo global de la plataforma.
+// Nunca se le muestra el menú de clínica (ni pacientes ni agenda).
+const SUPERADMIN_NAV_ITEMS: NavEntry[] = [
+  { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
+  { kind: 'leaf', label: 'Clínicas', icon: 'building-hospital', route: '/superadmin/tenants' },
+  { kind: 'leaf', label: 'Planes', icon: 'package', route: '/superadmin/plans' },
+  // Fase 10 T3: solo aparece acá (nunca en CLINIC_NAV_ITEMS) — junto con
+  // superadminGuard en la ruta, cumple "la ruta se oculta y se protege".
+  { kind: 'leaf', label: 'Reportes', icon: 'report-analytics', route: '/superadmin/reports' },
+];
+
+// Sidebar de clínica v1: mismo menú para admin/recepcion/profesional — no
+// se le oculta Pacientes a recepción.
+const CLINIC_NAV_ITEMS: NavEntry[] = [
+  { kind: 'leaf', label: 'Agenda', icon: 'calendar-event', route: '/appointments' },
+  { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', route: '/patients' },
+  // Fase 4 T6: encuentros clínicos (notas de evolución). Visible solo con acceso clínico
+  // (profesional activo o clinical.void).
+  { kind: 'leaf', label: 'Encuentros', icon: 'notes', route: '/encounters', requiresEncountersAccess: true },
+  { kind: 'leaf', label: 'Servicios', icon: 'stethoscope', route: '/services' },
+  // Fase 6: grupo Odontología gated por feature 'odontogram' (cada hijo lleva el moduleKey; un
+  // grupo sin hijos visibles se oculta entero). Reemplaza la entry demo "Odontograma" de T6 FF.
+  {
+    kind: 'group', label: 'Odontología', icon: 'dental', children: [
+      { kind: 'leaf', label: 'Catálogo', icon: 'list-details', route: '/odontology/catalog', moduleKey: 'odontogram' },
+      { kind: 'leaf', label: 'Odontograma', icon: 'dental', route: '/odontology/odontogram', moduleKey: 'odontogram' },
+    ],
+  },
+  // Fase 8: gated por feature 'invoicing' — mismo criterio que Odontología.
+  { kind: 'leaf', label: 'Facturas', icon: 'file-invoice', route: '/invoices', moduleKey: 'invoicing' },
+  // Fase 9: gated por feature 'whatsapp' (es la key existente más cercana
+  // a "notificaciones" — no hay un FeatureKey 'notifications' propio).
+  { kind: 'leaf', label: 'Notificaciones', icon: 'message-2', route: '/notification-templates', moduleKey: 'whatsapp' },
+];
+
+// Extra solo para role.code === 'admin'. Sucursales/Especialidades/
+// Profesionales/Salas/Horarios eran de 'develop' (antes de que existiera
+// este split por rol); son configuración de la propia clínica, no de la
+// plataforma, así que van acá y no en SUPERADMIN_NAV_ITEMS.
+const CLINIC_ADMIN_EXTRA_NAV_ITEMS: NavEntry[] = [
+  { kind: 'leaf', label: 'Sucursales', icon: 'building', route: '/branches' },
+  { kind: 'leaf', label: 'Especialidades', icon: 'certificate', route: '/specialties' },
+  { kind: 'leaf', label: 'Profesionales', icon: 'stethoscope', route: '/professionals' },
+  { kind: 'leaf', label: 'Salas', icon: 'door', route: '/rooms' },
+  { kind: 'leaf', label: 'Horarios', icon: 'calendar-time', route: '/schedules' },
+  { kind: 'leaf', label: 'Roles', icon: 'shield-lock', route: '/roles' },
+  // Fase 10: reportes con datos financieros (facturación) — mismo
+  // criterio que Roles/Sucursales, solo admin.
+  { kind: 'leaf', label: 'Reportes', icon: 'report-analytics', route: '/reports' },
+  { kind: 'leaf', label: 'Configuración', icon: 'settings', comingSoon: true },
+];
+
+@Component({
+  selector: 'app-sidebar',
+  imports: [RouterLink, RouterLinkActive],
+  templateUrl: './sidebar.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class Sidebar {
+  theme = inject(ThemeService);
+  private session = inject(SessionService);
+  private currentUser = inject(CurrentUserService);
+
+  private platformId = inject(PLATFORM_ID);
+  private closeTimer?: ReturnType<typeof setTimeout>;
+
+  private features = inject(FeaturesService);
+  private encounterLookups = inject(EncounterLookupsService);
+  private authStore = inject(AuthStore);
+
+  // Último veredicto conocido de acceso a Encuentros: no se oculta/muestra mientras una pantalla
+  // recarga los lookups (evita parpadeo). Arranca oculto hasta saberlo (default cerrado).
+  private readonly encountersVisible = signal(false);
+
+  collapsed  = signal<boolean>(this.loadCollapsed());
+  openFlyout = signal<OpenFlyout | null>(null);
+
+  // Menú por tipo de usuario (super admin vs clínica, con extra de admin
+  // dentro de clínica) y, encima, T6 FF filtra las entries con moduleKey
+  // según FeaturesService. Si el mapa aún no cargó (loaded=false), las
+  // entries gated quedan ocultas (default cerrado) para no filtrar por un
+  // instante y luego esconder — mejor UX esperar al primer GET
+  // /tenants/me/features.
+  readonly navItems = computed<NavEntry[]>(() => {
+    const base = this.currentUser.isSuperAdmin()
+      ? SUPERADMIN_NAV_ITEMS
+      : this.currentUser.hasRole('admin')
+        ? [...CLINIC_NAV_ITEMS, ...CLINIC_ADMIN_EXTRA_NAV_ITEMS]
+        : CLINIC_NAV_ITEMS;
+
+    const enabled = this.features.enabledMap();
+    const loaded = this.features.loaded();
+    const encountersVisible = this.encountersVisible();
+    return base
+      .map(entry => {
+        if (entry.kind === 'group') {
+          return { ...entry, children: entry.children.filter(c => this.showLeaf(c, enabled, loaded, encountersVisible)) };
+        }
+        return this.showLeaf(entry, enabled, loaded, encountersVisible) ? entry : null;
+      })
+      .filter((e): e is NavEntry => e !== null && !(e.kind === 'group' && e.children.length === 0));
+  });
+
+  constructor() {
+    // Solo usuarios de un tenant (el super admin no tiene profesionales: evita un 403 + toast).
+    effect(() => {
+      if (this.authStore.tenant()) untracked(() => this.encounterLookups.ensureProfessionalsLoaded());
+    });
+    effect(() => {
+      const access = this.encounterLookups.encountersAccess();
+      if (access === 'allowed') this.encountersVisible.set(true);
+      else if (access === 'denied' || access === 'error') this.encountersVisible.set(false);
+    });
+  }
+
+  private showLeaf(leaf: NavLeaf, enabled: Record<string, boolean>, loaded: boolean, encountersVisible: boolean): boolean {
+    if (leaf.requiresEncountersAccess && !encountersVisible) return false;
+    if (!leaf.moduleKey) return true;
+    return loaded && enabled[leaf.moduleKey] === true;
+  }
+
+  private collapsedGroups = signal<Set<string>>(new Set());
+
+  // ── Clases Tailwind (varían según collapsed(), se arman aquí en vez de
+  //    repetir ternarios largos en el template) ──────────────────────
+  readonly widthClass = computed(() =>
+    this.collapsed() ? 'w-19 min-w-19' : 'w-55 min-w-55',
+  );
+
+  readonly navClass = computed(() => {
+    const base = 'flex-1 flex flex-col gap-[0.15rem] overflow-y-auto p-2';
+    return this.collapsed() ? `${base} items-center` : base;
+  });
+
+  readonly headerClass = computed(() => {
+    const base = 'flex items-center gap-2.5 px-4 py-5 border-b border-white/10';
+    return this.collapsed() ? `${base} justify-center px-2` : base;
+  });
+
+  readonly footerClass = computed(() => {
+    const base = 'flex flex-col gap-[0.15rem] p-2 border-t border-white/10';
+    return this.collapsed() ? `${base} items-center` : base;
+  });
+
+  readonly navLinkClass = computed(() => this.linkClasses('text-sidebar-fg-muted'));
+  readonly navDisabledClass = computed(() => `${this.linkClasses('text-sidebar-fg-muted')} opacity-65 cursor-default`);
+  readonly groupHeaderClass = computed(() => this.linkClasses('text-sidebar-fg-muted', true));
+  readonly footerBtnClass = computed(() => this.linkClasses('text-sidebar-fg-muted', true));
+  readonly logoutBtnClass = computed(() => this.linkClasses('text-red-400/80', true, 'hover:bg-red-500/15'));
+
+  readonly navLinkChildClass =
+    'flex items-center gap-2.5 w-full rounded-lg px-3 py-2.5 text-[0.82rem] font-medium text-sidebar-fg-muted no-underline transition-colors hover:bg-sidebar-hover hover:text-sidebar-fg';
+  readonly navDisabledChildClass =
+    'flex items-center gap-2.5 w-full rounded-lg px-3 py-2.5 text-[0.82rem] font-medium text-sidebar-fg-muted opacity-65 cursor-default';
+
+  readonly flyoutLinkClass =
+    'flex items-center justify-between gap-2 rounded-md px-2.5 py-2 text-[0.82rem] font-medium text-fg-muted no-underline transition-colors hover:bg-card-accent hover:text-fg';
+  readonly flyoutDisabledClass =
+    'flex items-center justify-between gap-2 rounded-md px-2.5 py-2 text-[0.82rem] font-medium text-fg-muted opacity-50 cursor-default';
+
+  private linkClasses(color: string, isButton = false, hover?: string): string {
+    const base = `flex items-center gap-2.5 rounded-lg text-sm font-medium no-underline transition-colors font-sans ${color} ${hover ?? 'hover:bg-sidebar-hover hover:text-sidebar-fg'}`;
+    const buttonReset = isButton ? ' bg-transparent border-0 cursor-pointer text-left' : '';
+    return this.collapsed()
+      ? `${base}${buttonReset} justify-center w-11 px-2.5 py-2.5`
+      : `${base}${buttonReset} w-full px-3 py-2.5`;
+  }
+
+  logout(): void {
+    this.session.logout();
+  }
+
+  toggleCollapsed(): void {
+    this.collapsed.update(v => !v);
+    this.openFlyout.set(null);
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem(COLLAPSE_KEY, this.collapsed() ? '1' : '0');
+    }
+  }
+
+  toggleGroup(label: string): void {
+    this.collapsedGroups.update(current => {
+      const next = new Set(current);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  }
+
+  isExpanded(label: string): boolean {
+    return !this.collapsedGroups().has(label);
+  }
+
+  onGroupHeaderClick(event: MouseEvent, item: NavGroup): void {
+    if (!this.collapsed()) {
+      this.toggleGroup(item.label);
+      return;
+    }
+    event.preventDefault();
+    const current = this.openFlyout();
+    if (current?.item.label === item.label) {
+      this.openFlyout.set(null);
+    } else {
+      this.positionFlyout(event.currentTarget as HTMLElement, item);
+    }
+  }
+
+  onGroupMouseEnter(event: MouseEvent, item: NavGroup): void {
+    if (!this.collapsed()) return;
+    this.cancelClose();
+    this.positionFlyout(event.currentTarget as HTMLElement, item);
+  }
+
+  onGroupMouseLeave(): void {
+    if (!this.collapsed()) return;
+    this.scheduleClose();
+  }
+
+  cancelClose(): void {
+    if (this.closeTimer) clearTimeout(this.closeTimer);
+  }
+
+  scheduleClose(): void {
+    this.closeTimer = setTimeout(() => this.openFlyout.set(null), 150);
+  }
+
+  private positionFlyout(el: HTMLElement, item: NavGroup): void {
+    const rect = el.getBoundingClientRect();
+    this.openFlyout.set({ item, top: rect.top, left: rect.right + 8 });
+  }
+
+  private loadCollapsed(): boolean {
+    if (!isPlatformBrowser(this.platformId)) return false;
+    return localStorage.getItem(COLLAPSE_KEY) === '1';
+  }
+}

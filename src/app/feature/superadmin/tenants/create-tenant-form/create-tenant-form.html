@@ -1,0 +1,187 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-6">
+
+  <!-- Stepper -->
+  <div class="flex items-center gap-2">
+    @for (label of stepLabels; track label; let i = $index) {
+      <div class="flex flex-1 items-center gap-2">
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+          [class]="i + 1 <= currentStep() ? 'bg-brand text-white' : 'border border-border text-muted'">
+          @if (i + 1 < currentStep()) { <i class="ti ti-check"></i> } @else { {{ i + 1 }} }
+        </div>
+        <span class="hidden text-xs font-medium sm:block" [class]="i + 1 === currentStep() ? 'text-navy' : 'text-muted'">
+          {{ label }}
+        </span>
+        @if (i < stepLabels.length - 1) {
+          <div class="h-px flex-1" [class]="i + 1 < currentStep() ? 'bg-brand' : 'bg-border'"></div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Paso 1: Datos de la clínica -->
+  @if (currentStep() === 1) {
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Nombre</span>
+        <input type="text" formControlName="name" placeholder="Clínica San Andrés" [class]="inputClass(form.controls.name)" />
+        @if (isInvalid(form.controls.name)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.name) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Slug</span>
+        <input type="text" formControlName="slug" placeholder="clinica-san-andres" class="font-mono" [class]="inputClass(form.controls.slug)" />
+        @if (isInvalid(form.controls.slug)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.slug) }}</span>
+        } @else {
+          <span class="text-xs text-muted">Se sugiere desde el nombre, pero podés editarlo.</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">País</span>
+        <select formControlName="country_code" [class]="inputClass(form.controls.country_code)">
+          <option value="" disabled>Seleccionar país</option>
+          @for (opt of countryOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+        @if (isInvalid(form.controls.country_code)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.country_code) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Plan</span>
+        <select formControlName="plan_id" [class]="inputClass(form.controls.plan_id)">
+          <option value="" disabled>Seleccionar plan</option>
+          @for (opt of planOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+        @if (isInvalid(form.controls.plan_id)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.plan_id) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Días de trial</span>
+        <input type="number" min="0" formControlName="trial_days" [class]="inputClass(form.controls.trial_days)" />
+        @if (isInvalid(form.controls.trial_days)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.trial_days) }}</span>
+        }
+      </label>
+    </div>
+  }
+
+  <!-- Paso 2: Configuración regional -->
+  @if (currentStep() === 2) {
+    <div class="flex flex-col gap-4">
+      <p class="text-xs text-muted">Se sugieren según el país elegido, pero se pueden editar.</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted">Moneda</span>
+          <input type="text" formControlName="default_currency" placeholder="BOB" [class]="inputClass(form.controls.default_currency)" />
+          @if (isInvalid(form.controls.default_currency)) {
+            <span class="text-xs text-red-500">{{ errorMessage(form.controls.default_currency) }}</span>
+          }
+        </label>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted">Zona horaria</span>
+          <input type="text" formControlName="default_timezone" placeholder="America/La_Paz" [class]="inputClass(form.controls.default_timezone)" />
+          @if (isInvalid(form.controls.default_timezone)) {
+            <span class="text-xs text-red-500">{{ errorMessage(form.controls.default_timezone) }}</span>
+          }
+        </label>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted">Locale</span>
+          <input type="text" formControlName="locale" placeholder="es-BO" [class]="inputClass(form.controls.locale)" />
+          @if (isInvalid(form.controls.locale)) {
+            <span class="text-xs text-red-500">{{ errorMessage(form.controls.locale) }}</span>
+          }
+        </label>
+      </div>
+    </div>
+  }
+
+  <!-- Paso 3: Facturación -->
+  @if (currentStep() === 3) {
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Razón social</span>
+        <input type="text" formControlName="legal_name" placeholder="Clínica San Andrés S.R.L." [class]="inputClass(form.controls.legal_name)" />
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">NIT / Tax ID</span>
+        <input type="text" formControlName="tax_id" placeholder="1023456789" [class]="inputClass(form.controls.tax_id)" />
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Correo de facturación</span>
+        <input type="email" formControlName="billing_email" placeholder="facturacion@clinica.com" [class]="inputClass(form.controls.billing_email)" />
+        @if (isInvalid(form.controls.billing_email)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.billing_email) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Dirección de facturación</span>
+        <input type="text" formControlName="billing_address" placeholder="Av. Siempre Viva 123" [class]="inputClass(form.controls.billing_address)" />
+      </label>
+    </div>
+  }
+
+  <!-- Paso 4: Administrador inicial -->
+  @if (currentStep() === 4) {
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" formGroupName="first_admin">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Nombre completo</span>
+        <input type="text" formControlName="full_name" placeholder="Ana Belén Rojas" [class]="inputClass(form.controls.first_admin.controls.full_name)" />
+        @if (isInvalid(form.controls.first_admin.controls.full_name)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.first_admin.controls.full_name) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-muted">Correo</span>
+        <input type="email" formControlName="email" placeholder="admin@clinica.com" [class]="inputClass(form.controls.first_admin.controls.email)" />
+        @if (isInvalid(form.controls.first_admin.controls.email)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.first_admin.controls.email) }}</span>
+        }
+      </label>
+
+      <label class="flex flex-col gap-1.5 sm:col-span-2">
+        <span class="text-xs font-medium text-muted">Contraseña</span>
+        <div class="flex items-center gap-2">
+          <input [type]="showPassword() ? 'text' : 'password'" formControlName="password" placeholder="Mínimo 8 caracteres"
+            class="flex-1" [class]="inputClass(form.controls.first_admin.controls.password)" />
+
+          <button type="button" (click)="showPassword.set(!showPassword())"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-brand hover:text-brand">
+            <i class="ti" [class.ti-eye]="!showPassword()" [class.ti-eye-off]="showPassword()"></i>
+          </button>
+
+          <button type="button" (click)="generatePassword()"
+            class="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium whitespace-nowrap text-navy transition-colors hover:border-brand hover:text-brand">
+            <i class="ti ti-wand"></i> Generar
+          </button>
+
+          <button type="button" (click)="copyPassword()" aria-label="Copiar contraseña"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-brand hover:text-brand">
+            <i class="ti" [class.ti-copy]="!passwordCopied()" [class.ti-check]="passwordCopied()"></i>
+          </button>
+        </div>
+        @if (isInvalid(form.controls.first_admin.controls.password)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.first_admin.controls.password) }}</span>
+        } @else if (passwordCopied()) {
+          <span class="text-xs text-brand">Contraseña copiada.</span>
+        }
+      </label>
+    </div>
+  }
+</form>

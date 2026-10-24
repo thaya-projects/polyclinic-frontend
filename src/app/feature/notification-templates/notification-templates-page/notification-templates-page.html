@@ -1,0 +1,44 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h2 class="text-2xl font-bold text-navy">Notificaciones</h2>
+    <p class="mt-1 text-sm text-muted">Plantillas, reglas de recordatorio, notificaciones enviadas y mensajes entrantes.</p>
+  </div>
+
+  <div class="flex flex-wrap gap-2 border-b border-border">
+    <button type="button" (click)="setTab('templates')"
+      class="border-b-2 px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'templates' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
+      Plantillas
+    </button>
+    <button type="button" (click)="setTab('rules')"
+      class="border-b-2 px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'rules' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
+      Reglas de recordatorio
+    </button>
+    <button type="button" (click)="setTab('notifications')"
+      class="border-b-2 px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'notifications' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
+      Notificaciones enviadas
+    </button>
+    <button type="button" (click)="setTab('inbound')"
+      class="border-b-2 px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'inbound' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
+      Mensajes entrantes
+    </button>
+  </div>
+
+  @switch (activeTab()) {
+    @case ('templates') {
+      <app-notification-templates-section />
+    }
+    @case ('rules') {
+      <app-reminder-rules-section />
+    }
+    @case ('notifications') {
+      <app-notifications-section />
+    }
+    @default {
+      <app-inbound-messages-section />
+    }
+  }
+</div>

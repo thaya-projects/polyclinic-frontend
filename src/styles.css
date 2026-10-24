@@ -1,3 +1,113 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
+
+/* ════════════════════════════════════════════════════════════════
+   Paleta de marca (navy/teal) — ver doc de diseño.
+   Tokens con los mismos nombres que el doc (--navy, --brand, --sidebar,
+   --card-dark, --icon-soft, --text, --text-on-dark, --muted, --chip-*,
+   --positive) para que se puedan copiar tal cual a Figma/CSS, más los
+   tokens estructurales (--fg-muted, --sidebar-hover, --topbar, etc.)
+   que ya usan los componentes existentes.
+   ════════════════════════════════════════════════════════════════ */
+@theme {
+  /* Marca */
+  --color-navy: #032246;
+  --color-brand: #0e6b75;
+  --color-brand-dark: #014955;
+  --color-sidebar: #014955;
+  --color-card-dark: #00404b;
+
+  /* Superficies */
+  --color-bg: #fbfaf8;
+  --color-surface: #ffffff;
+  --color-surface-alt: #e1eff0;
+  --color-icon-soft: #e1eff0;
+  --color-border: #e6eeee;
+
+  /* Texto */
+  --color-text: #032246;
+  --color-fg: #032246;
+  --color-fg-muted: #6a7a7c;
+  --color-fg-subtle: #93a3a4;
+  --color-text-on-dark: #e8f4f3;
+  --color-muted: #6a7a7c;
+
+  /* Rail izquierdo (siempre oscuro, en ambos temas) */
+  --color-sidebar-fg: #e8f4f3;
+  --color-sidebar-fg-muted: rgba(232, 244, 243, 0.75);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.12);
+  --color-sidebar-active: #0e6b75;
+
+  /* Header — superficie clara, no un bloque de color */
+  --color-topbar: #ffffff;
+  --color-topbar-fg: #032246;
+  --color-topbar-fg-muted: #6a7a7c;
+
+  --color-card-accent: #e1eff0;
+
+  /* Tabla — el thead NUNCA usa --sidebar ni --brand de fondo (spec de tabla) */
+  --color-table-head: #f4f8f8;
+  --color-table-hover: #f0f7f6;
+
+  /* Estados / chips */
+  --color-chip-ok-bg: #d8eceb;
+  --color-chip-ok-fg: #1b6a68;
+  --color-chip-wait-bg: #f3d7b0;
+  --color-chip-wait-fg: #8a5a28;
+  --color-chip-danger-bg: #fbdede;
+  --color-chip-danger-fg: #b83b3b;
+  --color-positive: #2a8a6a;
+
+  --animate-flyout-in: flyout-in 120ms ease both;
+}
+
+@keyframes flyout-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Los valores de --color-* se redefinen aquí para modo oscuro; como las
+   utilidades de Tailwind generadas (bg-sidebar, text-fg, etc.) solo leen
+   la variable CSS en tiempo de render, el tema cambia entero con un único
+   toggle de clase en <body>, sin duplicar clases dark: en cada plantilla.
+   El doc de diseño solo trae la versión clara — esta es una variante
+   oscura derivada, coherente con los mismos tonos navy/teal. */
+body.dark {
+  --color-bg: #071a22;
+  --color-surface: #0d232c;
+  --color-surface-alt: #123039;
+  --color-border: rgba(255, 255, 255, 0.08);
+
+  --color-text: #e8f4f3;
+  --color-fg: #e8f4f3;
+  --color-fg-muted: rgba(232, 244, 243, 0.65);
+  --color-fg-subtle: rgba(232, 244, 243, 0.42);
+  --color-muted: rgba(232, 244, 243, 0.65);
+
+  --color-navy: #e8f4f3;
+
+  --color-sidebar: #012a33;
+  --color-sidebar-fg: #e8f4f3;
+  --color-sidebar-fg-muted: rgba(232, 244, 243, 0.7);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-active: #0e6b75;
+
+  --color-topbar: #0d232c;
+  --color-topbar-fg: #e8f4f3;
+  --color-topbar-fg-muted: rgba(232, 244, 243, 0.65);
+
+  --color-card-accent: #123039;
+  --color-icon-soft: rgba(14, 107, 117, 0.22);
+
+  --color-table-head: #0a1f27;
+  --color-table-hover: rgba(14, 107, 117, 0.16);
+
+  --color-chip-ok-bg: rgba(27, 106, 104, 0.28);
+  --color-chip-ok-fg: #6fd9ce;
+  --color-chip-wait-bg: rgba(138, 90, 40, 0.28);
+  --color-chip-wait-fg: #e8b36c;
+  --color-chip-danger-bg: rgba(184, 59, 59, 0.25);
+  --color-chip-danger-fg: #f2a3a3;
+  --color-positive: #5fd1a8;
+}

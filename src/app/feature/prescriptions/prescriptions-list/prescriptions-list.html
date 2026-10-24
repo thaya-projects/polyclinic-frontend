@@ -1,0 +1,117 @@
+@if (prescriptions().length === 0) {
+  <p class="text-sm text-muted" data-testid="prescriptions-empty">{{ emptyMessage() }}</p>
+} @else {
+  <ul class="flex flex-col gap-3" data-testid="prescriptions-list">
+    @for (p of prescriptions(); track p.id) {
+      <li>
+        <article class="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4" data-testid="prescription-card"
+          [attr.aria-labelledby]="headingId(p)">
+          <header class="flex flex-wrap items-start justify-between gap-2">
+            <div class="flex flex-col gap-0.5">
+              @if (headingLevel() === 3) {
+                <h3 [id]="headingId(p)" class="text-base font-semibold text-navy" data-testid="prescription-title">{{ title(p) }}</h3>
+              } @else {
+                <h4 [id]="headingId(p)" class="text-base font-semibold text-navy" data-testid="prescription-title">{{ title(p) }}</h4>
+              }
+              <p class="text-xs text-muted">
+                @if (professionalNames()[p.professional_id]; as name) {
+                  <span data-testid="prescription-professional">Emitida por {{ name }}</span> ·
+                }
+                @if (p.encounter_id) {
+                  <span>En un encuentro</span>
+                } @else {
+                  <span data-testid="prescription-standalone">Receta suelta</span>
+                }
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              @if (showEncounterLink() && p.encounter_id) {
+                <a [routerLink]="['/encounters', p.encounter_id]" data-testid="prescription-encounter-link"
+                  [attr.aria-label]="'Ver el encuentro de la ' + title(p).toLowerCase()"
+                  class="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+                  <i class="ti ti-notes" aria-hidden="true"></i>
+                  Ver encuentro
+                </a>
+              }
+              @if (hasButton(p.id)) {
+                <button type="button" [id]="addButtonId(p.id)" data-testid="btn-add-item" (click)="toggle(p.id)"
+                  [disabled]="reason(p.id) !== null || busy()"
+                  [attr.aria-expanded]="openPrescriptionId() === p.id"
+                  [attr.aria-controls]="openPrescriptionId() === p.id ? 'prescription-' + p.id + '-item-form' : null"
+                  [attr.aria-describedby]="describedBy(p.id)"
+                  [attr.aria-label]="'Agregar medicamento a la ' + title(p).toLowerCase()"
+                  class="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-navy">
+                  <i class="ti ti-pill" aria-hidden="true"></i>
+                  Agregar medicamento
+                </button>
+              }
+            </div>
+          </header>
+
+          @if (reason(p.id); as why) {
+            <p [id]="'prescription-' + p.id + '-add-reason'" class="text-xs text-muted" data-testid="add-item-reason">{{ why }}</p>
+          }
+          @if (hint(p.id); as note) {
+            <p [id]="'prescription-' + p.id + '-add-hint'" class="flex items-center gap-1 text-xs text-amber-700" data-testid="add-item-hint">
+              <i class="ti ti-clock-exclamation" aria-hidden="true"></i>{{ note }}
+            </p>
+          }
+
+          @if (p.notes) {
+            <p class="text-sm whitespace-pre-line text-text" data-testid="prescription-notes-text">{{ p.notes }}</p>
+          }
+
+          @if (p.items.length === 0) {
+            <p class="text-sm text-muted" data-testid="prescription-no-items">Sin medicamentos.</p>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[640px] text-left text-sm" data-testid="prescription-items">
+                <caption class="sr-only">Medicamentos de la {{ title(p).toLowerCase() }}</caption>
+                <thead>
+                  <tr class="border-b border-border text-xs tracking-wide text-muted uppercase">
+                    @for (col of columns; track col.key) {
+                      <th scope="col" class="px-2 py-2 font-medium">{{ col.label }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of p.items; track item.id) {
+                    <tr class="border-b border-border last:border-b-0 align-top" data-testid="prescription-item-row">
+                      <th scope="row" class="px-2 py-2 font-semibold text-text" data-testid="prescription-item-medication">{{ item.medication }}</th>
+                      <td class="px-2 py-2 text-text">{{ cell($any(item), 'presentation') }}</td>
+                      <td class="px-2 py-2 text-text">{{ cell($any(item), 'dose') }}</td>
+                      <td class="px-2 py-2 text-text">{{ cell($any(item), 'frequency') }}</td>
+                      <td class="px-2 py-2 text-text">{{ cell($any(item), 'duration') }}</td>
+                      <td class="px-2 py-2 whitespace-pre-line text-muted">{{ cell($any(item), 'instructions') }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (itemError(); as err) {
+            @if (err.prescriptionId === p.id) {
+              <div role="alert" [id]="itemErrorId(p.id)" tabindex="-1" class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" data-testid="item-error">
+                <i class="ti ti-alert-circle" aria-hidden="true"></i>
+                {{ err.message }}
+              </div>
+            }
+          }
+
+          @if (openPrescriptionId() === p.id) {
+            <div [id]="'prescription-' + p.id + '-item-form'">
+              <app-prescription-item-form
+                [label]="'Agregar medicamento a la ' + title(p).toLowerCase()"
+                [busy]="busy()"
+                [saving]="addingItemTo() === p.id"
+                [createdSeq]="itemAddedSeq()"
+                (submitted)="submitItem(p.id, $event)"
+                (cancelled)="close()" />
+            </div>
+          }
+        </article>
+      </li>
+    }
+  </ul>
+}

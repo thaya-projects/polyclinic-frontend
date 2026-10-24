@@ -1,0 +1,68 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h2 class="text-2xl font-bold text-navy">Horarios</h2>
+    <p class="mt-1 text-sm text-muted">Grilla semanal de atención por profesional y excepciones (feriados, licencias).</p>
+  </div>
+
+  @if (professionals().length === 0) {
+    <div class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+      <i class="ti ti-info-circle"></i>
+      Primero registra al menos un profesional activo.
+    </div>
+  } @else if (activeBranches().length === 0) {
+    <div class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+      <i class="ti ti-info-circle"></i>
+      Primero registra al menos una sucursal activa.
+    </div>
+  } @else {
+    <div class="flex flex-col gap-2">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="prof-selector">Profesional</label>
+      <select id="prof-selector" [value]="selectedProfessionalId() ?? ''"
+        (change)="onProfessionalChange($any($event.target).value)"
+        class="h-11 rounded-xl border border-border bg-surface px-3.5 text-sm text-text focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none md:w-96">
+        @for (p of professionals(); track p.id) {
+          <option [value]="p.id">{{ p.full_name }}</option>
+        }
+      </select>
+    </div>
+
+    @if (scheduleError()) {
+      <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ scheduleError() }}
+      </div>
+    }
+    @if (saveScheduleError()) {
+      <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ saveScheduleError() }}
+      </div>
+    }
+
+    @if (scheduleLoading()) {
+      <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-10 text-sm text-muted">
+        <i class="ti ti-loader-2 animate-spin"></i>
+        Cargando horario...
+      </div>
+    } @else {
+      <app-schedule-grid
+        [initialBlocks]="schedule()"
+        [availableBranches]="activeBranches()"
+        [saving]="savingSchedule()"
+        (save)="onSaveSchedule($event)" />
+    }
+
+    <div class="mt-6 border-t border-border pt-6">
+      <app-exceptions-section
+        [exceptions]="exceptions()"
+        [branches]="branches()"
+        [professionals]="professionals()"
+        [loading]="exceptionsLoading()"
+        [saving]="savingException()"
+        [removingId]="removingExceptionId()"
+        [error]="exceptionsError()"
+        (create)="onCreateException($event)"
+        (remove)="onRemoveException($event)" />
+    </div>
+  }
+</div>

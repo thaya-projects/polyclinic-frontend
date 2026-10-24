@@ -1,0 +1,13 @@
+<div class="flex h-screen overflow-hidden">
+  <app-sidebar />
+
+  <div class="flex flex-1 flex-col min-w-0">
+    <app-impersonation-banner />
+    <app-header />
+    <main class="flex-1 overflow-y-auto bg-bg">
+      <div class="px-14 py-10">
+        <router-outlet />
+      </div>
+    </main>
+  </div>
+</div>

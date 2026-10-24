@@ -1,0 +1,69 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5 px-6 py-5">
+  <div class="grid gap-4 md:grid-cols-2">
+    <div class="flex flex-col gap-1.5 md:col-span-2">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="prof-full-name">Nombre completo</label>
+      <input id="prof-full-name" type="text" formControlName="full_name" placeholder="ej: Dra. Perez"
+        [class]="inputClass(form.controls.full_name)" />
+      @if (isInvalid(form.controls.full_name)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.full_name) }}</span>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="prof-license">Nº de licencia</label>
+      <input id="prof-license" type="text" formControlName="license_number" placeholder="Opcional"
+        [class]="inputClass(form.controls.license_number)" />
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="prof-phone">Teléfono</label>
+      <input id="prof-phone" type="text" formControlName="phone" placeholder="Opcional"
+        [class]="inputClass(form.controls.phone)" />
+    </div>
+
+    <div class="flex flex-col gap-1.5 md:col-span-2">
+      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="prof-email">
+        Email
+        @if (form.controls.create_login_account.value) {
+          <span class="text-red-500">*</span>
+        }
+      </label>
+      <input id="prof-email" type="email" formControlName="email" placeholder="Opcional"
+        [class]="inputClass(form.controls.email)" />
+      @if (isInvalid(form.controls.email)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.email) }}</span>
+      }
+    </div>
+  </div>
+
+  @if (!isEdit()) {
+    <label class="flex items-start gap-2.5 rounded-xl border border-border bg-surface px-4 py-3">
+      <input type="checkbox" formControlName="create_login_account" class="mt-0.5 h-4 w-4 accent-brand" />
+      <span class="flex flex-col gap-0.5">
+        <span class="text-sm font-medium text-navy">Crear cuenta de acceso para este profesional</span>
+        <span class="text-xs text-muted">
+          Le va a llegar una clave temporal por correo. Requiere email.
+        </span>
+      </span>
+    </label>
+  }
+
+  <div class="flex flex-col gap-2">
+    <label class="text-xs font-medium text-muted uppercase tracking-wide">Especialidades</label>
+    @if (availableSpecialties().length === 0) {
+      <span class="text-xs text-muted">No hay especialidades activas todavía.</span>
+    } @else {
+      <div class="flex flex-wrap gap-2">
+        @for (s of availableSpecialties(); track s.id) {
+          <button type="button" (click)="toggleSpecialty(s.id)"
+            [class]="isSelected(s.id)
+              ? 'inline-flex items-center gap-1.5 rounded-full border border-brand bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand transition-colors'
+              : 'inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-brand hover:text-brand'">
+            @if (isSelected(s.id)) { <i class="ti ti-check"></i> }
+            {{ s.name }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+</form>
