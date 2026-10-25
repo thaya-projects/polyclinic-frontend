@@ -3,6 +3,7 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Va
 import { Modal } from '../../../shared/components/modal/modal';
 import { ENCOUNTER_LIMITS } from '../../../core/models/encounter.model';
 import { fieldErrorMessage, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 // El backend recorta antes de validar 1-500: solo espacios cuenta como vacío.
 function notBlank(control: AbstractControl): ValidationErrors | null {
@@ -44,6 +45,12 @@ export class VoidEncounterDialog {
 
   get reasonLength(): number {
     return this.form.controls.reason.value?.length ?? 0;
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el contenedor muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   submit(): void {

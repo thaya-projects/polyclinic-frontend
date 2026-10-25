@@ -57,13 +57,18 @@ describe('ToothConditionForm', () => {
     expect(form.form.controls.surface.value).toBe('mesial');
   });
 
-  it('selector: globales y propias agrupadas, con la muestra del default_color', () => {
+  it('selector: globales y propias agrupadas, cada opción con el color del default_color', () => {
     render();
-    const groups = Array.from(el().querySelectorAll('optgroup')).map(g => g.label);
-    expect(groups).toEqual(['Globales', 'Propias']);
-    form.form.controls.condition_id.setValue('dc-own-1');
+    const groups = Array.from(el().querySelectorAll('[data-testid^="condition-group-"]')).map(g => g.getAttribute('data-testid'));
+    expect(groups).toEqual(['condition-group-Globales', 'condition-group-Propias']);
+    const option = q('condition-option-dc-own-1')!;
+    expect((option.querySelector('[data-testid="condition-swatch"]') as HTMLElement).style.backgroundColor).toBe('rgb(0, 172, 193)');
+    expect(option.textContent).not.toContain('#');
+
+    option.click();
     fixture.detectChanges();
-    expect(q('condition-swatch')!.style.backgroundColor).toBe('rgb(0, 172, 193)');
+    expect(form.form.controls.condition_id.value).toBe('dc-own-1');
+    expect(option.getAttribute('aria-checked')).toBe('true');
   });
 
   it('alta: emite tooth_fdi de la pieza, sin tenant_id ni created_by; nota recortada', () => {

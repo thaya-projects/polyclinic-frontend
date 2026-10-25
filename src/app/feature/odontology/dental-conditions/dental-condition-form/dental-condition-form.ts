@@ -5,7 +5,24 @@ import {
   CreateDentalConditionDto, DENTAL_CONDITION_CATEGORIES, DENTAL_CONDITION_LIMITS, DentalCondition,
   UpdateDentalConditionDto,
 } from '../../../../core/models/dental-condition.model';
+import { HttpErrorResponse } from '@angular/common/http';
 import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+import { extractServerError } from '../../../../shared/utils/server-errors.util';
+import { DentalConditionError } from '../../../../shared/utils/dental-conditions-error.util';
+
+// Los VOs DentalConditionCode / HexColor lanzan con ParamName "value" (el ProblemDetails no trae
+// `field`): el campo se deduce del texto ("Code ...", "Color ...", "Name ...", "Category ...").
+const DETAIL_FIELD: [RegExp, string][] = [
+  [/^Code\b/i, 'code'],
+  [/^Color\b/i, 'default_color'],
+  [/^Name\b/i, 'name'],
+  [/^Category\b/i, 'category'],
+];
+
+function fieldFromDetail(err: unknown): string | null {
+  const detail = err instanceof HttpErrorResponse && typeof err.error?.detail === 'string' ? err.error.detail : '';
+  return DETAIL_FIELD.find(([pattern]) => pattern.test(detail))?.[1] ?? null;
+}
 
 // required no rechaza "   ": el backend sí (Name is required).
 function notBlank(control: AbstractControl): ValidationErrors | null {
@@ -95,6 +112,23 @@ export class DentalConditionForm {
       return 'Usá el formato #RRGGBB (ej: #E53935).';
     }
     return fieldErrorMessage(control);
+  }
+
+  // Error del backend (422 de un campo, o 409 de código duplicado): lo marca en el input del campo,
+  // con el texto ya traducido por dentalConditionError. false = no es de un campo de este form (el
+  // caller muestra el banner).
+  applyServerError(err: unknown, error: DentalConditionError): boolean {
+    let field: string | null = null;
+    if (error.kind === 'duplicate_code') field = 'code';
+    else if (error.kind === 'validation') {
+      const serverField = extractServerError(err)?.field ?? null;
+      field = serverField === 'color' ? 'default_color' : serverField ?? fieldFromDetail(err);
+    }
+    const control = field ? this.form.get(field) : null;
+    if (!control || control.disabled) return false;
+    control.setErrors({ ...(control.errors ?? {}), server: error.message });
+    control.markAsTouched();
+    return true;
   }
 
   // El selector nativo devuelve #rrggbb en minúsculas; se guarda en mayúsculas como el backend.

@@ -1,17 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CreateTenantDto } from '../../../../core/models/create-tenant.model';
 import { COUNTRIES } from '../../../../core/constants/countries.const';
+import { PlansService } from '../../../../core/services/plans.service';
 import { generateRandomPassword } from '../../../../shared/utils/password.util';
 import { copyToClipboard } from '../../../../shared/utils/clipboard.util';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
-
-const PLAN_OPTIONS = [
-  { value: 'free', label: 'Free' },
-  { value: 'starter', label: 'Starter' },
-  { value: 'pro', label: 'Pro' },
-  { value: 'enterprise', label: 'Enterprise' },
-];
+import { emailValidator, fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator } from '../../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../../shared/utils/server-errors.util';
 
 const STEP_LABELS = ['Datos de la clínica', 'Configuración regional', 'Facturación', 'Administrador inicial'];
 
@@ -25,7 +20,11 @@ export class CreateTenantForm {
   private fb = inject(FormBuilder);
 
   readonly countryOptions = COUNTRIES;
-  readonly planOptions = PLAN_OPTIONS;
+  private readonly plansSvc = inject(PlansService);
+  // plan_id es el Guid del plan (backend), no un código: se listan los planes activos reales.
+  readonly planOptions = computed(() =>
+    this.plansSvc.getAll()().filter(p => p.is_active).map(p => ({ value: p.id, label: p.name })),
+  );
   readonly stepLabels = STEP_LABELS;
   readonly totalSteps = STEP_LABELS.length;
 
@@ -40,7 +39,7 @@ export class CreateTenantForm {
   private regionTouched = new Set<'default_currency' | 'default_timezone' | 'locale'>();
 
   form = this.fb.group({
-    name: ['', Validators.required],
+    name: ['', requiredNotBlankValidator],
     slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)]],
     country_code: ['', Validators.required],
     plan_id: ['', Validators.required],
@@ -50,11 +49,11 @@ export class CreateTenantForm {
     locale: ['', Validators.required],
     legal_name: [''],
     tax_id: [''],
-    billing_email: ['', [Validators.required, Validators.email]],
+    billing_email: ['', [Validators.required, emailValidator]],
     billing_address: [''],
     first_admin: this.fb.group({
-      full_name: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
+      full_name: ['', requiredNotBlankValidator],
+      email: ['', [Validators.required, emailValidator]],
       password: ['', [Validators.required, Validators.minLength(8)]],
     }),
   });
@@ -67,6 +66,7 @@ export class CreateTenantForm {
   ];
 
   constructor() {
+    this.plansSvc.load();
     this.form.controls.name.valueChanges.subscribe(name => {
       if (this.slugTouched) return;
       this.form.controls.slug.setValue(this.slugify(name ?? ''), { emitEvent: false });
@@ -115,6 +115,22 @@ export class CreateTenantForm {
       return;
     }
     this.submitted.emit(this.form.getRawValue() as CreateTenantDto);
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló y vuelve al paso donde está
+  // ese input (el submit se hace desde el último paso). Los campos del admin inicial llegan sin el
+  // prefijo first_admin. false = no es de un campo de este form (la página muestra el banner).
+  applyServerError(err: unknown): boolean {
+    const applied = applyServerError(this.form, err, {
+      full_name: 'first_admin.full_name',
+      email: 'first_admin.email',
+      password: 'first_admin.password',
+    });
+    if (applied) {
+      const step = this.stepControls.findIndex(keys => keys.some(key => this.form.controls[key].invalid));
+      if (step >= 0) this.currentStep.set(step + 1);
+    }
+    return applied;
   }
 
   cancel(): void {

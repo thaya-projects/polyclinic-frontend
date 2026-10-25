@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { normalizeBackendMessage } from './encounters-error.util';
+import { translatedValidationMessage } from './translated-validation.util';
 import {
   ODONTOGRAM_DISABLED_MESSAGE, ODONTOGRAM_MODULE_KEY, hasProblemDetail, isModuleDisabledProblem,
 } from './module-disabled.util';
@@ -62,7 +63,8 @@ export const ODONTOGRAM_CONFLICT_MESSAGE =
   'Otro usuario creó un odontograma para este paciente al mismo tiempo. Se recargó el odontograma actual.';
 export const ODONTOGRAM_PATIENT_NOT_FOUND_MESSAGE = 'El paciente no existe o ya no está disponible.';
 export const ODONTOGRAM_NOT_FOUND_MESSAGE = 'El odontograma no existe o ya no está disponible.';
-export const ODONTOGRAM_VALIDATION_MESSAGE = 'Revisá los datos ingresados e intentá de nuevo.';
+export const ODONTOGRAM_VALIDATION_MESSAGE =
+  'No se pudo guardar: algún dato del odontograma (dentición, pieza, condición, cara, estado o nota) no es válido.';
 export const ODONTOGRAM_LOAD_ERROR_MESSAGE = 'No se pudo cargar el odontograma.';
 export const TOOTH_CONDITION_NOT_FOUND_MESSAGE = 'La condición marcada ya no existe. Se recargó la pieza.';
 export const TOOTH_CONDITION_WRITE_FORBIDDEN_MESSAGE =
@@ -194,8 +196,11 @@ export function odontogramError(
     case 403: return forbiddenError(err, context);
     case 404: return notFoundError(err);
     case 409: return conflictError(err, context);
+    // 400 (model binding) y 422: texto propio si se reconoce, si no el genérico traducido con el campo.
+    case 400:
     case 422: return {
-      kind: 'validation', message: translate(detailOf(err), VALIDATION_MESSAGES) ?? ODONTOGRAM_VALIDATION_MESSAGE,
+      kind: 'validation',
+      message: translate(detailOf(err), VALIDATION_MESSAGES) ?? translatedValidationMessage(err) ?? ODONTOGRAM_VALIDATION_MESSAGE,
     };
     case 0: return { kind: 'other', message: 'No se pudo conectar con el servidor.' };
     default: return { kind: 'other', message: fallback };

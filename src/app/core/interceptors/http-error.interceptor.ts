@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { ToastService } from '../services/toast.service';
 import { isAuthExemptPath } from '../constants/auth-exempt-paths.const';
-import { validationErrorMessage } from '../../shared/utils/http-error.util';
+import { specificErrorMessage, validationErrorMessage } from '../../shared/utils/http-error.util';
 
 // T20: manejo global de 403/404/422 — muestra un toast y deja pasar el
 // error tal cual (no lo swallowea), para que cada pantalla pueda además
@@ -27,9 +27,9 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         if (err.status === 403) {
           toast.error('No tenés permisos para realizar esta acción.');
         } else if (err.status === 404) {
-          toast.error('Recurso no encontrado.');
+          toast.error(specificErrorMessage(err) ?? 'Recurso no encontrado.');
         } else if (err.status === 422) {
-          toast.error(validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.');
+          toast.error(validationErrorMessage(err) ?? 'El servidor rechazó los datos enviados.');
         }
       }
       return throwError(() => err);

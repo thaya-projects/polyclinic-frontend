@@ -5,7 +5,7 @@
       <input id="specialty-code" type="text" formControlName="code" placeholder="ej: dermatologia"
         [class]="inputClass(form.controls.code)" />
       @if (isInvalid(form.controls.code)) {
-        <span class="text-xs text-red-500">{{ errorMessage(form.controls.code) }}</span>
+        <span class="text-xs text-red-500">{{ codeErrorMessage() }}</span>
       }
       @if (isEdit()) {
         <span class="text-xs text-muted">El código no se puede modificar.</span>

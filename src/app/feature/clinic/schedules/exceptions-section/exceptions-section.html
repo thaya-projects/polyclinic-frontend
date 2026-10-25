@@ -71,10 +71,11 @@
 
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-medium text-muted uppercase tracking-wide" for="exc-end">Hasta</label>
-        <input id="exc-end" type="datetime-local" formControlName="ends_at"
-          [class]="inputClass(form.controls.ends_at)" />
+        <input id="exc-end" type="datetime-local" formControlName="ends_at" [class]="endsAtClass()" />
         @if (isInvalid(form.controls.ends_at)) {
           <span class="text-xs text-red-500">{{ errorMessage(form.controls.ends_at) }}</span>
+        } @else if (showEndBeforeStart()) {
+          <span class="text-xs text-red-500">{{ endBeforeStartMessage }}</span>
         }
       </div>
 
@@ -87,6 +88,9 @@
             <option [value]="p.id">{{ p.full_name }}</option>
           }
         </select>
+        @if (isInvalid(form.controls.professional_id)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.professional_id) }}</span>
+        }
       </div>
 
       <div class="flex flex-col gap-1.5">
@@ -98,12 +102,18 @@
             <option [value]="b.id">{{ b.name }}</option>
           }
         </select>
+        @if (isInvalid(form.controls.branch_id)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.branch_id) }}</span>
+        }
       </div>
 
       <div class="flex flex-col gap-1.5 md:col-span-2">
         <label class="text-xs font-medium text-muted uppercase tracking-wide" for="exc-reason">Motivo (opcional)</label>
         <input id="exc-reason" type="text" formControlName="reason" placeholder="ej: Feriado nacional"
           [class]="inputClass(form.controls.reason)" />
+        @if (isInvalid(form.controls.reason)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.reason) }}</span>
+        }
       </div>
     </div>
   </form>

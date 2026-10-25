@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { extractServerError, serverErrorText } from './server-errors.util';
 
 // Fase 4 T7: clasificación de errores de /tenants/encounters. La pantalla decide qué hacer según
 // `kind` (404 → volver al listado, 409 → recargar el encounter); `message` es el texto a mostrar.
@@ -23,7 +24,8 @@ export const PATIENTS_LOAD_ERROR_MESSAGE = 'No se pudieron cargar los pacientes.
 export const ENCOUNTERS_ACCESS_DENIED_MESSAGE = 'Solo los profesionales pueden ver las notas clínicas.';
 export const ADMIN_VOID_ONLY_MESSAGE =
   'Solo el profesional del encuentro puede editar o firmar esta nota. Podés anularla administrativamente.';
-export const GENERIC_VALIDATION_MESSAGE = 'Revisá los datos ingresados e intentá de nuevo.';
+// 422 sin motivo reconocible ni campo: nunca el texto crudo del backend (inglés, con GUIDs).
+export const GENERIC_VALIDATION_MESSAGE = 'El servidor rechazó uno de los datos del encuentro y no informó cuál.';
 
 // Fase 4 T4/T5: diagnósticos y CIE-10.
 export const DIAGNOSIS_FORBIDDEN_MESSAGE = 'Solo el profesional del encuentro puede agregar o eliminar diagnósticos.';
@@ -170,6 +172,15 @@ function backendDetail(err: HttpErrorResponse): string {
   return normalizeBackendMessage(backendMessages(err)[0] ?? '');
 }
 
+// 422 con `field` (ArgumentException del Domain): aunque el texto no esté en KNOWN_MESSAGES, se
+// nombra el campo y el motivo genérico traducido ("Motivo de consulta: El valor supera...").
+function fieldValidationMessage(err: HttpErrorResponse): string | null {
+  const error = extractServerError(err);
+  if (!error?.field) return null;
+  const label = FIELD_LABEL[error.field];
+  return label ? `${label.charAt(0).toUpperCase()}${label.slice(1)}: ${error.message}` : serverErrorText(error);
+}
+
 function translatedBackendMessage(err: HttpErrorResponse, context: KnownMessage[] = []): string | null {
   const raw = backendMessages(err);
   if (raw.length === 0) return null;
@@ -184,7 +195,12 @@ export function encounterError(err: unknown, fallback = 'No se pudo completar la
     case 403: return { kind: 'forbidden', message: ENCOUNTER_FORBIDDEN_MESSAGE };
     case 404: return { kind: 'not_found', message: ENCOUNTER_NOT_FOUND_MESSAGE };
     case 409: return { kind: 'conflict', message: translatedBackendMessage(err) ?? ENCOUNTER_CONFLICT_MESSAGE };
-    case 422: return { kind: 'validation', message: translatedBackendMessage(err) ?? GENERIC_VALIDATION_MESSAGE };
+    case 400:
+    case 422:
+      return {
+        kind: 'validation',
+        message: translatedBackendMessage(err) ?? fieldValidationMessage(err) ?? GENERIC_VALIDATION_MESSAGE,
+      };
     case 0: return { kind: 'other', message: 'No se pudo conectar con el servidor.' };
     default: return { kind: 'other', message: fallback };
   }
@@ -227,7 +243,8 @@ export function diagnosisError(err: unknown, fallback = 'No se pudo completar la
     case 422:
       return {
         kind: 'validation',
-        message: translatedBackendMessage(err, DIAGNOSIS_CONTEXT_MESSAGES) ?? DIAGNOSIS_VALIDATION_MESSAGE,
+        message: translatedBackendMessage(err, DIAGNOSIS_CONTEXT_MESSAGES) ?? fieldValidationMessage(err)
+          ?? DIAGNOSIS_VALIDATION_MESSAGE,
       };
     default: return encounterError(err, fallback);
   }

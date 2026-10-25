@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, effect, inject, input, output } fro
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TenantDetail, EditTenantDto } from '../../../../core/models/tenant-detail.model';
 import { COUNTRIES } from '../../../../core/constants/countries.const';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+import { emailValidator, fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator } from '../../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../../shared/utils/server-errors.util';
 
 @Component({
   selector: 'app-edit-tenant-form',
@@ -24,7 +25,7 @@ export class EditTenantForm {
   readonly errorMessage = fieldErrorMessage;
 
   form = this.fb.group({
-    name: ['', Validators.required],
+    name: ['', requiredNotBlankValidator],
     slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)]],
     country_code: ['', Validators.required],
     default_currency: ['', Validators.required],
@@ -32,7 +33,7 @@ export class EditTenantForm {
     locale: ['', Validators.required],
     legal_name: [''],
     tax_id: [''],
-    billing_email: ['', [Validators.required, Validators.email]],
+    billing_email: ['', [Validators.required, emailValidator]],
     billing_address: [''],
   });
 
@@ -56,6 +57,12 @@ export class EditTenantForm {
         { emitEvent: false },
       );
     });
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (la página muestra el banner).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   submit(): void {

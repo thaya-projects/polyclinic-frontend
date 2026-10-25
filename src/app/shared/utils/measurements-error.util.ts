@@ -4,6 +4,8 @@ import {
   translateEncounterBackendMessage,
 } from './encounters-error.util';
 import { formatMeasurementValue, measurementTypeLabel } from '../../core/models/measurement.model';
+import { extractServerError } from './server-errors.util';
+import { translatedValidationMessage } from './translated-validation.util';
 
 // Fase 4 T4: errores de /tenants/patients/:id/measurements y /tenants/measurement-types.
 // `kind` decide qué hace la pantalla; un mismo status con causas distintas se separa por el detail:
@@ -157,7 +159,23 @@ export function measurementError(err: unknown, options: MeasurementErrorOptions 
       return { kind: 'other', message: MEASUREMENT_RESOURCE_NOT_FOUND_MESSAGE };
     }
     case 409: return { kind: 'conflict', message: MEASUREMENT_CONFLICT_MESSAGE };
-    case 422: return { kind: 'validation', message: translated(err, locale) ?? MEASUREMENT_VALIDATION_MESSAGE };
+    // 400 (model binding) y 422: texto propio si se reconoce, si no el genérico traducido con el campo.
+    case 400:
+    case 422: return {
+      kind: 'validation',
+      message: translated(err, locale) ?? translatedValidationMessage(err) ?? MEASUREMENT_VALIDATION_MESSAGE,
+    };
     default: return encounterError(err, fallback);
   }
+}
+
+// Campo del alta al que apunta un 400/422, para marcarlo en su input. El middleware no informa
+// `field` cuando el ParamName es "value" (justo el del valor de la medición), así que primero se lee
+// el detail ("value for type …", "unit is required …", "measured_at cannot …", "note cannot …").
+const FIELD_FROM_DETAIL = /^(type|value|unit|measured_at|note)\b/i;
+
+export function measurementErrorField(err: unknown): string | null {
+  if (!(err instanceof HttpErrorResponse) || (err.status !== 400 && err.status !== 422)) return null;
+  const match = detail(err).match(FIELD_FROM_DETAIL);
+  return match ? match[1].toLowerCase() : extractServerError(err)?.field ?? null;
 }

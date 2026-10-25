@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { NotificationTemplatesTable } from '../notification-templates-table/notification-templates-table';
 import { NotificationTemplateForm } from '../notification-template-form/notification-template-form';
 import { Modal } from '../../../shared/components/modal/modal';
@@ -23,6 +23,10 @@ export class NotificationTemplatesSection {
   selectedTemplateId = signal<string | null>(null);
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  // Forms hijos: un 400/422 de un campo se marca debajo de su input en vez del banner general.
+  private readonly createForm = viewChild<NotificationTemplateForm>('createForm');
+  private readonly editForm = viewChild<NotificationTemplateForm>('editForm');
 
   readonly selectedTemplate = computed<NotificationTemplate | null>(() => {
     const id = this.selectedTemplateId();
@@ -53,7 +57,7 @@ export class NotificationTemplatesSection {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(notificationTemplateSaveErrorMessage(err));
+        this.actionError.set(this.createForm()?.applyServerError(err) ? null : notificationTemplateSaveErrorMessage(err));
       },
     });
   }
@@ -82,7 +86,7 @@ export class NotificationTemplatesSection {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(notificationTemplateSaveErrorMessage(err));
+        this.actionError.set(this.editForm()?.applyServerError(err) ? null : notificationTemplateSaveErrorMessage(err));
       },
     });
   }

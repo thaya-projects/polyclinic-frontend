@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { TenantsFilters } from '../tenants-filters/tenants-filters';
 import { TenantsTable } from '../tenants-table/tenants-table';
 import { CreateTenantForm } from '../create-tenant-form/create-tenant-form';
@@ -11,7 +11,7 @@ import { TenantsService } from '../../../../core/services/tenants.service';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { CreateTenantDto } from '../../../../core/models/create-tenant.model';
 import { EditTenantDto, TenantDetail } from '../../../../core/models/tenant-detail.model';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { httpErrorMessage, validationErrorMessage } from '../../../../shared/utils/http-error.util';
 
 const PAGE_SIZE = 8;
 
@@ -43,6 +43,10 @@ export class TenantsPage {
   detailLoading = signal(false);
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  // Forms hijos: un 400/422 de un campo se marca debajo de su input en vez del banner general.
+  private readonly createForm = viewChild<CreateTenantForm>('tenantForm');
+  private readonly editForm = viewChild<EditTenantForm>('editForm');
 
   confirmingToggle = signal(false);
   togglingActive = signal(false);
@@ -142,7 +146,9 @@ export class TenantsPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(
+          this.createForm()?.applyServerError(err) ? null : (validationErrorMessage(err) ?? httpErrorMessage(err)),
+        );
       },
     });
   }
@@ -160,7 +166,9 @@ export class TenantsPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(
+          this.editForm()?.applyServerError(err) ? null : (validationErrorMessage(err) ?? httpErrorMessage(err)),
+        );
       },
     });
   }

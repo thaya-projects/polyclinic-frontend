@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InvoiceOptionsService } from '../../../core/services/invoice-options.service';
 import { InvoiceItemDto } from '../../../core/models/invoice-item.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 // Form de alta rápida de un item — se resetea después de cada "Agregar"
 // (sin HTTP de por medio, no aplica el cuidado de "esperar al POST" que
@@ -37,7 +38,7 @@ export class InvoiceItemForm {
   form = this.fb.group({
     service_id: [''],
     treatment_plan_item_id: [''],
-    description: ['', Validators.required],
+    description: ['', requiredNotBlankValidator],
     quantity: [1, [Validators.required, Validators.min(1)]],
     unit_price: [0, [Validators.required, Validators.min(0)]],
   });
@@ -65,6 +66,25 @@ export class InvoiceItemForm {
     );
   }
 
+  // Error 400/422 del backend al guardar el item: como el form ya se reseteó al emitir, se
+  // restauran los valores enviados (`dto`) y se marca el input del campo que falló.
+  // false = no es de un campo de este form (el contenedor muestra el mensaje general).
+  applyServerError(err: unknown, dto?: InvoiceItemDto): boolean {
+    if (dto) {
+      this.form.setValue(
+        {
+          service_id: dto.service_id ?? '',
+          treatment_plan_item_id: dto.treatment_plan_item_id ?? '',
+          description: dto.description,
+          quantity: dto.quantity,
+          unit_price: dto.unit_price,
+        },
+        { emitEvent: false },
+      );
+    }
+    return applyServerError(this.form, err);
+  }
+
   add(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -74,9 +94,9 @@ export class InvoiceItemForm {
     this.added.emit({
       service_id: raw.service_id || null,
       treatment_plan_item_id: raw.treatment_plan_item_id || null,
-      description: raw.description!,
-      quantity: raw.quantity!,
-      unit_price: raw.unit_price!,
+      description: raw.description!.trim(),
+      quantity: Number(raw.quantity),
+      unit_price: Number(raw.unit_price),
     });
     this.form.reset({ service_id: '', treatment_plan_item_id: '', description: '', quantity: 1, unit_price: 0 });
   }

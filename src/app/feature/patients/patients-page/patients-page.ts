@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { PatientsTable } from '../patients-table/patients-table';
 import { CreatePatientForm } from '../create-patient-form/create-patient-form';
@@ -26,6 +26,8 @@ type ModalMode = 'none' | 'create' | 'detail' | 'edit';
 })
 export class PatientsPage {
   private patientsSvc = inject(PatientsService);
+  private readonly createForm = viewChild<CreatePatientForm>('patientForm');
+  private readonly editForm = viewChild<CreatePatientForm>('editForm');
   private router = inject(Router);
   private encounterLookups = inject(EncounterLookupsService);
 
@@ -154,7 +156,8 @@ export class PatientsPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(patientSaveErrorMessage(err));
+        // Error de un campo: se marca en su input; el banner queda para lo que no es de un campo.
+        this.actionError.set(this.createForm()?.applyServerError(err) ? null : patientSaveErrorMessage(err));
       },
     });
   }
@@ -173,7 +176,7 @@ export class PatientsPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(patientSaveErrorMessage(err));
+        this.actionError.set(this.editForm()?.applyServerError(err) ? null : patientSaveErrorMessage(err));
       },
     });
   }

@@ -1,6 +1,6 @@
 import {
   ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, afterNextRender, computed, effect, inject, signal,
-  untracked,
+  untracked, viewChild,
 } from '@angular/core';
 import { Location, isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
@@ -72,6 +72,7 @@ export class EncountersPage {
   createPatientId = signal<string | null>(null);
   saving = signal(false);
   actionError = signal<string | null>(null);
+  private createForm = viewChild(EncounterCreateForm);
   private patientSearchResults = signal<EncounterPartyOption[] | null>(null);
   private readonly patientSearch$ = new Subject<string>();
 
@@ -232,7 +233,8 @@ export class EncountersPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(createErrorMessage(err));
+        // Error de un campo del alta (paciente, motivo) → debajo del input; si no, banner.
+        this.actionError.set(this.createForm()?.applyServerError(err) ? null : createErrorMessage(err));
       },
     });
   }

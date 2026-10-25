@@ -12,7 +12,10 @@ export interface ClinicalRecord {
   chronic_conditions: string | null;
   current_medications: string | null;
   family_history: string | null;
-  habits: string | null;
+  // jsonb en el backend (objeto clave/valor, default {}): nunca un string.
+  habits: ClinicalHabits | null;
 }
+
+export type ClinicalHabits = Record<string, unknown>;
 
 export type ClinicalRecordDto = Omit<ClinicalRecord, 'patient_id' | 'id'>;

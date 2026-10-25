@@ -4,6 +4,7 @@ import {
   PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE, PRESCRIPTION_ENCOUNTER_FORBIDDEN_MESSAGE, PRESCRIPTION_FORBIDDEN_MESSAGE,
   PRESCRIPTION_INACTIVE_PROFESSIONAL_MESSAGE, PRESCRIPTION_ITEM_FORBIDDEN_MESSAGE, PRESCRIPTION_NOT_FOUND_MESSAGE,
   PRESCRIPTION_CONCURRENCY_MESSAGE, PRESCRIPTION_VALIDATION_MESSAGE, PRESCRIPTION_WINDOW_CLOSED_MESSAGE, prescriptionError,
+  prescriptionErrorField,
 } from './prescriptions-error.util';
 import { ENCOUNTER_NOT_FOUND_MESSAGE } from './encounters-error.util';
 import { PRESCRIPTION_BACKEND_MESSAGES } from '../../testing/prescriptions-mock.repository';
@@ -105,5 +106,15 @@ describe('prescriptionError', () => {
       PRESCRIPTION_BACKEND_MESSAGES.requestBodyNullChar, PRESCRIPTION_BACKEND_MESSAGES.textNullChar]) {
       expect(t(raw)).not.toBe(PRESCRIPTION_VALIDATION_MESSAGE);
     }
+  });
+});
+
+describe('prescriptionErrorField', () => {
+  it('campo e índice del medicamento desde el detail', () => {
+    expect(prescriptionErrorField(error(422, "items[2].medication is required. (Parameter 'medication')")))
+      .toEqual({ index: 2, field: 'medication' });
+    expect(prescriptionErrorField(error(422, 'notes cannot exceed 2000 characters.'))).toEqual({ index: null, field: 'notes' });
+    expect(prescriptionErrorField(error(422, 'A prescription cannot have more than 50 items.'))).toBeNull();
+    expect(prescriptionErrorField(error(409, 'medication is required.'))).toBeNull();
   });
 });

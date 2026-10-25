@@ -15,7 +15,8 @@ import {
   fromOffsetMinutes,
   toOffsetMinutes,
 } from '../../../shared/utils/reminder-offset.util';
-import { fieldInputClass } from '../../../shared/utils/form-validation.util';
+import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 // No llama a ningún servicio para guardar — arma el payload y lo emite;
 // el contenedor (NotificationTemplatesPage) decide cómo persistirlo.
@@ -44,6 +45,8 @@ export class ReminderRuleForm {
   readonly units = OFFSET_UNITS;
   readonly unitLabels = OFFSET_UNIT_LABELS;
   readonly inputClass = fieldInputClass;
+  readonly isInvalid = isFieldInvalid;
+  readonly errorMessage = fieldErrorMessage;
 
   private allTemplates = this.templatesSvc.getAll();
 
@@ -106,6 +109,13 @@ export class ReminderRuleForm {
       const stillValid = this.allTemplates().some(t => t.id === currentId && t.channel === channel);
       if (currentId && !stillValid) this.form.patchValue({ template_id: '' }, { emitEvent: false });
     });
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. El backend valida
+  // offset_minutes, que en el form se arma con offset_value/unit/direction — se marca el número.
+  // false = no es de un campo de este form (el contenedor muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err, { offset_minutes: 'offset_value' });
   }
 
   submit(): void {

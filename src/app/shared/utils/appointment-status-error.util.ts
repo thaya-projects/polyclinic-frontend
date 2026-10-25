@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { validationErrorMessage } from './http-error.util';
+import { specificErrorMessage, validationErrorMessage } from './http-error.util';
 
 // T6: mensajes específicos para los códigos que puede devolver
 // GET /tenants/appointments/:id y POST /tenants/appointments/:id/status.
@@ -18,7 +18,7 @@ export function appointmentDetailErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
     return (
       baseAppointmentStatusMessage(err) ??
-      (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo cargar el detalle de la cita.')
+      (validationErrorMessage(err) ?? 'No se pudo cargar el detalle de la cita.')
     );
   }
   return 'No se pudo cargar el detalle de la cita.';
@@ -29,15 +29,18 @@ export function appointmentDetailErrorMessage(err: unknown): string {
 // validación (ej. cancelled_reason faltante).
 export function appointmentStatusChangeErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     if (err.status === 409) {
       return 'No se puede reabrir una cita completada o cancelada. Elegí otro estado.';
     }
-    if (err.status === 422) {
+    if (err.status === 400 || err.status === 422) {
       return validationErrorMessage(err) ?? 'El motivo de cancelación es obligatorio para cancelar la cita.';
     }
     return (
       baseAppointmentStatusMessage(err) ??
-      (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo actualizar el estado de la cita.')
+      (validationErrorMessage(err) ?? 'No se pudo actualizar el estado de la cita.')
     );
   }
   return 'No se pudo actualizar el estado de la cita.';

@@ -5,10 +5,12 @@ import { InvoiceItemForm } from '../invoice-item-form/invoice-item-form';
 import { InvoiceItemsPreview, InvoiceItemDraft } from '../invoice-items-preview/invoice-items-preview';
 import { InvoiceOptionsService } from '../../../core/services/invoice-options.service';
 import { PatientsService } from '../../../core/services/patients.service';
-import { CURRENCIES } from '../../../core/constants/currencies.const';
+import { currencyOptions, resolveTenantCurrency } from '../../../core/constants/currencies.const';
+import { AuthStore } from '../../../core/services/auth-store.service';
 import { Invoice, InvoiceDto } from '../../../core/models/invoice.model';
 import { InvoiceItemDto } from '../../../core/models/invoice-item.model';
 import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 export interface InvoiceSubmitPayload {
   invoice: InvoiceDto;
@@ -41,7 +43,9 @@ export class InvoiceForm {
 
   readonly patients = this.patientsSvc.getAll();
   readonly branches = this.optionsSvc.branches();
-  readonly currencies = CURRENCIES;
+  // Moneda de la clínica preseleccionada; las demás quedan disponibles para cambiarla.
+  readonly tenantCurrency = resolveTenantCurrency(inject(AuthStore).tenant());
+  readonly currencies = currencyOptions(this.tenantCurrency);
   readonly inputClass = fieldInputClass;
   readonly isInvalid = isFieldInvalid;
   readonly errorMessage = fieldErrorMessage;
@@ -60,7 +64,7 @@ export class InvoiceForm {
     branch_id: [''],
     notes: [''],
     tax: [0, [Validators.required, Validators.min(0)]],
-    currency: [''],
+    currency: [this.tenantCurrency],
   });
 
   // El armado de items solo aplica al CREAR — en edición de un borrador
@@ -88,11 +92,17 @@ export class InvoiceForm {
           branch_id: inv?.branch_id ?? '',
           notes: inv?.notes ?? '',
           tax: inv?.tax ?? 0,
-          currency: inv?.currency ?? '',
+          currency: inv?.currency ?? this.tenantCurrency,
         },
         { emitEvent: false },
       );
     });
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el contenedor muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   onItemAdded(dto: InvoiceItemDto): void {

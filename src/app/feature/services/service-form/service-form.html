@@ -16,16 +16,25 @@
           <option [value]="cat.id">{{ cat.name }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.category_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.category_id) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Duración (minutos)</span>
-      <input type="number" min="0" formControlName="duration_minutes" [class]="inputClass(form.controls.duration_minutes)" />
+      <input type="number" min="1" step="1" formControlName="duration_minutes" [class]="inputClass(form.controls.duration_minutes)" />
+      @if (isInvalid(form.controls.duration_minutes)) {
+        <span class="text-xs text-red-500">{{ durationErrorMessage() }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Precio base</span>
       <input type="number" min="0" step="0.01" formControlName="base_price" [class]="inputClass(form.controls.base_price)" />
+      @if (isInvalid(form.controls.base_price)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.base_price) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">

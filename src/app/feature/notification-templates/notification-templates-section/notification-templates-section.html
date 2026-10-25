@@ -25,12 +25,12 @@
 </div>
 
 <app-modal [open]="creating()" title="Nueva plantilla" size="lg" (closed)="closeCreate()">
-  <app-notification-template-form [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
+  <app-notification-template-form #createForm [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
 </app-modal>
 
 <app-modal [open]="selectedTemplate() !== null" title="Plantilla de notificación" size="lg" (closed)="closeDetail()">
   @if (selectedTemplate(); as template) {
-    <app-notification-template-form
+    <app-notification-template-form #editForm
       [template]="template"
       [saving]="saving()"
       [saveError]="actionError()"

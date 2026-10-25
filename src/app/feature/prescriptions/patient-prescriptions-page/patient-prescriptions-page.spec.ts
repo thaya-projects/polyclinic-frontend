@@ -236,12 +236,13 @@ describe('PatientPrescriptionsPage (mock repositories)', () => {
     expect(addButton(0).disabled).toBe(false);
   });
 
-  it('422 al emitir: mensaje en español dentro del modal', async () => {
+  it('422 al emitir: mensaje en español debajo del campo que falló (sin banner)', async () => {
     const page = await open();
     page.openCreate();
     page.onCreate({ notes: 'x'.repeat(2001) });
     await settle();
-    expect(d('create-error')?.textContent).toContain('El campo notas no puede superar los 2000 caracteres.');
+    expect(d('prescription-notes-error')?.textContent).toContain('El campo notas no puede superar los 2000 caracteres.');
+    expect(d('create-error')).toBeNull();
   });
 
   it('401 al agregar: no muestra error (lo resuelve authInterceptor)', async () => {

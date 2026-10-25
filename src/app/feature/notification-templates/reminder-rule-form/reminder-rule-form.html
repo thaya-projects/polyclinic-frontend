@@ -7,6 +7,9 @@
           <option [value]="e">{{ eventTypeLabels[e] }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.event_type)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.event_type) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
@@ -16,6 +19,9 @@
           <option [value]="c">{{ channelLabels[c] }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.channel)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.channel) }}</span>
+      }
     </label>
   </div>
 
@@ -33,6 +39,9 @@
         <option value="after">Después del evento</option>
       </select>
     </div>
+    @if (isInvalid(form.controls.offset_value)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.offset_value) }}</span>
+    }
     <span class="text-xs text-muted">Se va a guardar como: {{ offsetPreview() }}</span>
   </div>
 
@@ -44,6 +53,9 @@
         <option [value]="t.id">{{ t.name }}</option>
       }
     </select>
+    @if (isInvalid(form.controls.template_id)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.template_id) }}</span>
+    }
     @if (templateOptions().length === 0) {
       <span class="text-xs text-muted">No hay plantillas activas para este canal todavía.</span>
     }

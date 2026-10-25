@@ -16,7 +16,10 @@ import { TreatmentPlanOptionsService } from '../../../core/services/treatment-pl
 import { TreatmentPlan, TreatmentPlanStatusChangeDto } from '../../../core/models/treatment-plan.model';
 import { TreatmentPlanItemDto } from '../../../core/models/treatment-plan-item.model';
 import { treatmentPlanDetailErrorMessage, treatmentPlanSaveErrorMessage } from '../../../shared/utils/treatment-plans-error.util';
-import { treatmentPlanItemSaveErrorMessage } from '../../../shared/utils/treatment-plan-items-error.util';
+import {
+  treatmentPlanItemSaveErrorMessage,
+  treatmentPlanItemStatusErrorMessage,
+} from '../../../shared/utils/treatment-plan-items-error.util';
 
 @Component({
   selector: 'app-treatment-plans-section',
@@ -37,6 +40,10 @@ export class TreatmentPlansSection {
   private itemsSvc = inject(TreatmentPlanItemsService);
   private optionsSvc = inject(TreatmentPlanOptionsService);
   private statusForm = viewChild(TreatmentPlanStatusForm);
+  private readonly createPlanForm = viewChild<TreatmentPlanForm>('createPlanForm');
+  private readonly editPlanForm = viewChild<TreatmentPlanForm>('editPlanForm');
+  private readonly addItemForm = viewChild(TreatmentPlanItemForm);
+  private readonly itemsStatusList = viewChild(TreatmentPlanItemsStatusList);
 
   patientId = input.required<string>();
 
@@ -132,7 +139,8 @@ export class TreatmentPlansSection {
       },
       error: err => {
         this.planStatusSaving.set(false);
-        this.planStatusError.set(treatmentPlanSaveErrorMessage(err));
+        // Error de un campo: se marca en su input; el banner queda para lo que no es de un campo.
+        this.planStatusError.set(this.statusForm()?.applyServerError(err) ? null : treatmentPlanSaveErrorMessage(err));
       },
     });
   }
@@ -149,7 +157,9 @@ export class TreatmentPlansSection {
       next: () => this.itemStatusSavingId.set(null),
       error: err => {
         this.itemStatusSavingId.set(null);
-        this.itemActionError.set(treatmentPlanItemSaveErrorMessage(err));
+        this.itemActionError.set(
+          this.itemsStatusList()?.applyServerError(event.itemId, err) ? null : treatmentPlanItemStatusErrorMessage(err),
+        );
       },
     });
   }
@@ -167,7 +177,9 @@ export class TreatmentPlansSection {
     this.itemActionError.set(null);
     this.itemsSvc.create(plan.id, dto).subscribe({
       next: () => this.addingItem.set(false),
-      error: err => this.itemActionError.set(treatmentPlanItemSaveErrorMessage(err)),
+      // El form conserva los valores ([resetOnAdd]="false"): el campo rechazado queda marcado.
+      error: err =>
+        this.itemActionError.set(this.addItemForm()?.applyServerError(err) ? null : treatmentPlanItemSaveErrorMessage(err)),
     });
   }
 
@@ -216,7 +228,7 @@ export class TreatmentPlansSection {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(treatmentPlanSaveErrorMessage(err));
+        this.actionError.set(this.createPlanForm()?.applyServerError(err) ? null : treatmentPlanSaveErrorMessage(err));
       },
     });
   }
@@ -235,7 +247,7 @@ export class TreatmentPlansSection {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(treatmentPlanSaveErrorMessage(err));
+        this.actionError.set(this.editPlanForm()?.applyServerError(err) ? null : treatmentPlanSaveErrorMessage(err));
       },
     });
   }

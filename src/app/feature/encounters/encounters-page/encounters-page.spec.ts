@@ -11,7 +11,7 @@ import { MOCK_CURRENT_USER_ID, MockEncountersRepository } from '../../../testing
 import { EncounterSummary } from '../../../core/models/encounter.model';
 import { PagedResult } from '../../../core/models/paged-result.model';
 import {
-  ENCOUNTERS_ACCESS_DENIED_MESSAGE, INACTIVE_PROFESSIONAL_MESSAGE, NO_PROFESSIONAL_MESSAGE,
+  ENCOUNTERS_ACCESS_DENIED_MESSAGE, GENERIC_VALIDATION_MESSAGE, INACTIVE_PROFESSIONAL_MESSAGE, NO_PROFESSIONAL_MESSAGE,
   PROFESSIONALS_LOAD_ERROR_MESSAGE,
 } from '../../../shared/utils/encounters-error.util';
 
@@ -192,7 +192,9 @@ describe('EncountersPage', () => {
       [403, {}, NO_PROFESSIONAL_MESSAGE],
       [404, {}, 'El paciente, su historia clínica o el profesional no existen en esta clínica.'],
       [422, { detail: "Professional with id 'x' is inactive." }, 'El profesional del encuentro está desactivado'],
-      [422, { detail: 'Something unexpected 1234-abcd.' }, 'Revisá los datos ingresados e intentá de nuevo.'],
+      [422, { detail: 'Something unexpected 1234-abcd.' }, GENERIC_VALIDATION_MESSAGE],
+      [422, { detail: "clinical_record_id is not a valid guid. (Parameter 'clinical_record_id')", field: 'clinical_record_id' },
+        'Historia clínica: El valor seleccionado no es válido.'],
       [409, { detail: "Appointment 'a1' already has an encounter." }, 'La cita ya tiene un encuentro registrado.'],
     ];
     for (const [status, error, expected] of cases) {
@@ -208,6 +210,19 @@ describe('EncountersPage', () => {
         expect(cmp.saving()).toBe(false);
       });
     }
+
+    it('422 con field de un input del alta (patient_id): el motivo va debajo del select, sin banner', async () => {
+      const cmp = await open('/encounters?patient_id=pat-1&new=1');
+      vi.spyOn(repo, 'create').mockReturnValue(throwError(() => new HttpErrorResponse({
+        status: 422, error: { detail: "patient_id cannot be empty. (Parameter 'patient_id')", field: 'patient_id' },
+      })));
+
+      cmp.onCreate({ patient_id: 'pat-1', chief_complaint: null });
+      await settle();
+
+      expect(q('create-error')).toBeNull();
+      expect(q('create-form')?.textContent).toContain('Este campo es obligatorio.');
+    });
   });
 
   it('usa el resumen del listado: sin anamnesis/exam/clinical_data y la tabla se pinta igual', async () => {

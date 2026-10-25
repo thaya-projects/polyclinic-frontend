@@ -6,6 +6,9 @@
         <option [value]="status">{{ statusLabels[status] }}</option>
       }
     </select>
+    @if (isInvalid(form.controls.status)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.status) }}</span>
+    }
   </label>
 
   <label class="flex flex-1 flex-col gap-1.5">
@@ -16,6 +19,9 @@
         <option [value]="apt.id">{{ apt.label }}</option>
       }
     </select>
+    @if (isInvalid(form.controls.appointment_id)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.appointment_id) }}</span>
+    }
   </label>
 
   <button type="submit" [disabled]="saving()"

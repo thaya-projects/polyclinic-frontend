@@ -59,6 +59,13 @@
   --color-chip-danger-fg: #b83b3b;
   --color-positive: #2a8a6a;
 
+  /* Odontograma: dibujo anatómico de las piezas (corona clara, raíz marfil,
+     trazo gris suave — nunca negro) y banda central de numeración. */
+  --color-tooth-crown: #ffffff;
+  --color-tooth-root: #f3ecdf;
+  --color-tooth-stroke: #9fb0b1;
+  --color-tooth-band: #f4f8f8;
+
   --animate-flyout-in: flyout-in 120ms ease both;
 }
 
@@ -102,6 +109,10 @@ body.dark {
 
   --color-table-head: #0a1f27;
   --color-table-hover: rgba(14, 107, 117, 0.16);
+  --color-tooth-crown: #1a3a44;
+  --color-tooth-root: #15303a;
+  --color-tooth-stroke: rgba(232, 244, 243, 0.35);
+  --color-tooth-band: #0a1f27;
 
   --color-chip-ok-bg: rgba(27, 106, 104, 0.28);
   --color-chip-ok-fg: #6fd9ce;

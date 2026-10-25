@@ -9,9 +9,9 @@ export function reportsErrorMessage(err: unknown, resourceLabel: string): string
   if (err instanceof HttpErrorResponse) {
     if (err.status === 401) return 'Tu sesión expiró. Iniciá sesión de nuevo.';
     if (err.status === 403) return 'No tenés permiso para ver este reporte.';
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Los filtros ingresados no son válidos.';
+    if (err.status === 400 || err.status === 422) return validationErrorMessage(err) ?? 'Los filtros ingresados no son válidos.';
     if (err.status === 0) return 'No se pudo conectar con el servidor.';
-    return typeof err.error?.message === 'string' ? err.error.message : `No se pudo cargar ${resourceLabel}.`;
+    return validationErrorMessage(err) ?? `No se pudo cargar ${resourceLabel}.`;
   }
   return `No se pudo cargar ${resourceLabel}.`;
 }

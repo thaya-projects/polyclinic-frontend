@@ -7,7 +7,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { CreatePrescriptionItemDto } from '../../../core/models/prescription.model';
 import {
-  PrescriptionItemFields, createPrescriptionItemGroup, prescriptionItemDto,
+  PrescriptionItemFields, applyPrescriptionItemServerError, createPrescriptionItemGroup, prescriptionItemDto,
 } from '../prescription-item-fields/prescription-item-fields';
 
 let nextFormId = 0;
@@ -60,6 +60,14 @@ export class PrescriptionItemForm {
     });
 
     afterNextRender(() => this.focusMedication());
+  }
+
+  // Error 400/422 del backend (texto ya traducido): lo marca en el input del campo. false = no es un
+  // campo de este form (el contenedor deja el banner).
+  applyServerError(field: string, message: string): boolean {
+    const applied = applyPrescriptionItemServerError(this.form, field, message);
+    if (applied) this.tick.update(n => n + 1);
+    return applied;
   }
 
   submit(): void {

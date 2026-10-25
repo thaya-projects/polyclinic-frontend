@@ -183,3 +183,14 @@ describe('odontogramError: condiciones por pieza (/teeth)', () => {
     expect(odontogramError(httpErr(401), 'x', ctx).kind).toBe('unauthorized');
   });
 });
+
+describe('odontogramError 422 no reconocido', () => {
+  it('con field y motivo traducible → genérico con el campo; sin field → texto propio (nunca el inglés crudo)', () => {
+    expect(odontogramError(httpErr(422, { detail: "Value cannot be negative. (Parameter 'tooth_fdi')", field: 'tooth_fdi' })).message)
+      .toBe('Pieza (FDI): El valor no puede ser negativo.');
+    expect(odontogramError(httpErr(422, { detail: 'Something odd happened.', field: 'note' })).message)
+      .toBe(ODONTOGRAM_VALIDATION_MESSAGE);
+    expect(odontogramError(httpErr(400, { errors: { '$.surface': ['The JSON value could not be converted.'] } })).message)
+      .toBe('Cara: Elegí una de las opciones de la lista.');
+  });
+});

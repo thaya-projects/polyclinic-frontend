@@ -469,7 +469,9 @@ describe('EncounterDetailPage (mock repository)', () => {
     await settle();
 
     const dialog = el.querySelector('[role="dialog"]');
-    expect(dialog?.textContent).toContain('El motivo de anulación no puede superar los 500 caracteres.');
+    // El backend no manda `field`, pero el campo se deduce del mensaje ("reason ...") y el motivo
+    // queda debajo del input, con el límite concreto.
+    expect(dialog?.textContent).toContain('No puede superar los 500 caracteres.');
     expect(fixture.componentInstance.voidOpen()).toBe(true);
     expect(q('action-error')).toBeNull();
   });

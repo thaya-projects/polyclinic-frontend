@@ -1,8 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ClinicRole, RoleDto, isSystemRole } from '../../../core/models/clinic-role.model';
 import { ROLE_MODULE_PERMISSIONS } from '../../../core/constants/role-permissions.const';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import {
+  fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator,
+} from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 @Component({
   selector: 'app-role-form',
@@ -35,8 +38,8 @@ export class RoleForm {
   // los códigos de permiso tienen puntos ("roles.manage") y Angular no
   // permite esos caracteres en claves de FormGroup.
   form = this.fb.group({
-    code: ['', Validators.required],
-    name: ['', Validators.required],
+    code: ['', requiredNotBlankValidator],
+    name: ['', requiredNotBlankValidator],
     permissions: this.fb.array(this.catalogCodes.map(() => this.fb.control(false))),
   });
 
@@ -60,6 +63,19 @@ export class RoleForm {
     });
   }
 
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
+  }
+
+  // 409 (RoleCodeAlreadyExistsException): el código ya está en uso en la clínica.
+  markCodeTaken(message: string): void {
+    const code = this.form.controls.code;
+    code.setErrors({ ...(code.errors ?? {}), server: message });
+    code.markAsTouched();
+  }
+
   submit(): void {
     if (this.readOnly()) return;
     if (this.form.invalid) {
@@ -74,8 +90,8 @@ export class RoleForm {
     const preserved = (this.role()?.permissions ?? []).filter(p => !this.catalogCodes.includes(p));
 
     this.submitted.emit({
-      code: raw.code!,
-      name: raw.name!,
+      code: raw.code!.trim(),
+      name: raw.name!.trim(),
       permissions: [...preserved, ...selectedCatalogPerms],
     });
   }

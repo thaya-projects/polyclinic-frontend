@@ -1,12 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Branch, CreateBranchDto, UpdateBranchDto } from '../../../../core/models/branch.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+import {
+  fieldErrorMessage, fieldInputClass, isFieldInvalid, phoneValidator, requiredNotBlankValidator,
+} from '../../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../../shared/utils/server-errors.util';
+import { PhoneInput } from '../../../../shared/components/phone-input/phone-input';
 
 // Reutilizable: si `branch` viene → edit (emit saved). Si null → create (emit created).
 @Component({
   selector: 'app-branch-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PhoneInput],
   templateUrl: './branch-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -26,10 +30,12 @@ export class BranchForm {
   readonly isEdit = computed(() => this.branch() !== null);
 
   form = this.fb.group({
-    name: ['', Validators.required],
+    name: ['', requiredNotBlankValidator],
     address: [''],
-    phone: [''],
-    timezone: ['America/La_Paz', Validators.required],
+    phone: ['', phoneValidator],
+    // El backend valida que sea un id IANA reconocido (ej. America/La_Paz): eso vuelve como 422
+    // con field "timezone" y se marca en el input.
+    timezone: ['America/La_Paz', requiredNotBlankValidator],
   });
 
   constructor() {
@@ -44,6 +50,12 @@ export class BranchForm {
         }, { emitEvent: false });
       }
     });
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   submit(): void {

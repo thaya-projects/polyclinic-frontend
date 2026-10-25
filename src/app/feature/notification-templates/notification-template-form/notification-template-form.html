@@ -40,6 +40,9 @@
             <option [value]="c">{{ channelLabels[c] }}</option>
           }
         </select>
+        @if (isInvalid(form.controls.channel)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.channel) }}</span>
+        }
       </label>
 
       <label class="flex flex-col gap-1.5">
@@ -49,6 +52,9 @@
             <option [value]="lang">{{ lang.toUpperCase() }}</option>
           }
         </select>
+        @if (isInvalid(form.controls.language)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.language) }}</span>
+        }
       </label>
 
       <label class="flex flex-col gap-1.5">
@@ -70,6 +76,9 @@
       <label class="flex flex-col gap-1.5 sm:col-span-2">
         <span class="text-xs font-medium text-muted">Variables (separadas por coma)</span>
         <input type="text" formControlName="variables" placeholder="patient_name, appointment_date" [class]="inputClass(form.controls.variables)" />
+        @if (isInvalid(form.controls.variables)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.variables) }}</span>
+        }
       </label>
     </div>
 
@@ -77,6 +86,9 @@
       <span class="text-xs font-medium text-muted">Mensaje</span>
       <textarea formControlName="body" rows="4" placeholder="Hola {{ '{{patient_name}}' }}, ..."
         class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+      @if (isInvalid(form.controls.body)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.body) }}</span>
+      }
     </label>
 
     @if (saveError()) {

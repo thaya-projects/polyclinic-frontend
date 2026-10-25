@@ -7,7 +7,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CreatePrescriptionDto, PRESCRIPTION_LIMITS } from '../../../core/models/prescription.model';
 import {
-  PrescriptionItemFields, PrescriptionItemGroup, createPrescriptionItemGroup, noNullCharacter, prescriptionItemDto,
+  PrescriptionItemFields, PrescriptionItemGroup, applyPrescriptionItemServerError, createPrescriptionItemGroup,
+  noNullCharacter, prescriptionItemDto,
 } from '../prescription-item-fields/prescription-item-fields';
 
 let nextFormId = 0;
@@ -92,6 +93,8 @@ export class PrescriptionForm {
   }
 
   notesErrorText(): string {
+    const server = this.form.controls.notes.errors?.['server'];
+    if (typeof server === 'string') return server;
     return this.form.controls.notes.hasError('nullChar')
       ? 'Las notas contienen un carácter inválido.'
       : `Las notas no pueden superar los ${this.notesLimit} caracteres.`;
@@ -120,6 +123,24 @@ export class PrescriptionForm {
     this.rowCount.set(this.rows.length);
     this.liveMessage.set(`Se quitó el medicamento ${index + 1}.`);
     afterNextRender(() => this.focus(`${this.id}-add-row`), { injector: this.injector });
+  }
+
+  // Error 400/422 del backend (texto ya traducido): "notes" o el campo del medicamento `index`
+  // (items[i].campo). Sin índice, un campo de medicamento va a la primera fila si hay una sola.
+  // false = no es un campo de este form (el contenedor deja el banner).
+  applyServerError(index: number | null, field: string, message: string): boolean {
+    let applied = false;
+    if (field === 'notes') {
+      const control = this.form.controls.notes;
+      control.setErrors({ ...(control.errors ?? {}), server: message });
+      control.markAsTouched();
+      applied = true;
+    } else {
+      const row = index !== null ? this.rows[index] : this.rows.length === 1 ? this.rows[0] : undefined;
+      applied = !!row && applyPrescriptionItemServerError(row, field, message);
+    }
+    if (applied) this.tick.update(n => n + 1);
+    return applied;
   }
 
   submit(): void {

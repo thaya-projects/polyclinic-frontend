@@ -2,7 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CreateRoomDto, Room, UpdateRoomDto } from '../../../../core/models/room.model';
 import { Branch } from '../../../../core/models/branch.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+import {
+  fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator,
+} from '../../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../../shared/utils/server-errors.util';
 
 // Reutilizable: si `room` viene → edit (emit saved). Si null → create (emit created).
 // defaultBranchId se usa para pre-seleccionar la branch del selector cuando se abre en modo create.
@@ -30,7 +33,7 @@ export class RoomForm {
   readonly isEdit = computed(() => this.room() !== null);
 
   form = this.fb.group({
-    name: ['', Validators.required],
+    name: ['', requiredNotBlankValidator],
     branch_id: ['', Validators.required],
   });
 
@@ -45,6 +48,12 @@ export class RoomForm {
           { emitEvent: false });
       }
     });
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   submit(): void {

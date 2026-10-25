@@ -41,7 +41,15 @@ describe('encounterError', () => {
     expect(encounterError(err)).toEqual({ kind: 'validation', message: GENERIC_VALIDATION_MESSAGE });
   });
 
-  it('422 con errors (model binding) conocidos → traducidos', () => {
+  it('422 con detail desconocido pero con field → nombra el campo y el motivo traducido', () => {
+    const err = httpErr(422, {
+      detail: "chief_complaint has an unsupported value '3f2a'. Invalid. (Parameter 'chief_complaint')",
+      field: 'chief_complaint',
+    });
+    expect(encounterError(err)).toEqual({ kind: 'validation', message: 'Motivo de consulta: El formato no es válido.' });
+  });
+
+    it('422 con errors (model binding) conocidos → traducidos', () => {
     const err = httpErr(422, { errors: { reason: ['reason is required.'], anamnesis: ['anamnesis cannot exceed 20000 characters.'] } });
     expect(encounterError(err).message)
       .toBe('El motivo de anulación es obligatorio. El campo anamnesis no puede superar los 20000 caracteres.');

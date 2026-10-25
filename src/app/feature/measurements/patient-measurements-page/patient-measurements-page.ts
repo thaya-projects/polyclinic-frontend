@@ -109,6 +109,17 @@ export class PatientMeasurementsPage {
       this.patientMissing.set(true);
     });
 
+    // 400/422 de un campo: se marca en su input; el banner queda para lo que no es de un campo.
+    // También sigue a createForm(): si el error llega antes de que el form del modal exista.
+    effect(() => {
+      const error = this.store.fieldError();
+      const form = this.createForm();
+      if (!error || !form) return;
+      untracked(() => {
+        if (form.applyServerError(error.field, error.message)) this.store.actionError.set(null);
+      });
+    });
+
     // Alta exitosa → cierra el modal (la lista ya se actualizó en memoria).
     let lastSeq: number | null = null;
     effect(() => {
@@ -165,6 +176,7 @@ export class PatientMeasurementsPage {
   openCreate(): void {
     if (!this.canRegister() || this.store.busy()) return;
     this.store.actionError.set(null);
+    this.store.fieldError.set(null);
     this.store.loadTypes();
     this.createOpen.set(true);
   }
@@ -174,6 +186,7 @@ export class PatientMeasurementsPage {
     if (this.store.busy()) return;
     this.createOpen.set(false);
     this.store.actionError.set(null);
+    this.store.fieldError.set(null);
   }
 
   submitCreate(): void {

@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { PaymentDto, PaymentMethod } from '../../../core/models/payment.model';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '../../../core/constants/payment-method.const';
-import { fieldInputClass } from '../../../shared/utils/form-validation.util';
+import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -10,10 +11,11 @@ function todayIsoDate(): string {
 
 // Criterio de aceptación: valida en el cliente que amount sea mayor a 0 y
 // no supere el saldo pendiente — el backend valida igual (409 si se pasa),
-// esto es solo para no hacer esperar al usuario a esa respuesta.
+// esto es solo para no hacer esperar al usuario a esa respuesta. Validator
+// de control (no de grupo) para que el error quede debajo del input.
 function amountValidatorFor(balance: () => number) {
-  return (group: AbstractControl): ValidationErrors | null => {
-    const amount = Number(group.get('amount')?.value);
+  return (control: AbstractControl): ValidationErrors | null => {
+    const amount = Number(control.value);
     if (!(amount > 0)) return { amountInvalid: true };
     if (amount > balance()) return { amountExceedsBalance: true };
     return null;
@@ -37,26 +39,50 @@ export class PaymentForm {
   added = output<PaymentDto>();
 
   readonly inputClass = fieldInputClass;
+  readonly isInvalid = isFieldInvalid;
   readonly methods = PAYMENT_METHODS;
   readonly methodLabels = PAYMENT_METHOD_LABELS;
 
-  form = this.fb.group(
-    {
-      amount: [0, Validators.required],
-      method: this.fb.control<PaymentMethod>('efectivo', Validators.required),
-      reference: [''],
-      paid_at: [todayIsoDate(), Validators.required],
-    },
-    { validators: amountValidatorFor(() => this.balance()) },
-  );
+  form = this.fb.group({
+    amount: [0, [Validators.required, amountValidatorFor(() => this.balance())]],
+    method: this.fb.control<PaymentMethod>('efectivo', Validators.required),
+    reference: [''],
+    paid_at: [todayIsoDate(), Validators.required],
+  });
 
-  get amountErrorMessage(): string | null {
-    if (!this.form.controls.amount.touched) return null;
-    if (this.form.errors?.['amountInvalid']) return 'El monto tiene que ser mayor a 0.';
-    if (this.form.errors?.['amountExceedsBalance']) {
+  constructor() {
+    // El saldo cambia después de cada pago (lo recalcula el contenedor): se re-valida el monto
+    // para que el límite del validator sea siempre el saldo actual.
+    effect(() => {
+      this.balance();
+      this.form.controls.amount.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  errorMessage(control: AbstractControl | null): string {
+    if (control?.errors?.['amountInvalid']) return 'El monto tiene que ser mayor a 0.';
+    if (control?.errors?.['amountExceedsBalance']) {
       return `El monto no puede superar el saldo pendiente (${this.balance().toFixed(2)}).`;
     }
-    return null;
+    return fieldErrorMessage(control);
+  }
+
+  // Error 400/422 del backend al registrar el pago: como el form ya se reseteó al emitir, se
+  // restauran los valores enviados (`dto`) y se marca el input del campo que falló.
+  // false = no es de un campo de este form (el contenedor muestra el mensaje general).
+  applyServerError(err: unknown, dto?: PaymentDto): boolean {
+    if (dto) {
+      this.form.setValue(
+        {
+          amount: dto.amount,
+          method: dto.method,
+          reference: dto.reference ?? '',
+          paid_at: dto.paid_at ? dto.paid_at.slice(0, 10) : todayIsoDate(),
+        },
+        { emitEvent: false },
+      );
+    }
+    return applyServerError(this.form, err);
   }
 
   add(): void {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { RoomsTable } from '../rooms-table/rooms-table';
 import { RoomForm } from '../room-form/room-form';
 import { Modal } from '../../../../shared/components/modal/modal';
@@ -6,7 +6,7 @@ import { RoomsService } from '../../../../core/services/rooms.service';
 import { BranchesService } from '../../../../core/services/branches.service';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { CreateRoomDto, Room, UpdateRoomDto } from '../../../../core/models/room.model';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { clinicSettingsErrorMessage } from '../../../../shared/utils/clinic-settings-error.util';
 
 type ModalMode = 'none' | 'create' | 'edit';
 
@@ -45,6 +45,9 @@ export class RoomsPage {
 
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  private createForm = viewChild<RoomForm>('createForm');
+  private editForm = viewChild<RoomForm>('editForm');
 
   toggling = signal<string | null>(null);
   toggleError = signal<string | null>(null);
@@ -101,7 +104,10 @@ export class RoomsPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        // Error de un campo → debajo del input; si no, banner con el motivo.
+        this.actionError.set(this.createForm()?.applyServerError(err)
+          ? null
+          : clinicSettingsErrorMessage(err, 'No se pudo crear el consultorio.', 'El consultorio o la sucursal ya no existen.'));
       },
     });
   }
@@ -118,7 +124,9 @@ export class RoomsPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(this.editForm()?.applyServerError(err)
+          ? null
+          : clinicSettingsErrorMessage(err, 'No se pudo guardar el consultorio.', 'El consultorio o la sucursal ya no existen.'));
       },
     });
   }
@@ -130,7 +138,7 @@ export class RoomsPage {
       next: () => this.toggling.set(null),
       error: (err: unknown) => {
         this.toggling.set(null);
-        this.toggleError.set(httpErrorMessage(err));
+        this.toggleError.set(clinicSettingsErrorMessage(err, 'No se pudo actualizar el estado del consultorio.', 'El consultorio o la sucursal ya no existen.'));
       },
     });
   }

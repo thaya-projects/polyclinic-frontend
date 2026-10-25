@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CreateSpecialtyDto, Specialty, UpdateSpecialtyDto } from '../../../../core/models/specialty.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+import {
+  fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator,
+} from '../../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../../shared/utils/server-errors.util';
 
 // Reutilizable: si `specialty` viene → edit (emit saved). Si null → create (emit created).
 // Code no editable en modo edit (clave natural).
@@ -26,9 +29,19 @@ export class SpecialtyForm {
 
   readonly isEdit = computed(() => this.specialty() !== null);
 
+  // fieldErrorMessage describe el patrón de los slugs (con guiones); el código de especialidad usa
+  // guion bajo.
+  codeErrorMessage(): string {
+    const code = this.form.controls.code;
+    return code.hasError('pattern') && !code.hasError('server')
+      ? 'Solo minúsculas, números y guion bajo (ej: medicina_general).'
+      : fieldErrorMessage(code);
+  }
+
   form = this.fb.group({
-    code: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
-    name: ['', Validators.required],
+    // Mismo patrón que Specialty.CodePattern del backend.
+    code: ['', [requiredNotBlankValidator, Validators.pattern(/^[a-z0-9_]+$/)]],
+    name: ['', requiredNotBlankValidator],
   });
 
   constructor() {
@@ -44,6 +57,19 @@ export class SpecialtyForm {
         this.form.reset({ code: '', name: '' }, { emitEvent: false });
       }
     });
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
+  }
+
+  // 409 del alta (SpecialtyCodeAlreadyExistsException): el código ya está en uso en la clínica.
+  markCodeTaken(): void {
+    const code = this.form.controls.code;
+    code.setErrors({ ...(code.errors ?? {}), server: 'Ya existe una especialidad con ese código. Elegí otro.' });
+    code.markAsTouched();
   }
 
   submit(): void {

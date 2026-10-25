@@ -13,7 +13,8 @@ import { EncounterStatus, EncounterVersionChange } from '../../core/models/encou
 import { ENCOUNTER_NOT_FOUND_MESSAGE } from '../../shared/utils/encounters-error.util';
 import {
   PATIENT_NOT_FOUND_MESSAGE, PRESCRIPTIONS_ACCESS_DENIED_MESSAGE, PRESCRIPTIONS_LOAD_ERROR_MESSAGE,
-  PRESCRIPTION_CONFLICT_MESSAGE, PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE, PrescriptionOperation, prescriptionError,
+  PRESCRIPTION_CONFLICT_MESSAGE, PRESCRIPTION_ENCOUNTER_CLOSED_MESSAGE, PrescriptionFieldError, PrescriptionOperation,
+  prescriptionError, prescriptionErrorField,
 } from '../../shared/utils/prescriptions-error.util';
 import { comparePrescriptionsAsc, comparePrescriptionsDesc } from './prescription-format.util';
 
@@ -32,6 +33,8 @@ export type EncounterStatusLookup = EncounterStatus | 'loading' | 'error';
 export interface PrescriptionItemError {
   prescriptionId: string;
   message: string;
+  // 400/422 de un campo del ítem (medication, dose…): el listado lo marca en su input.
+  field?: string;
 }
 
 // Por qué el backend bloqueó una receta: la ventana de 24 h (definitivo) o el encuentro cerrado
@@ -93,6 +96,9 @@ export class PrescriptionsStore {
   readonly addingItemTo = signal<string | null>(null);
   // Error del alta de receta (formulario "Nueva receta").
   readonly actionError = signal<string | null>(null);
+  // 400/422 del alta que apunta a un campo del formulario (notes o items[i].campo): el contenedor lo
+  // marca en su input (PrescriptionForm.applyServerError) y, si pudo, limpia actionError.
+  readonly actionFieldError = signal<(PrescriptionFieldError & { message: string }) | null>(null);
   // Error del alta de un ítem, asociado a su receta.
   readonly itemError = signal<PrescriptionItemError | null>(null);
   // Se incrementan con cada alta exitosa: los formularios se limpian / el modal se cierra.
@@ -145,6 +151,7 @@ export class PrescriptionsStore {
     this.loadRetryable.set(true);
     this.accessDenied.set(false);
     this.actionError.set(null);
+    this.actionFieldError.set(null);
     this.itemError.set(null);
     this.pending.set(null);
     this.addingItemTo.set(null);
@@ -210,6 +217,7 @@ export class PrescriptionsStore {
       : this.repo.createStandalone(scope.patientId, dto);
     this.pending.set('create');
     this.actionError.set(null);
+    this.actionFieldError.set(null);
     this.run(request$, {
       next: ({ encounter_version, ...created }: CreatedPrescription) => {
         this.insert(created);
@@ -365,8 +373,14 @@ export class PrescriptionsStore {
         this.actionError.set(message);
         this.patientNotFound$.next(message);
         return;
+      case 'validation': {
+        this.actionError.set(message);
+        const field = prescriptionErrorField(err);
+        this.actionFieldError.set(field ? { ...field, message } : null);
+        return;
+      }
       default:
-        // forbidden, validation, otros.
+        // forbidden, otros.
         this.actionError.set(message);
     }
   }
@@ -411,8 +425,13 @@ export class PrescriptionsStore {
         this.itemError.set({ prescriptionId, message });
         this.patientNotFound$.next(message);
         return;
+      case 'validation': {
+        const field = prescriptionErrorField(err)?.field;
+        this.itemError.set(field ? { prescriptionId, message, field } : { prescriptionId, message });
+        return;
+      }
       default:
-        // forbidden, validation, otros.
+        // forbidden, otros.
         this.itemError.set({ prescriptionId, message });
     }
   }

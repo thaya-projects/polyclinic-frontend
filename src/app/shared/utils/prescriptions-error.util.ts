@@ -5,6 +5,7 @@ import {
 } from './encounters-error.util';
 import { PATIENT_NOT_FOUND_MESSAGE } from './measurements-error.util';
 import { PRESCRIPTION_LIMITS } from '../../core/models/prescription.model';
+import { translatedValidationMessage } from './translated-validation.util';
 
 // Fase 4 Recetas T5: errores de /tenants/encounters/:id/prescriptions,
 // /tenants/patients/:id/prescriptions y /tenants/prescriptions/:id/items. `kind` decide qué hace la
@@ -183,7 +184,29 @@ export function prescriptionError(err: unknown, options: PrescriptionErrorOption
       }
       return { kind: 'concurrency', message: PRESCRIPTION_CONCURRENCY_MESSAGE };
     }
-    case 422: return { kind: 'validation', message: translated(err) ?? PRESCRIPTION_VALIDATION_MESSAGE };
+    // 400 (model binding) y 422: texto propio si se reconoce, si no el genérico traducido con el campo.
+    case 400:
+    case 422: return {
+      kind: 'validation', message: translated(err) ?? translatedValidationMessage(err) ?? PRESCRIPTION_VALIDATION_MESSAGE,
+    };
     default: return encounterError(err, fallback);
   }
+}
+
+// Campo de un 400/422 para marcarlo en su input: "items[2].medication is required." →
+// { index: 2, field: 'medication' }; "notes cannot exceed …" → { index: null, field: 'notes' }.
+export interface PrescriptionFieldError {
+  index: number | null;
+  field: string;
+}
+
+const FIELD_FROM_DETAIL = new RegExp(
+  `^${ITEM_PREFIX}(medication|presentation|dose|frequency|duration|instructions|notes)\\b`, 'i',
+);
+
+export function prescriptionErrorField(err: unknown): PrescriptionFieldError | null {
+  if (!(err instanceof HttpErrorResponse) || (err.status !== 400 && err.status !== 422)) return null;
+  const match = detail(err).match(FIELD_FROM_DETAIL);
+  if (!match) return null;
+  return { index: match[1] !== undefined ? Number(match[1]) : null, field: match[2].toLowerCase() };
 }

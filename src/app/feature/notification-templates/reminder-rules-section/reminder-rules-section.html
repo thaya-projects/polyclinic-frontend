@@ -25,12 +25,12 @@
 </div>
 
 <app-modal [open]="creating()" title="Nueva regla de recordatorio" size="lg" (closed)="closeCreate()">
-  <app-reminder-rule-form [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
+  <app-reminder-rule-form #createForm [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
 </app-modal>
 
 <app-modal [open]="selectedRule() !== null" title="Regla de recordatorio" size="lg" (closed)="closeDetail()">
   @if (selectedRule(); as rule) {
-    <app-reminder-rule-form
+    <app-reminder-rule-form #editForm
       [rule]="rule"
       [saving]="saving()"
       [saveError]="actionError()"

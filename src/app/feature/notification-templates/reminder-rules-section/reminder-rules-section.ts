@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { ReminderRulesTable, ReminderRuleRow } from '../reminder-rules-table/reminder-rules-table';
 import { ReminderRuleForm } from '../reminder-rule-form/reminder-rule-form';
 import { Modal } from '../../../shared/components/modal/modal';
@@ -28,6 +28,10 @@ export class ReminderRulesSection {
   selectedRuleId = signal<string | null>(null);
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  // Forms hijos: un 400/422 de un campo se marca debajo de su input en vez del banner general.
+  private readonly createForm = viewChild<ReminderRuleForm>('createForm');
+  private readonly editForm = viewChild<ReminderRuleForm>('editForm');
 
   readonly selectedRule = computed<ReminderRule | null>(() => {
     const id = this.selectedRuleId();
@@ -67,7 +71,7 @@ export class ReminderRulesSection {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(reminderRuleSaveErrorMessage(err));
+        this.actionError.set(this.createForm()?.applyServerError(err) ? null : reminderRuleSaveErrorMessage(err));
       },
     });
   }
@@ -93,7 +97,7 @@ export class ReminderRulesSection {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(reminderRuleSaveErrorMessage(err));
+        this.actionError.set(this.editForm()?.applyServerError(err) ? null : reminderRuleSaveErrorMessage(err));
       },
     });
   }

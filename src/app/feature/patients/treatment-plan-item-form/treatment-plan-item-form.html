@@ -8,6 +8,9 @@
           <option [value]="s.id">{{ s.name }} ({{ s.base_price.toFixed(2) }} {{ s.currency }})</option>
         }
       </select>
+      @if (isInvalid(form.controls.service_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.service_id) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
@@ -38,6 +41,9 @@
       <label class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-muted">Pieza (FDI)</span>
         <input type="number" formControlName="tooth_fdi" placeholder="Ej. 36" [class]="inputClass(form.controls.tooth_fdi)" />
+        @if (isInvalid(form.controls.tooth_fdi)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.tooth_fdi) }}</span>
+        }
       </label>
 
       <div class="flex flex-col gap-1.5">
@@ -51,6 +57,9 @@
             </label>
           }
         </div>
+        @if (isInvalid(form.controls.surfaces)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.surfaces) }}</span>
+        }
       </div>
     }
   </div>

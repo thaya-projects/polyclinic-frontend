@@ -30,14 +30,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
       const refreshToken = tokens.getRefreshToken();
       if (!refreshToken) {
-        expireSession(session, toast);
+        expireSession(tokens, session, toast);
         return throwError(() => err);
       }
 
       return refreshAccessToken(authApi, tokens, refreshToken).pipe(
         switchMap(newAccessToken => {
           if (!newAccessToken) {
-            expireSession(session, toast);
+            expireSession(tokens, session, toast);
             return throwError(() => err);
           }
           return next(withBearer(req, newAccessToken));
@@ -48,8 +48,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 };
 
 // T20: avisar por qué se cierra la sesión antes de redirigir, en vez de
-// mandar a login en silencio.
-function expireSession(session: SessionService, toast: ToastService): void {
+// mandar a login en silencio. Cuando expira, todos los requests en vuelo
+// vuelven con 401 a la vez: solo el primero cierra la sesión y avisa —
+// logout() borra los tokens en el acto, así que los siguientes ya no
+// encuentran sesión y no repiten el toast ni la redirección.
+function expireSession(tokens: AuthTokenService, session: SessionService, toast: ToastService): void {
+  if (!tokens.getAccessToken() && !tokens.getRefreshToken()) return;
   toast.error('Tu sesión expiró. Iniciá sesión de nuevo.');
   session.logout();
 }

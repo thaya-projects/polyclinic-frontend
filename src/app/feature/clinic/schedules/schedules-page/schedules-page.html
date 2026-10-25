@@ -60,7 +60,7 @@
         [loading]="exceptionsLoading()"
         [saving]="savingException()"
         [removingId]="removingExceptionId()"
-        [error]="exceptionsError()"
+        [error]="exceptionsError() ?? deleteExceptionError()"
         (create)="onCreateException($event)"
         (remove)="onRemoveException($event)" />
     </div>

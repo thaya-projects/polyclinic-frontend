@@ -50,6 +50,16 @@ export function prescriptionItemDto(group: PrescriptionItemGroup): CreatePrescri
 
 type FieldName = keyof PrescriptionItemGroup['controls'];
 
+// Marca en el control `field` del grupo el error del backend (texto ya traducido). false = el grupo
+// no tiene ese campo.
+export function applyPrescriptionItemServerError(group: PrescriptionItemGroup, field: string, message: string): boolean {
+  const control = group.get(field);
+  if (!control) return false;
+  control.setErrors({ ...(control.errors ?? {}), server: message });
+  control.markAsTouched();
+  return true;
+}
+
 // Fase 4 Recetas T4: campos de UN medicamento de una receta — PRESENTACIONAL (no emite nada: edita
 // el FormGroup que le pasa su formulario). Lo usan "Nueva receta" (una fila por medicamento) y
 // "Agregar medicamento". medication obligatorio (≤ 200); presentation/dose/frequency/duration
@@ -100,6 +110,8 @@ export class PrescriptionItemFields {
   errorText(name: FieldName): string {
     const errors = this.control(name).errors;
     if (!errors) return '';
+    // Error del backend para este campo (applyServerError del formulario): ya viene traducido.
+    if (typeof errors['server'] === 'string') return errors['server'];
     if (errors['required']) return PRESCRIPTION_MEDICATION_REQUIRED_MESSAGE;
     if (errors['maxlength']) return `Máximo ${errors['maxlength'].requiredLength} caracteres.`;
     if (errors['nullChar']) return 'Contiene un carácter inválido.';

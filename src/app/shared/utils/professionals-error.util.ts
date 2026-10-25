@@ -1,4 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { specificErrorMessage, validationErrorMessage } from './http-error.util';
+import { translateServerMessage } from './server-errors.util';
 
 // Este endpoint devuelve ProblemDetails ({ status, title, detail }), no { message }.
 function problemDetail(err: HttpErrorResponse): string | null {
@@ -14,13 +16,24 @@ function baseProfessionalsMessage(err: HttpErrorResponse): string | null {
   return null;
 }
 
+export const PROFESSIONAL_EMAIL_TAKEN_MESSAGE = 'Ya existe una cuenta de usuario con ese correo.';
+
+// 409 del alta con create_login_account: el correo ya tiene un app_user (se marca en el input).
+export function isProfessionalEmailTaken(err: unknown): boolean {
+  return err instanceof HttpErrorResponse && err.status === 409
+    && !!problemDetail(err)?.includes('app user with email');
+}
+
 // POST /tenants/professionals, PATCH /tenants/professionals/:id
 export function professionalSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     const base = baseProfessionalsMessage(err);
     if (base) return base;
 
-    if (err.status === 422) {
+    if (err.status === 400 || err.status === 422) {
       const detail = problemDetail(err);
       if (detail?.includes('Email is required')) {
         return 'Para crear una cuenta de acceso, el correo es obligatorio.';
@@ -28,18 +41,16 @@ export function professionalSaveErrorMessage(err: unknown): string {
       if (detail?.includes('Cannot combine')) {
         return 'No podés vincular un usuario existente y crear una cuenta nueva al mismo tiempo.';
       }
-      return detail ?? 'Revisá los datos ingresados e intentá de nuevo.';
+      return validationErrorMessage(err) ?? 'No se pudo guardar el profesional: uno de los datos no es válido.';
     }
 
     if (err.status === 409) {
-      const detail = problemDetail(err);
-      if (detail?.includes('app user with email')) {
-        return 'Ya existe una cuenta de usuario con ese correo.';
-      }
+      if (isProfessionalEmailTaken(err)) return PROFESSIONAL_EMAIL_TAKEN_MESSAGE;
       return 'Ese usuario ya está vinculado a otro profesional.';
     }
 
-    return problemDetail(err) ?? 'No se pudo guardar el profesional.';
+    const detail = problemDetail(err);
+    return detail ? translateServerMessage(detail) : 'No se pudo guardar el profesional.';
   }
   return 'No se pudo guardar el profesional.';
 }

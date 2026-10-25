@@ -3,7 +3,8 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AppointmentType } from '../../../core/models/appointment.model';
 import { APPOINTMENT_TYPES, APPOINTMENT_TYPE_LABELS } from '../../../core/constants/appointment-type.const';
-import { fieldInputClass } from '../../../shared/utils/form-validation.util';
+import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 export interface AppointmentOnlineFieldsValue {
   type: AppointmentType;
@@ -30,6 +31,8 @@ export class AppointmentOnlineFields {
   initialMeetingProvider = input<string | null>(null);
 
   readonly inputClass = fieldInputClass;
+  readonly isInvalid = isFieldInvalid;
+  readonly errorMessage = fieldErrorMessage;
   readonly typeOptions = APPOINTMENT_TYPES;
   readonly typeLabels = APPOINTMENT_TYPE_LABELS;
 
@@ -65,6 +68,12 @@ export class AppointmentOnlineFields {
         this.form.patchValue({ meeting_url: '', meeting_provider: '' }, { emitEvent: false });
       }
     });
+  }
+
+  // Error 400/422 del backend sobre type/meeting_url/meeting_provider: lo marca debajo del input.
+  // Lo llama AppointmentForm cuando el campo no es suyo.
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   getValue(): AppointmentOnlineFieldsValue {
