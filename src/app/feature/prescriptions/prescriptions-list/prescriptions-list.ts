@@ -1,6 +1,6 @@
 import {
   ChangeDetectionStrategy, Component, Injector, PLATFORM_ID, afterNextRender, computed, effect, inject, input, output, signal,
-  untracked,
+  untracked, viewChild,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -55,6 +55,10 @@ export class PrescriptionsList {
 
   readonly openFor = signal<string | null>(null);
 
+  private readonly itemForm = viewChild(PrescriptionItemForm);
+  // itemError de un campo que ya quedó marcado en su input: no se repite en el banner.
+  readonly fieldItemError = signal<PrescriptionItemError | null>(null);
+
   readonly columns = [
     { key: 'medication', label: 'Medicamento' },
     { key: 'presentation', label: 'Presentación' },
@@ -71,6 +75,16 @@ export class PrescriptionsList {
   });
 
   constructor() {
+    // 400/422 de un campo del medicamento: se marca en su input del formulario abierto.
+    effect(() => {
+      const err = this.itemError();
+      untracked(() => {
+        const applied = !!err?.field && err.prescriptionId === this.openPrescriptionId()
+          && !!this.itemForm()?.applyServerError(err.field, err.message);
+        this.fieldItemError.set(applied ? err : null);
+      });
+    });
+
     // Si la receta abierta deja de existir o de admitir ítems, se cierra el formulario.
     effect(() => {
       const id = this.openFor();

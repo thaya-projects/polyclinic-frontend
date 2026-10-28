@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { validationErrorMessage } from './http-error.util';
+import { specificErrorMessage, validationErrorMessage } from './http-error.util';
+import { translateServerMessage } from './server-errors.util';
 
 // T16: mensajes específicos para cada código de error que pueden devolver
 // /tenants/roles y /tenants/users/:userId/roles. Nada de "Ocurrió un error
@@ -20,10 +21,18 @@ function baseRolesModuleMessage(err: HttpErrorResponse): string | null {
   return null;
 }
 
+// ProblemDetails ({ detail }) del backend; { message } queda por compatibilidad.
+function backendText(err: HttpErrorResponse): string | null {
+  const raw = err.error?.detail ?? err.error?.message;
+  return typeof raw === 'string' && raw ? translateServerMessage(raw) : null;
+}
+
+export const ROLE_CODE_TAKEN_MESSAGE = 'Ya existe un rol con ese código en tu clínica. Elegí un código distinto.';
+
 // GET /tenants/roles
 export function rolesListErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    return baseRolesModuleMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo cargar el listado de roles.');
+    return baseRolesModuleMessage(err) ?? backendText(err) ?? 'No se pudo cargar el listado de roles.';
   }
   return 'No se pudo cargar el listado de roles.';
 }
@@ -31,9 +40,14 @@ export function rolesListErrorMessage(err: unknown): string {
 // POST /tenants/roles, PATCH /tenants/roles/:id
 export function roleSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    if (err.status === 409) return 'Ya existe un rol con ese código en tu clínica. Elegí un código distinto.';
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
-    return baseRolesModuleMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo guardar el rol.');
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
+    if (err.status === 409) return ROLE_CODE_TAKEN_MESSAGE;
+    if (err.status === 400 || err.status === 422) {
+      return validationErrorMessage(err) ?? 'No se pudo guardar el rol: uno de los datos no es válido.';
+    }
+    return baseRolesModuleMessage(err) ?? backendText(err) ?? 'No se pudo guardar el rol.';
   }
   return 'No se pudo guardar el rol.';
 }
@@ -42,8 +56,11 @@ export function roleSaveErrorMessage(err: unknown): string {
 // ese rol; el backend no lo deja borrar mientras esté en uso.
 export function roleDeleteErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     if (err.status === 409) return 'No se puede eliminar: hay usuarios con este rol asignado.';
-    return baseRolesModuleMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo eliminar el rol.');
+    return baseRolesModuleMessage(err) ?? backendText(err) ?? 'No se pudo eliminar el rol.';
   }
   return 'No se pudo eliminar el rol.';
 }
@@ -51,7 +68,7 @@ export function roleDeleteErrorMessage(err: unknown): string {
 // GET /tenants/users/:userId/roles
 export function userRolesListErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    return baseRolesModuleMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudieron cargar los roles del usuario.');
+    return baseRolesModuleMessage(err) ?? backendText(err) ?? 'No se pudieron cargar los roles del usuario.';
   }
   return 'No se pudieron cargar los roles del usuario.';
 }
@@ -59,8 +76,14 @@ export function userRolesListErrorMessage(err: unknown): string {
 // PUT /tenants/users/:userId/roles
 export function userRolesSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
-    return baseRolesModuleMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo guardar la asignación de roles.');
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
+    if (err.status === 409) return 'Ese usuario ya tiene asignado uno de esos roles en esa sucursal.';
+    if (err.status === 400 || err.status === 422) {
+      return validationErrorMessage(err) ?? 'No se pudo guardar la asignación de roles: una de las asignaciones no es válida.';
+    }
+    return baseRolesModuleMessage(err) ?? backendText(err) ?? 'No se pudo guardar la asignación de roles.';
   }
   return 'No se pudo guardar la asignación de roles.';
 }

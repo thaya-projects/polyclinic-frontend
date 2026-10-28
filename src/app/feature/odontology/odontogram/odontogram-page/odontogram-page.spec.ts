@@ -199,6 +199,10 @@ describe('OdontogramPage', () => {
   // ── T5: marcar pieza (condiciones por pieza, repositorio mock) ─────────────────────────────────
   const fill = (testId: string) => q(testId)!.getAttribute('fill');
 
+  function pickCondition(id: string): void {
+    q(`condition-option-${id}`)!.click();
+  }
+
   function choose(testId: string, value: string): void {
     const select = q(testId) as HTMLSelectElement;
     select.value = value;
@@ -231,7 +235,7 @@ describe('OdontogramPage', () => {
     fixture.detectChanges();
     expect(q('tooth-condition-empty')).not.toBeNull();
 
-    choose('condition-select', 'dc-own-1');
+    pickCondition('dc-own-1');
     choose('state-select', 'planificado');
     q('tooth-condition-submit')!.click();
     fixture.detectChanges();
@@ -252,7 +256,7 @@ describe('OdontogramPage', () => {
     expect(q('selected-tooth-number')?.textContent).toContain('21');
     expect((q('surface-select') as HTMLSelectElement).value).toBe('mesial');
 
-    choose('condition-select', 'dc-1');
+    pickCondition('dc-1');
     q('tooth-condition-submit')!.click();
     fixture.detectChanges();
     expect(fill('face-21-left')).toBe('#E53935');
@@ -265,9 +269,9 @@ describe('OdontogramPage', () => {
     fixture.detectChanges();
     (q('tooth-condition-tc-2')!.querySelector('[data-testid="edit"]') as HTMLElement).click();
     fixture.detectChanges();
-    expect((q('condition-select') as HTMLSelectElement).value).toBe('dc-3');
+    expect(q('condition-option-dc-3')!.getAttribute('aria-checked')).toBe('true');
 
-    choose('condition-select', 'dc-2');
+    pickCondition('dc-2');
     q('tooth-condition-submit')!.click();
     fixture.detectChanges();
     expect(q('tooth-condition-tc-2')!.textContent).toContain('Obturación');
@@ -292,7 +296,7 @@ describe('OdontogramPage', () => {
     q('tooth-85')!.click();
     fixture.detectChanges();
     expect(q('fdi-error')).toBeNull();
-    choose('condition-select', 'dc-1');
+    pickCondition('dc-1');
     q('tooth-condition-submit')!.click();
     fixture.detectChanges();
     expect(fill('face-85-center')).toBe('#E53935');
@@ -303,7 +307,7 @@ describe('OdontogramPage', () => {
     q('tooth-11')!.click();
     fixture.detectChanges();
     teethRepo.setOdontogramEnabled(false);
-    choose('condition-select', 'dc-1');
+    pickCondition('dc-1');
     q('tooth-condition-submit')!.click();
     fixture.detectChanges();
     expect(q('tooth-conditions-error')?.textContent).toContain(ODONTOGRAM_DISABLED_MESSAGE);
@@ -328,7 +332,7 @@ describe('OdontogramPage', () => {
     fixture.detectChanges();
     teethRepo.markHistoric('odo-2');
     const getCurrent = vi.spyOn(repo, 'getCurrent');
-    choose('condition-select', 'dc-1');
+    pickCondition('dc-1');
     q('tooth-condition-submit')!.click();
     fixture.detectChanges();
     expect(q('notice')?.textContent).toContain(TOOTH_CONDITION_HISTORIC_MESSAGE);

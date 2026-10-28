@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { PlansFilters } from '../plans-filters/plans-filters';
 import { PlansTable } from '../plans-table/plans-table';
 import { PlanForm } from '../plan-form/plan-form';
@@ -8,7 +8,7 @@ import { ConfirmDialog, ConfirmTone } from '../../../../shared/components/confir
 import { PlansService } from '../../../../core/services/plans.service';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { CreatePlanDto, Plan, UpdatePlanDto } from '../../../../core/models/plan.model';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { httpErrorMessage, validationErrorMessage } from '../../../../shared/utils/http-error.util';
 
 const PAGE_SIZE = 8;
 
@@ -38,6 +38,10 @@ export class PlansPage {
 
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  // Forms hijos: un 400/422 de un campo se marca debajo de su input en vez del banner general.
+  private readonly createForm = viewChild<PlanForm>('createForm');
+  private readonly editForm = viewChild<PlanForm>('editForm');
 
   // Toggle activo/desactivo con confirmación — se guarda el plan objetivo mientras el
   // ConfirmDialog está abierto para poder mostrar su nombre en el mensaje.
@@ -115,7 +119,9 @@ export class PlansPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(
+          this.createForm()?.applyServerError(err) ? null : (validationErrorMessage(err) ?? httpErrorMessage(err)),
+        );
       },
     });
   }
@@ -132,7 +138,9 @@ export class PlansPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(
+          this.editForm()?.applyServerError(err) ? null : (validationErrorMessage(err) ?? httpErrorMessage(err)),
+        );
       },
     });
   }

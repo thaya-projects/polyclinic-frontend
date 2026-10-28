@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { InvoicesFilters } from '../invoices-filters/invoices-filters';
 import { InvoicesTable, InvoiceRow } from '../invoices-table/invoices-table';
@@ -53,6 +53,12 @@ export class InvoicesPage {
   private allPayments = this.paymentsSvc.getAll();
   private patients = this.patientsSvc.getAll();
   private branches = this.optionsSvc.branches();
+
+  // Forms hijos: un 400/422 de un campo se marca debajo de su input en vez del banner general.
+  private readonly createForm = viewChild<InvoiceForm>('createForm');
+  private readonly editForm = viewChild<InvoiceForm>('editForm');
+  private readonly itemForm = viewChild<InvoiceItemForm>('itemForm');
+  private readonly paymentForm = viewChild<PaymentForm>('paymentForm');
 
   search = signal('');
   filters = signal<Record<string, string>>({});
@@ -190,7 +196,7 @@ export class InvoicesPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(invoiceSaveErrorMessage(err));
+        this.actionError.set(this.createForm()?.applyServerError(err) ? null : invoiceSaveErrorMessage(err));
       },
     });
   }
@@ -299,7 +305,7 @@ export class InvoicesPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(invoiceSaveErrorMessage(err));
+        this.actionError.set(this.editForm()?.applyServerError(err) ? null : invoiceSaveErrorMessage(err));
       },
     });
   }
@@ -311,7 +317,8 @@ export class InvoicesPage {
     if (!invoice) return;
     this.itemActionError.set(null);
     this.itemsSvc.create(invoice.id, dto).subscribe({
-      error: err => this.itemActionError.set(invoiceItemSaveErrorMessage(err)),
+      error: err =>
+        this.itemActionError.set(this.itemForm()?.applyServerError(err, dto) ? null : invoiceItemSaveErrorMessage(err)),
     });
   }
 
@@ -335,7 +342,8 @@ export class InvoicesPage {
     if (!invoice) return;
     this.paymentActionError.set(null);
     this.paymentsSvc.create(invoice.id, dto).subscribe({
-      error: err => this.paymentActionError.set(paymentSaveErrorMessage(err)),
+      error: err =>
+        this.paymentActionError.set(this.paymentForm()?.applyServerError(err, dto) ? null : paymentSaveErrorMessage(err)),
     });
   }
 

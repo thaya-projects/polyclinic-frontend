@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { validationErrorMessage } from './http-error.util';
+import { specificErrorMessage, validationErrorMessage } from './http-error.util';
 
 // T6: mensajes específicos para los códigos que puede devolver
 // /tenants/appointments (401/404/409 según el ticket, más 422 para
@@ -16,7 +16,7 @@ export function appointmentsListErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
     return (
       baseAppointmentsMessage(err) ??
-      (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo cargar la agenda.')
+      (validationErrorMessage(err) ?? 'No se pudo cargar la agenda.')
     );
   }
   return 'No se pudo cargar la agenda.';
@@ -27,13 +27,16 @@ export function appointmentsListErrorMessage(err: unknown): string {
 // una cita que se superpone).
 export function appointmentSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     if (err.status === 409) {
       return 'Ese profesional (o consultorio) ya tiene una cita en ese horario. Elegí otro horario.';
     }
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
+    if (err.status === 400 || err.status === 422) return validationErrorMessage(err) ?? 'El servidor rechazó los datos de la cita.';
     return (
       baseAppointmentsMessage(err) ??
-      (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo guardar la cita.')
+      (validationErrorMessage(err) ?? 'No se pudo guardar la cita.')
     );
   }
   return 'No se pudo guardar la cita.';

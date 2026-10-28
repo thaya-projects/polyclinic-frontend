@@ -8,7 +8,7 @@ import { SubscriptionsService } from '../../../../core/services/subscriptions.se
 import { PlansService } from '../../../../core/services/plans.service';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { ConfirmDialog, ConfirmTone } from '../../../../shared/components/confirm-dialog/confirm-dialog';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { httpErrorMessage, validationErrorMessage } from '../../../../shared/utils/http-error.util';
 
 // T8: panel super admin de subscription del tenant. Lee el tenantId desde el path, carga la
 // subscription y muestra plan/status/trial + botones cambiar plan / extender trial / cancelar.
@@ -47,6 +47,12 @@ export class SubscriptionAdminPage {
 
   readonly cancelTone: ConfirmTone = 'danger';
 
+  // Validación visible del input de días (antes el botón solo quedaba deshabilitado sin decir por qué).
+  readonly extendDaysError = computed(() => {
+    const days = Number(this.extendDays());
+    return Number.isInteger(days) && days >= 1 ? null : 'Ingresá una cantidad entera de días, mayor a 0.';
+  });
+
   constructor() {
     inject(PageTitleService).set('Suscripción del tenant');
     this.plansSvc.load();
@@ -70,8 +76,8 @@ export class SubscriptionAdminPage {
 
   onExtendTrial(): void {
     const id = this.tenantId();
+    if (!id || this.extendDaysError()) return;
     const days = Number(this.extendDays());
-    if (!id || !Number.isFinite(days) || days <= 0) return;
     this.runAction(this.subscriptionsSvc.extendTrial(id, days));
   }
 
@@ -101,7 +107,7 @@ export class SubscriptionAdminPage {
       },
       error: err => {
         this.actionInFlight.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(validationErrorMessage(err) ?? httpErrorMessage(err));
       },
     });
   }
@@ -118,7 +124,7 @@ export class SubscriptionAdminPage {
       next: () => this.actionInFlight.set(false),
       error: err => {
         this.actionInFlight.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(validationErrorMessage(err) ?? httpErrorMessage(err));
       },
     });
   }

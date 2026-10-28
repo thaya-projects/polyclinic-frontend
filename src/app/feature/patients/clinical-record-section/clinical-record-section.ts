@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { ClinicalRecordForm } from '../clinical-record-form/clinical-record-form';
 import { ClinicalRecordsService } from '../../../core/services/clinical-records.service';
 import { ClinicalRecordDto } from '../../../core/models/clinical-record.model';
@@ -18,6 +18,8 @@ export class ClinicalRecordSection {
   readonly record = computed(() => this.recordsSvc.findByPatientId(this.patientId()));
   readonly listLoading = this.recordsSvc.loading;
   readonly listError = this.recordsSvc.error;
+
+  private readonly form = viewChild(ClinicalRecordForm);
 
   saving = signal(false);
   saveError = signal<string | null>(null);
@@ -44,7 +46,7 @@ export class ClinicalRecordSection {
       },
       error: err => {
         this.saving.set(false);
-        this.saveError.set(clinicalRecordSaveErrorMessage(err));
+        this.saveError.set(this.form()?.applyServerError(err) ? null : clinicalRecordSaveErrorMessage(err));
       },
     });
   }

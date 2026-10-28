@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { RolesTable } from '../roles-table/roles-table';
 import { RoleForm } from '../role-form/role-form';
 import { Modal } from '../../../shared/components/modal/modal';
@@ -6,7 +7,9 @@ import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm
 import { ClinicRolesService } from '../../../core/services/clinic-roles.service';
 import { ClinicRole, RoleDto, isSystemRole } from '../../../core/models/clinic-role.model';
 import { PageTitleService } from '../../../core/services/page-title.service';
-import { roleDeleteErrorMessage, roleSaveErrorMessage } from '../../../shared/utils/roles-error.util';
+import {
+  ROLE_CODE_TAKEN_MESSAGE, roleDeleteErrorMessage, roleSaveErrorMessage,
+} from '../../../shared/utils/roles-error.util';
 
 type ModalMode = 'none' | 'create' | 'edit';
 
@@ -27,6 +30,8 @@ export class RolesPage {
   selectedRole = signal<ClinicRole | null>(null);
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  private roleForm = viewChild<RoleForm>('roleForm');
 
   roleToDelete = signal<ClinicRole | null>(null);
   deleting = signal(false);
@@ -79,7 +84,15 @@ export class RolesPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(roleSaveErrorMessage(err));
+        const form = this.roleForm();
+        // 409 en el alta = código repetido: se marca en el input "Código".
+        if (form && !role && err instanceof HttpErrorResponse && err.status === 409) {
+          form.markCodeTaken(ROLE_CODE_TAKEN_MESSAGE);
+          this.actionError.set(null);
+          return;
+        }
+        // Error de un campo → debajo del input; si no, banner con el motivo.
+        this.actionError.set(form?.applyServerError(err) ? null : roleSaveErrorMessage(err));
       },
     });
   }

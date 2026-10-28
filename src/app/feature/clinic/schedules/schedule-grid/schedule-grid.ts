@@ -11,13 +11,45 @@ interface BlockRow {
   startTime: string;
   endTime: string;
   slotMinutes: number;
-  // Error local de validación (end > start). Backend valida también.
+  // Error local de validación (mismas reglas que ProfessionalSchedule en el backend).
   error: string | null;
+}
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Reglas de un bloque: sucursal elegida, horas cargadas, fin > inicio, 0 < slot <= duración.
+function rowError(r: BlockRow): string | null {
+  if (!r.branchId) return 'Elegí la sucursal del bloque.';
+  if (!r.startTime || !r.endTime) return 'Completá la hora inicio y la hora fin.';
+  if (r.endTime <= r.startTime) return 'La hora fin debe ser mayor que la hora inicio.';
+  if (!Number.isInteger(r.slotMinutes) || r.slotMinutes <= 0) return 'Los minutos por turno deben ser un entero mayor a 0.';
+  const blockMinutes = toMinutes(r.endTime) - toMinutes(r.startTime);
+  if (r.slotMinutes > blockMinutes) {
+    return `Los minutos por turno no pueden superar la duración del bloque (${blockMinutes} min).`;
+  }
+  return null;
+}
+
+// El profesional no puede estar en dos lugares a la vez: los bloques de un mismo día no se
+// solapan aunque sean de sucursales distintas (contiguos 09-12 y 12-15 sí valen).
+function validateRows(rows: BlockRow[]): BlockRow[] {
+  const result = rows.map(r => ({ ...r, error: rowError(r) }));
+  for (let i = 0; i < result.length; i++) {
+    if (result[i].error) continue;
+    const overlap = result.find((o, j) => j !== i && o.weekday === result[i].weekday
+      && !rowError(o) && o.startTime < result[i].endTime && result[i].startTime < o.endTime);
+    if (overlap) result[i].error = `Se superpone con el bloque ${overlap.startTime}–${overlap.endTime} del mismo día.`;
+  }
+  return result;
 }
 
 // Grilla semanal como lista editable de bloques (agrupados visualmente por día). Local state
 // hasta que el usuario presione "Guardar": en ese momento el componente emite el array completo
-// y la page dispara PUT. Validación local: end_time > start_time.
+// y la page dispara PUT. Validación local: mismas reglas que
+// el backend (ver validateRows); si igual rechaza (422), la page muestra el motivo traducido.
 @Component({
   selector: 'app-schedule-grid',
   imports: [FormsModule, ReactiveFormsModule],
@@ -70,24 +102,21 @@ export class ScheduleGrid {
   }
 
   removeAt(index: number): void {
-    this.rows.update(list => list.filter((_, i) => i !== index));
+    // Revalida solo las filas que ya mostraban error (quitar un bloque puede resolver un solape).
+    this.rows.update(list => {
+      const next = list.filter((_, i) => i !== index);
+      return next.some(r => r.error) ? validateRows(next) : next;
+    });
   }
 
   updateRow(index: number, patch: Partial<BlockRow>): void {
-    this.rows.update(list => list.map((r, i) => {
-      if (i !== index) return r;
-      const next: BlockRow = { ...r, ...patch, error: null };
-      if (next.endTime <= next.startTime) next.error = 'La hora fin debe ser mayor que la hora inicio.';
-      return next;
-    }));
+    // Se revalida todo: un cambio en un bloque puede crear o resolver un solape con otro.
+    this.rows.update(list => validateRows(list.map((r, i) => (i === index ? { ...r, ...patch } : r))));
   }
 
   submit(): void {
     // Re-validar por si hay rows sin tocar que están inválidas desde hidratación.
-    const current = this.rows().map(r => ({
-      ...r,
-      error: r.endTime <= r.startTime ? 'La hora fin debe ser mayor que la hora inicio.' : null,
-    }));
+    const current = validateRows(this.rows());
     this.rows.set(current);
     if (current.some(r => r.error !== null)) return;
 
@@ -104,5 +133,11 @@ export class ScheduleGrid {
   // Helpers template.
   rowIndex(row: BlockRow): number {
     return this.rows().indexOf(row);
+  }
+
+  // Borde rojo en los inputs del bloque con error (el motivo va debajo de la fila).
+  rowClass(row: BlockRow, size: string): string {
+    const border = row.error ? 'border-red-400' : 'border-border';
+    return `${size} rounded-lg border ${border} bg-surface text-xs`;
   }
 }

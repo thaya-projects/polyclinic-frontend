@@ -47,12 +47,31 @@ export interface Appointment {
   type?: AppointmentType;
   meeting_url?: string | null;
   meeting_provider?: string | null;
+  // Nombres legibles que solo llena GET /tenants/appointments (listado) —
+  // los usa el popover de la agenda para no depender de los catálogos
+  // cargados en el front (pacientes viene paginado).
+  patient_name?: string | null;
+  professional_name?: string | null;
+  service_name?: string | null;
+  room_name?: string | null;
+  branch_name?: string | null;
 }
 
 // El form de alta/edición (T5/T6 de agenda) no toca status/confirmed_at/
 // cancelled_reason — eso se maneja exclusivamente desde el panel de
 // cambio de estado.
-export type AppointmentDto = Omit<Appointment, 'id' | 'status' | 'confirmed_at' | 'cancelled_reason'>;
+export type AppointmentDto = Omit<
+  Appointment,
+  | 'id'
+  | 'status'
+  | 'confirmed_at'
+  | 'cancelled_reason'
+  | 'patient_name'
+  | 'professional_name'
+  | 'service_name'
+  | 'room_name'
+  | 'branch_name'
+>;
 
 // GET /tenants/appointments?from=&to=&professional_id=&branch_id=&patient_id=&status= (T6)
 // patient_id/status no se exponen en esta UI (T5 no tiene filtro de

@@ -21,6 +21,8 @@ export class ToastService {
   readonly toasts = this.toastsSignal.asReadonly();
 
   show(message: string, tone: ToastTone = 'info', durationMs = DEFAULT_DURATION_MS): void {
+    // Mismo aviso ya visible (ej. varios requests fallando a la vez): no se apila otro igual.
+    if (this.toastsSignal().some(t => t.message === message && t.tone === tone)) return;
     const id = ++this.nextId;
     this.toastsSignal.update(list => [...list, { id, tone, message }]);
     setTimeout(() => this.dismiss(id), durationMs);

@@ -68,11 +68,17 @@
       <label class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-muted">Razón social</span>
         <input type="text" formControlName="legal_name" [class]="inputClass(form.controls.legal_name)" />
+        @if (isInvalid(form.controls.legal_name)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.legal_name) }}</span>
+        }
       </label>
 
       <label class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-muted">NIT / Tax ID</span>
         <input type="text" formControlName="tax_id" [class]="inputClass(form.controls.tax_id)" />
+        @if (isInvalid(form.controls.tax_id)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.tax_id) }}</span>
+        }
       </label>
 
       <label class="flex flex-col gap-1.5">
@@ -86,6 +92,9 @@
       <label class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-muted">Dirección de facturación</span>
         <input type="text" formControlName="billing_address" [class]="inputClass(form.controls.billing_address)" />
+        @if (isInvalid(form.controls.billing_address)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.billing_address) }}</span>
+        }
       </label>
     </div>
   </section>

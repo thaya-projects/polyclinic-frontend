@@ -1,13 +1,26 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Branch } from '../../../../core/models/branch.model';
 import { Professional } from '../../../../core/models/professional.model';
 import {
   CreateScheduleExceptionDto, ScheduleException,
 } from '../../../../core/models/schedule.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+import {
+  INPUT_BASE_CLASS, fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator,
+} from '../../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../../shared/utils/server-errors.util';
+
+const END_BEFORE_START_MESSAGE = 'La fecha fin debe ser mayor que la fecha inicio.';
+
+// ends_at > starts_at (mismo criterio que ScheduleException.Create): el error queda en el grupo y se
+// muestra debajo de "Hasta".
+function endAfterStartValidator(group: AbstractControl): ValidationErrors | null {
+  const start = group.get('starts_at')?.value as string | null;
+  const end = group.get('ends_at')?.value as string | null;
+  return start && end && end <= start ? { endBeforeStart: true } : null;
+}
 
 // Lista de excepciones + modal para crear. Validación local: ends_at > starts_at.
 @Component({
@@ -43,13 +56,15 @@ export class ExceptionsSection {
   readonly professionalNameById = computed(() =>
     this.professionals().reduce<Record<string, string>>((acc, p) => (acc[p.id] = p.full_name, acc), {}));
 
+  readonly endBeforeStartMessage = END_BEFORE_START_MESSAGE;
+
   form = this.fb.group({
     professional_id: [''],
     branch_id: [''],
-    starts_at: ['', Validators.required],
-    ends_at: ['', Validators.required],
+    starts_at: ['', requiredNotBlankValidator],
+    ends_at: ['', requiredNotBlankValidator],
     reason: [''],
-  });
+  }, { validators: endAfterStartValidator });
 
   openModal(): void {
     this.form.reset({ professional_id: '', branch_id: '', starts_at: '', ends_at: '', reason: '' });
@@ -61,6 +76,28 @@ export class ExceptionsSection {
     this.modalOpen.set(false);
   }
 
+  // "Hasta" en rojo también cuando el rango está invertido (error del grupo).
+  showEndBeforeStart(): boolean {
+    const end = this.form.controls.ends_at;
+    return this.form.hasError('endBeforeStart') && (end.touched || end.dirty);
+  }
+
+  endsAtClass(): string {
+    return this.showEndBeforeStart() && !isFieldInvalid(this.form.controls.ends_at)
+      ? `${INPUT_BASE_CLASS} border-red-400 focus:border-red-400 focus:ring-red-400/18`
+      : fieldInputClass(this.form.controls.ends_at);
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje con showError).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
+  }
+
+  showError(message: string): void {
+    this.localError.set(message);
+  }
+
   submit(): void {
     this.localError.set(null);
     if (this.form.invalid) {
@@ -68,10 +105,6 @@ export class ExceptionsSection {
       return;
     }
     const raw = this.form.getRawValue();
-    if (raw.ends_at! <= raw.starts_at!) {
-      this.localError.set('La fecha fin debe ser mayor que la fecha inicio.');
-      return;
-    }
 
     // Datetime-local no incluye zona — asumimos UTC consistente con el backend que trabaja en UTC.
     const dto: CreateScheduleExceptionDto = {

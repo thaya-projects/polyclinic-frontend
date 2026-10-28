@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { validationErrorMessage } from './http-error.util';
+import { specificErrorMessage, validationErrorMessage } from './http-error.util';
 
 // T5: mensajes específicos para los códigos que puede devolver
 // /tenants/invoices/:id/payments — 401/403/404/409 (monto mayor al
@@ -15,7 +15,7 @@ function basePaymentsMessage(err: HttpErrorResponse): string | null {
 // GET /tenants/invoices/:id/payments
 export function paymentsListErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    return basePaymentsMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudieron cargar los pagos.');
+    return basePaymentsMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudieron cargar los pagos.');
   }
   return 'No se pudieron cargar los pagos.';
 }
@@ -25,9 +25,12 @@ export function paymentsListErrorMessage(err: unknown): string {
 // normal; esto cubre una condición de carrera con el saldo real).
 export function paymentSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     if (err.status === 409) return 'El monto supera el saldo pendiente de la factura.';
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
-    return basePaymentsMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo registrar el pago.');
+    if (err.status === 400 || err.status === 422) return validationErrorMessage(err) ?? 'El servidor rechazó los datos del pago.';
+    return basePaymentsMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudo registrar el pago.');
   }
   return 'No se pudo registrar el pago.';
 }

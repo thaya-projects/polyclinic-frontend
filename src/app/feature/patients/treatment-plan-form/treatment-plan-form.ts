@@ -2,10 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { TreatmentPlanItemForm } from '../treatment-plan-item-form/treatment-plan-item-form';
 import { TreatmentPlanItemsPreview, TreatmentPlanItemDraft } from '../treatment-plan-items-preview/treatment-plan-items-preview';
-import { CURRENCIES } from '../../../core/constants/currencies.const';
+import { currencyOptions, resolveTenantCurrency } from '../../../core/constants/currencies.const';
+import { AuthStore } from '../../../core/services/auth-store.service';
 import { TreatmentPlan, TreatmentPlanDto } from '../../../core/models/treatment-plan.model';
 import { TreatmentPlanItem, TreatmentPlanItemDto } from '../../../core/models/treatment-plan-item.model';
-import { fieldInputClass } from '../../../shared/utils/form-validation.util';
+import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 export interface TreatmentPlanSubmitPayload {
   plan: TreatmentPlanDto;
@@ -36,11 +38,15 @@ export class TreatmentPlanForm {
   cancelled = output<void>();
 
   readonly inputClass = fieldInputClass;
-  readonly currencies = CURRENCIES;
+  readonly isInvalid = isFieldInvalid;
+  readonly errorMessage = fieldErrorMessage;
+  // Moneda de la clínica preseleccionada; las demás quedan disponibles para cambiarla.
+  readonly tenantCurrency = resolveTenantCurrency(inject(AuthStore).tenant());
+  readonly currencies = currencyOptions(this.tenantCurrency);
 
   form = this.fb.group({
     notes: [''],
-    currency: [''],
+    currency: [this.tenantCurrency],
   });
 
   items = signal<TreatmentPlanItemDraft[]>([]);
@@ -56,7 +62,7 @@ export class TreatmentPlanForm {
   constructor() {
     effect(() => {
       const p = this.plan();
-      this.form.patchValue({ notes: p?.notes ?? '', currency: p?.currency ?? '' }, { emitEvent: false });
+      this.form.patchValue({ notes: p?.notes ?? '', currency: p?.currency ?? this.tenantCurrency }, { emitEvent: false });
     });
 
     effect(() => {
@@ -86,7 +92,17 @@ export class TreatmentPlanForm {
     this.items.update(list => list.filter(i => i.tempId !== tempId));
   }
 
+  // Error 400/422 del backend: lo marca en el input del campo que falló (notes/currency). false = no
+  // es de un campo de este form (el caller muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
+  }
+
   submit(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     const raw = this.form.getRawValue();
     this.submitted.emit({
       plan: { notes: raw.notes || null, currency: raw.currency || undefined },

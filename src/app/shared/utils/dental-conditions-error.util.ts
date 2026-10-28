@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { normalizeBackendMessage } from './encounters-error.util';
+import { translatedValidationMessage } from './translated-validation.util';
 import {
   ODONTOGRAM_DISABLED_MESSAGE, ODONTOGRAM_MODULE_KEY, hasProblemDetail, isModuleDisabledProblem,
 } from './module-disabled.util';
@@ -44,7 +45,8 @@ export const DENTAL_CONDITION_FORBIDDEN_MESSAGE =
 export const DENTAL_CONDITIONS_LIST_FORBIDDEN_MESSAGE = 'No tenés acceso al catálogo dental de esta clínica.';
 export const SESSION_EXPIRED_MESSAGE = 'Tu sesión expiró. Iniciá sesión de nuevo.';
 export const DENTAL_CONDITION_NOT_FOUND_MESSAGE = 'La condición ya no existe. Se actualizó el listado.';
-export const DENTAL_CONDITION_VALIDATION_MESSAGE = 'Revisá los datos ingresados e intentá de nuevo.';
+export const DENTAL_CONDITION_VALIDATION_MESSAGE =
+  'No se pudo guardar la condición: el código, el nombre, la categoría o el color no son válidos.';
 export const DENTAL_CONDITIONS_LOAD_ERROR_MESSAGE = 'No se pudo cargar el catálogo de condiciones dentales.';
 
 type KnownMessage = { pattern: RegExp; translate: (m: RegExpMatchArray) => string };
@@ -127,7 +129,12 @@ export function dentalConditionError(
     case 403: return forbiddenError(err, context);
     case 404: return { kind: 'not_found', message: DENTAL_CONDITION_NOT_FOUND_MESSAGE };
     case 409: return { kind: 'duplicate_code', message: DENTAL_CONDITION_DUPLICATE_CODE_MESSAGE };
-    case 422: return { kind: 'validation', message: translatedMessage(err) ?? DENTAL_CONDITION_VALIDATION_MESSAGE };
+    // 400 (model binding) y 422: texto propio si se reconoce, si no el genérico traducido con el campo.
+    case 400:
+    case 422: return {
+      kind: 'validation',
+      message: translatedMessage(err) ?? translatedValidationMessage(err) ?? DENTAL_CONDITION_VALIDATION_MESSAGE,
+    };
     case 0: return { kind: 'other', message: 'No se pudo conectar con el servidor.' };
     default: return { kind: 'other', message: fallback };
   }

@@ -110,6 +110,7 @@ export class EncounterDetailPage {
   readonly prescriptions = inject(PrescriptionsStore);
 
   private note = viewChild(EncounterNote);
+  private voidDialog = viewChild(VoidEncounterDialog);
 
   encounter = signal<Encounter | null>(null);
   loading = signal(false);
@@ -442,9 +443,12 @@ export class EncounterDetailPage {
         // authInterceptor ya hizo refresh o logout + redirect.
         return;
       default:
-        // 422 del void se muestra dentro del diálogo; el resto, arriba de la nota.
+        // 422 del void se muestra dentro del diálogo (debajo del motivo si el backend nombra el
+        // campo); un 422 de un campo de la nota, debajo de ese campo; el resto, arriba de la nota.
         if (action === 'void' && kind === 'validation') {
-          this.voidError.set(message);
+          this.voidError.set(this.voidDialog()?.applyServerError(err) ? null : message);
+        } else if (action === 'save' && kind === 'validation' && this.note()?.applyServerError(err)) {
+          this.actionError.set(null);
         } else {
           if (action === 'void') this.voidOpen.set(false);
           this.actionError.set(message);

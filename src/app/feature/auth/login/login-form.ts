@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LoginDto } from '../../../core/models/auth.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { emailValidator, fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
 
 @Component({
   selector: 'app-login-form',
@@ -23,7 +23,7 @@ export class LoginForm {
   readonly errorMessage = fieldErrorMessage;
 
   form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required, emailValidator]],
     password: ['', Validators.required],
   });
 

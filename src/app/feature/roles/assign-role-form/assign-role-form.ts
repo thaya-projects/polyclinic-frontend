@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AssignmentRow, UserRoleAssignmentsTable } from '../user-role-assignments-table/user-role-assignments-table';
 import { ClinicRole } from '../../../core/models/clinic-role.model';
 import { Branch } from '../../../core/models/branch.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { INPUT_BASE_CLASS, fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
 
 interface DraftAssignment {
   draftId: string;
@@ -57,6 +58,15 @@ export class AssignRoleForm {
     effect(() => {
       this.draft.set(this.initialAssignments().map(a => ({ draftId: crypto.randomUUID(), ...a })));
     });
+    // Al cambiar rol o sucursal, el aviso de duplicado deja de aplicar.
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.duplicateError.set(false));
+  }
+
+  // El duplicado se marca en el select "Rol" (no es un error del control, es del draft).
+  roleSelectClass(): string {
+    return this.duplicateError()
+      ? `${INPUT_BASE_CLASS} border-red-400 focus:border-red-400 focus:ring-red-400/18`
+      : fieldInputClass(this.form.controls.role_id);
   }
 
   addToDraft(): void {

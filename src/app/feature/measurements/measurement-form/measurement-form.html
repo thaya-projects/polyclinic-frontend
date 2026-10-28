@@ -19,7 +19,7 @@
         <option [value]="other">Otro…</option>
       </select>
       @if (showError(form.controls.type)) {
-        <span role="alert" [id]="fieldId('type-error')" class="text-xs text-red-500" data-testid="measurement-type-error">Elegí un tipo.</span>
+        <span role="alert" [id]="fieldId('type-error')" class="text-xs text-red-500" data-testid="measurement-type-error">{{ typeErrorText() }}</span>
       }
     </div>
 
@@ -64,7 +64,7 @@
         [class]="inputClass(form.controls.unit, unitReadonly() ? 'bg-surface-alt/40 text-muted' : '')" />
       @if (showError(form.controls.unit)) {
         <span role="alert" [id]="fieldId('unit-error')" class="text-xs text-red-500" data-testid="measurement-unit-error">
-          {{ form.controls.unit.hasError('maxlength') ? 'Máximo ' + unitLimit + ' caracteres.' : 'Indicá la unidad.' }}
+          {{ unitErrorText() }}
         </span>
       }
     </div>
@@ -99,7 +99,7 @@
       class="w-full rounded-xl border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:ring-3 focus:outline-none"
       [class]="showError(form.controls.note) ? 'border-red-400 focus:border-red-400 focus:ring-red-400/18' : 'border-border focus:border-brand focus:ring-brand/18'"></textarea>
     @if (showError(form.controls.note)) {
-      <span role="alert" [id]="fieldId('note-error')" class="text-xs text-red-500" data-testid="measurement-note-error">La nota no puede superar los {{ noteLimit }} caracteres.</span>
+      <span role="alert" [id]="fieldId('note-error')" class="text-xs text-red-500" data-testid="measurement-note-error">{{ noteErrorText() }}</span>
     }
   </div>
 

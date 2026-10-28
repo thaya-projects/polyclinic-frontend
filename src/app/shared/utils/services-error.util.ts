@@ -1,5 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { validationErrorMessage } from './http-error.util';
+import { specificErrorMessage, validationErrorMessage } from './http-error.util';
+import { translateServerMessage } from './server-errors.util';
+
+// Estos endpoints devuelven ProblemDetails ({ detail }); { message } queda por compatibilidad.
+function backendText(err: HttpErrorResponse): string | null {
+  const raw = err.error?.detail ?? err.error?.message;
+  return typeof raw === 'string' && raw ? translateServerMessage(raw) : null;
+}
 
 // T6: mensajes específicos para los códigos que puede devolver
 // /tenants/service-categories y /tenants/services (401/404 según el
@@ -16,7 +23,7 @@ export function servicesListErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
     return (
       baseServicesMessage(err) ??
-      (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo cargar el catálogo de servicios.')
+      backendText(err) ?? 'No se pudo cargar el catálogo de servicios.'
     );
   }
   return 'No se pudo cargar el catálogo de servicios.';
@@ -25,10 +32,16 @@ export function servicesListErrorMessage(err: unknown): string {
 // POST /tenants/services, PATCH /tenants/services/:id (alta/edición)
 export function serviceSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
+    if (err.status === 400 || err.status === 422) {
+      return validationErrorMessage(err) ?? 'No se pudo guardar el servicio: uno de los datos no es válido.';
+    }
+    if (err.status === 409) return 'Ya existe un servicio con ese código en tu clínica.';
     return (
       baseServicesMessage(err) ??
-      (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo guardar el servicio.')
+      backendText(err) ?? 'No se pudo guardar el servicio.'
     );
   }
   return 'No se pudo guardar el servicio.';
@@ -37,9 +50,12 @@ export function serviceSaveErrorMessage(err: unknown): string {
 // PATCH /tenants/services/:id (solo activar/desactivar)
 export function serviceStatusErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     return (
       baseServicesMessage(err) ??
-      (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo actualizar el estado del servicio.')
+      backendText(err) ?? 'No se pudo actualizar el estado del servicio.'
     );
   }
   return 'No se pudo actualizar el estado del servicio.';

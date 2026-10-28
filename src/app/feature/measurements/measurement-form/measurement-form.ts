@@ -160,9 +160,48 @@ export class MeasurementForm {
     return this.showError(control) ? this.fieldId(`${name}-error`) : hint;
   }
 
+  // Error 400/422 del backend (MeasurementsStore.fieldError, texto ya traducido): lo marca en el
+  // input del campo. `type` de un tipo libre va al código. false = no es un campo de este form (el
+  // contenedor deja el banner).
+  applyServerError(field: string, message: string): boolean {
+    const name = field === 'type' && this.isOther() ? 'custom_type' : field;
+    const control = this.form.get(name);
+    if (!control) return false;
+    const apply = () => {
+      control.setErrors({ ...(control.errors ?? {}), server: message });
+      control.markAsTouched();
+      this.formTick.update(n => n + 1);
+    };
+    apply();
+    // El select de tipo está deshabilitado mientras dura la operación: al rehabilitarse (busy → false)
+    // Angular recalcula sus errores y perdería el del backend, así que se vuelve a aplicar.
+    if (control.disabled) afterNextRender(() => { if (control.enabled) apply(); }, { injector: this.injector });
+    return true;
+  }
+
+  private serverError(control: AbstractControl): string | null {
+    const server = control.errors?.['server'];
+    return typeof server === 'string' ? server : null;
+  }
+
+  typeErrorText(): string {
+    return this.serverError(this.form.controls.type) ?? 'Elegí un tipo.';
+  }
+
+  unitErrorText(): string {
+    const control = this.form.controls.unit;
+    return this.serverError(control)
+      ?? (control.hasError('maxlength') ? `Máximo ${this.unitLimit} caracteres.` : 'Indicá la unidad.');
+  }
+
+  noteErrorText(): string {
+    return this.serverError(this.form.controls.note) ?? `La nota no puede superar los ${this.noteLimit} caracteres.`;
+  }
+
   valueErrorText(): string {
     const errors = this.form.controls.value.errors;
     if (!errors) return '';
+    if (typeof errors['server'] === 'string') return errors['server'];
     if (errors['required']) return 'Ingresá un valor numérico.';
     if (errors['range']) return this.rangeText() ?? 'Valor fuera de rango.';
     if (errors['decimals']) return `Hasta ${MEASUREMENT_LIMITS.decimals} decimales.`;
@@ -173,6 +212,7 @@ export class MeasurementForm {
   customTypeErrorText(): string {
     const errors = this.form.controls.custom_type.errors;
     if (!errors) return '';
+    if (typeof errors['server'] === 'string') return errors['server'];
     if (errors['required']) return 'Ingresá el código del tipo.';
     if (errors['known']) return 'Ese tipo ya está en el catálogo: elegilo de la lista.';
     return MEASUREMENT_TYPE_FORMAT_MESSAGE;
@@ -181,6 +221,7 @@ export class MeasurementForm {
   measuredAtErrorText(): string {
     const errors = this.form.controls.measured_at.errors;
     if (!errors) return '';
+    if (typeof errors['server'] === 'string') return errors['server'];
     if (errors['required']) return 'Indicá la fecha y hora de la medición.';
     if (errors['nonexistent']) return 'Esa hora no existe en tu zona horaria por el cambio de horario. Elegí otra.';
     if (errors['future']) return 'La fecha de medición no puede ser futura.';

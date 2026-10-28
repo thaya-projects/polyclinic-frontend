@@ -18,7 +18,8 @@
         <div class="mb-2 flex flex-wrap items-start gap-2">
           <select [value]="row.branchId"
             (change)="updateRow(rowIndex(row), { branchId: $any($event.target).value })"
-            class="h-10 rounded-lg border border-border bg-surface px-2 text-xs">
+            [class]="rowClass(row, 'h-10 px-2')">
+            <option value="" disabled>Sucursal</option>
             @for (b of availableBranches(); track b.id) {
               <option [value]="b.id">{{ b.name }}</option>
             }
@@ -26,16 +27,16 @@
 
           <input type="time" [value]="row.startTime"
             (change)="updateRow(rowIndex(row), { startTime: $any($event.target).value })"
-            class="h-10 w-28 rounded-lg border border-border bg-surface px-2 text-xs" />
+            [class]="rowClass(row, 'h-10 w-28 px-2')" />
           <span class="pt-2 text-xs text-muted">a</span>
           <input type="time" [value]="row.endTime"
             (change)="updateRow(rowIndex(row), { endTime: $any($event.target).value })"
-            class="h-10 w-28 rounded-lg border border-border bg-surface px-2 text-xs" />
+            [class]="rowClass(row, 'h-10 w-28 px-2')" />
 
-          <input type="number" min="5" step="5" [value]="row.slotMinutes"
+          <input type="number" min="1" step="5" [value]="row.slotMinutes"
             (change)="updateRow(rowIndex(row), { slotMinutes: +$any($event.target).value })"
-            class="h-10 w-20 rounded-lg border border-border bg-surface px-2 text-xs"
-            title="Minutos por slot" />
+            [class]="rowClass(row, 'h-10 w-20 px-2')"
+            title="Minutos por turno" />
           <span class="pt-2 text-xs text-muted">min</span>
 
           <button type="button" (click)="removeAt(rowIndex(row))"

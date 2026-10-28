@@ -6,7 +6,8 @@ import {
   NotificationChannel,
 } from '../../../core/models/notification-template.model';
 import { NOTIFICATION_CHANNELS, NOTIFICATION_CHANNEL_LABELS, NOTIFICATION_LANGUAGES } from '../../../core/constants/notification-channel.const';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 // No llama a ningún servicio — arma el payload y lo emite; el contenedor
 // (NotificationTemplatesPage) decide cómo persistirlo.
@@ -44,8 +45,8 @@ export class NotificationTemplateForm {
 
   form = this.fb.group({
     channel: this.fb.control<NotificationChannel>('whatsapp', Validators.required),
-    code: ['', Validators.required],
-    name: ['', Validators.required],
+    code: ['', requiredNotBlankValidator],
+    name: ['', requiredNotBlankValidator],
     body: [''],
     language: ['es'],
     variables: [''],
@@ -68,6 +69,12 @@ export class NotificationTemplateForm {
     });
   }
 
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el contenedor muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -76,8 +83,8 @@ export class NotificationTemplateForm {
     const raw = this.form.getRawValue();
     this.submitted.emit({
       channel: raw.channel!,
-      code: raw.code!,
-      name: raw.name!,
+      code: raw.code!.trim(),
+      name: raw.name!.trim(),
       body: raw.body ?? '',
       language: raw.language ?? 'es',
       variables: (raw.variables ?? '')

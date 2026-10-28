@@ -1,10 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import {
   CreateProfessionalDto, Professional, UpdateProfessionalDto,
 } from '../../../../core/models/professional.model';
 import { Specialty } from '../../../../core/models/specialty.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+import {
+  emailValidator, fieldErrorMessage, fieldInputClass, isFieldInvalid, phoneValidator, requiredNotBlankValidator,
+} from '../../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../../shared/utils/server-errors.util';
+import { PhoneInput } from '../../../../shared/components/phone-input/phone-input';
 
 // create_login_account=true requiere email.
 function emailRequiredForLoginValidator(group: AbstractControl): ValidationErrors | null {
@@ -29,7 +33,7 @@ function emailRequiredForLoginValidator(group: AbstractControl): ValidationError
 // En edit, el componente padre decide si emitir un segundo PUT específico para specialties.
 @Component({
   selector: 'app-professional-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PhoneInput],
   templateUrl: './professional-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -55,10 +59,10 @@ export class ProfessionalForm {
 
   form = this.fb.group(
     {
-      full_name: ['', Validators.required],
+      full_name: ['', requiredNotBlankValidator],
       license_number: [''],
-      email: ['', Validators.email],
-      phone: [''],
+      email: ['', emailValidator],
+      phone: ['', phoneValidator],
       create_login_account: [false],
     },
     { validators: emailRequiredForLoginValidator },
@@ -99,6 +103,20 @@ export class ProfessionalForm {
     return this.selectedSpecialtyIds().has(id);
   }
 
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje general). El backend nombra el campo por el
+  // parámetro de Professional.Create (fullName → full_name), igual que el control.
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
+  }
+
+  // 409 "app user with email" (alta con cuenta de acceso): el correo ya tiene una cuenta.
+  markEmailTaken(message: string): void {
+    const email = this.form.controls.email;
+    email.setErrors({ ...(email.errors ?? {}), server: message });
+    email.markAsTouched();
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -106,7 +124,7 @@ export class ProfessionalForm {
     }
     const raw = this.form.getRawValue();
     const licenseNumber = raw.license_number?.trim() ? raw.license_number : null;
-    const email = raw.email?.trim() ? raw.email : null;
+    const email = raw.email?.trim() ? raw.email.trim() : null;
     const phone = raw.phone?.trim() ? raw.phone : null;
     const specialtyIds = Array.from(this.selectedSpecialtyIds());
 

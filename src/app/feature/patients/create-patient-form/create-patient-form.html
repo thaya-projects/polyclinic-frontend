@@ -35,6 +35,9 @@
       <label class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-muted">N° de documento</span>
         <input type="text" formControlName="document_number" [class]="inputClass(form.controls.document_number)" />
+        @if (isInvalid(form.controls.document_number)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.document_number) }}</span>
+        }
       </label>
 
       <label class="flex flex-col gap-1.5">
@@ -53,6 +56,9 @@
             <option [value]="opt.value">{{ opt.label }}</option>
           }
         </select>
+        @if (isInvalid(form.controls.sex)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.sex) }}</span>
+        }
       </label>
     </div>
   </section>
@@ -60,15 +66,21 @@
   <section class="flex flex-col gap-4">
     <h3 class="text-base font-semibold text-navy">Contacto</h3>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <label class="flex flex-col gap-1.5">
+      <div class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-muted">WhatsApp</span>
-        <input type="tel" formControlName="whatsapp_phone" [class]="inputClass(form.controls.whatsapp_phone)" />
-      </label>
+        <app-phone-input formControlName="whatsapp_phone" />
+        @if (isInvalid(form.controls.whatsapp_phone)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.whatsapp_phone) }}</span>
+        }
+      </div>
 
-      <label class="flex flex-col gap-1.5">
+      <div class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-muted">Teléfono alternativo</span>
-        <input type="tel" formControlName="phone_alt" [class]="inputClass(form.controls.phone_alt)" />
-      </label>
+        <app-phone-input formControlName="phone_alt" />
+        @if (isInvalid(form.controls.phone_alt)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.phone_alt) }}</span>
+        }
+      </div>
 
       <label class="flex flex-col gap-1.5 sm:col-span-2">
         <span class="text-xs font-medium text-muted">Correo</span>
@@ -81,12 +93,18 @@
       <label class="flex flex-col gap-1.5 sm:col-span-2">
         <span class="text-xs font-medium text-muted">Dirección</span>
         <input type="text" formControlName="address" [class]="inputClass(form.controls.address)" />
+        @if (isInvalid(form.controls.address)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.address) }}</span>
+        }
       </label>
 
       <label class="flex flex-col gap-1.5 sm:col-span-2">
         <span class="text-xs font-medium text-muted">Notas</span>
         <textarea formControlName="notes" rows="3"
           class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+        @if (isInvalid(form.controls.notes)) {
+          <span class="text-xs text-red-500">{{ errorMessage(form.controls.notes) }}</span>
+        }
       </label>
     </div>
   </section>

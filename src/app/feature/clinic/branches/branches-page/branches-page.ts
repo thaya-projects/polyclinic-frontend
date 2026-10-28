@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { BranchesTable } from '../branches-table/branches-table';
 import { BranchForm } from '../branch-form/branch-form';
 import { Modal } from '../../../../shared/components/modal/modal';
@@ -6,7 +6,7 @@ import { ConfirmDialog, ConfirmTone } from '../../../../shared/components/confir
 import { BranchesService } from '../../../../core/services/branches.service';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { Branch, CreateBranchDto, UpdateBranchDto } from '../../../../core/models/branch.model';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { clinicSettingsErrorMessage } from '../../../../shared/utils/clinic-settings-error.util';
 
 type ModalMode = 'none' | 'create' | 'edit';
 
@@ -29,6 +29,9 @@ export class BranchesPage {
 
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  private createForm = viewChild<BranchForm>('createForm');
+  private editForm = viewChild<BranchForm>('editForm');
 
   branchToDeactivate = signal<Branch | null>(null);
   deactivating = signal(false);
@@ -70,7 +73,10 @@ export class BranchesPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        // Error de un campo → debajo del input; si no, banner con el motivo.
+        this.actionError.set(this.createForm()?.applyServerError(err)
+          ? null
+          : clinicSettingsErrorMessage(err, 'No se pudo crear la sucursal.', 'La sucursal ya no existe.'));
       },
     });
   }
@@ -87,7 +93,9 @@ export class BranchesPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(this.editForm()?.applyServerError(err)
+          ? null
+          : clinicSettingsErrorMessage(err, 'No se pudo guardar la sucursal.', 'La sucursal ya no existe.'));
       },
     });
   }
@@ -114,7 +122,7 @@ export class BranchesPage {
       },
       error: (err: unknown) => {
         this.deactivating.set(false);
-        this.deactivateError.set(httpErrorMessage(err));
+        this.deactivateError.set(clinicSettingsErrorMessage(err, 'No se pudo desactivar la sucursal.', 'La sucursal ya no existe.'));
         this.branchToDeactivate.set(null);
       },
     });

@@ -42,14 +42,22 @@
       <label class="text-xs font-medium text-muted uppercase tracking-wide" for="plan-max-prof">Máx. profesionales</label>
       <input id="plan-max-prof" type="number" min="1" formControlName="max_professionals" placeholder="Sin límite"
         [class]="inputClass(form.controls.max_professionals)" />
-      <span class="text-xs text-muted">Dejá en blanco para 'sin límite'.</span>
+      @if (isInvalid(form.controls.max_professionals)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.max_professionals) }}</span>
+      } @else {
+        <span class="text-xs text-muted">Dejá en blanco para 'sin límite'.</span>
+      }
     </div>
 
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-medium text-muted uppercase tracking-wide" for="plan-max-branches">Máx. sedes</label>
       <input id="plan-max-branches" type="number" min="1" formControlName="max_branches" placeholder="Sin límite"
         [class]="inputClass(form.controls.max_branches)" />
-      <span class="text-xs text-muted">Dejá en blanco para 'sin límite'.</span>
+      @if (isInvalid(form.controls.max_branches)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.max_branches) }}</span>
+      } @else {
+        <span class="text-xs text-muted">Dejá en blanco para 'sin límite'.</span>
+      }
     </div>
   </div>
 
@@ -81,9 +89,12 @@
       }
     </div>
     <textarea id="plan-features" rows="6" formControlName="features_json" spellcheck="false"
+      [class.border-red-400]="featuresError() || isInvalid(form.controls.features_json)"
       class="rounded-xl border border-border bg-surface px-3.5 py-2.5 font-mono text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
     @if (featuresError()) {
       <span class="text-xs text-red-500">{{ featuresError() }}</span>
+    } @else if (isInvalid(form.controls.features_json)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.features_json) }}</span>
     } @else {
       <span class="text-xs text-muted">Los checkboxes de arriba sólo tocan las claves listadas; el resto del JSON se preserva.</span>
     }

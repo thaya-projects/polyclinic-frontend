@@ -132,6 +132,11 @@ export class ToothConditionsPanel {
     const { kind, message } = odontogramError(err, fallback, {
       operation: 'write', odontogramEnabled: this.repo.odontogramEnabled(), resource: 'tooth_condition',
     });
+    // 422 de un campo del form: se marca en su input; el banner queda para lo que no es de un campo.
+    if (kind === 'validation' && this.form()?.applyServerError(err, message)) {
+      this.error.set(null);
+      return;
+    }
     this.error.set(kind === 'forbidden' ? TOOTH_CONDITION_WRITE_FORBIDDEN_MESSAGE : message);
     if (kind === 'not_found' || kind === 'conflict') {
       this.editing.set(null);

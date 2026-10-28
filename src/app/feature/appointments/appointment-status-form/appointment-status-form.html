@@ -7,19 +7,25 @@
         <option [value]="status">{{ statusLabels[status] }}</option>
       }
     </select>
+    @if (isInvalid(form.controls.to_status)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.to_status) }}</span>
+    }
   </label>
 
   <label class="flex flex-col gap-1.5">
     <span class="text-xs font-medium text-muted">Nota</span>
     <input type="text" formControlName="note" placeholder="Opcional" [class]="inputClass(form.controls.note)" />
+    @if (isInvalid(form.controls.note)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.note) }}</span>
+    }
   </label>
 
   @if (showCancelledReason()) {
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Motivo de cancelación</span>
       <input type="text" formControlName="cancelled_reason" [class]="inputClass(form.controls.cancelled_reason)" />
-      @if (hasCancelledReasonError) {
-        <span class="text-xs text-red-500">Es obligatorio indicar el motivo para cancelar la cita.</span>
+      @if (isInvalid(form.controls.cancelled_reason)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.cancelled_reason) }}</span>
       }
     </label>
   }

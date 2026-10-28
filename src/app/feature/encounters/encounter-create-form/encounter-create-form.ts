@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ENCOUNTER_LIMITS, EncounterPartyOption } from '../../../core/models/encounter.model';
 import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 const SEARCH_DEBOUNCE_MS = 280;
 
@@ -65,6 +66,12 @@ export class EncounterCreateForm {
     this.searchTerm.set(value);
     clearTimeout(this.searchDebounce);
     this.searchDebounce = setTimeout(() => this.patientSearch.emit(value), SEARCH_DEBOUNCE_MS);
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   submit(): void {

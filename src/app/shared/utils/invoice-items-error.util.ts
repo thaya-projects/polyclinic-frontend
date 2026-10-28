@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { validationErrorMessage } from './http-error.util';
+import { specificErrorMessage, validationErrorMessage } from './http-error.util';
 
 // T5: mensajes específicos para los códigos que puede devolver
 // /tenants/invoices/:id/items(...) — 401/403/404/409 (factura ya no es
@@ -15,7 +15,7 @@ function baseInvoiceItemsMessage(err: HttpErrorResponse): string | null {
 // GET /tenants/invoices/:id/items
 export function invoiceItemsListErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    return baseInvoiceItemsMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudieron cargar los items de la factura.');
+    return baseInvoiceItemsMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudieron cargar los items de la factura.');
   }
   return 'No se pudieron cargar los items de la factura.';
 }
@@ -24,9 +24,12 @@ export function invoiceItemsListErrorMessage(err: unknown): string {
 // ya no está en borrador (regla del schema: "no editar items").
 export function invoiceItemSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     if (err.status === 409) return 'Esta factura ya no es un borrador — no se pueden editar sus items.';
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
-    return baseInvoiceItemsMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo guardar el item.');
+    if (err.status === 400 || err.status === 422) return validationErrorMessage(err) ?? 'El servidor rechazó los datos del item.';
+    return baseInvoiceItemsMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudo guardar el item.');
   }
   return 'No se pudo guardar el item.';
 }

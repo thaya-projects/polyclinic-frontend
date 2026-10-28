@@ -11,7 +11,7 @@ import { FeaturesService } from '../../../core/services/features.service';
 
 const PATIENT: Patient = {
   id: 'pat-1', first_name: 'Ana', last_name: 'Gómez', document_type: 'dni', document_number: '30111222',
-  birth_date: null, sex: '', whatsapp_phone: '', phone_alt: null, email: null, address: null, notes: null,
+  birth_date: null, sex: null, whatsapp_phone: '', phone_alt: null, email: null, address: null, notes: null,
   is_active: true,
 };
 

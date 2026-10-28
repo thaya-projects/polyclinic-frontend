@@ -2,7 +2,7 @@
   <form [formGroup]="form" (ngSubmit)="addToDraft()" class="flex flex-col gap-4 sm:flex-row sm:items-end">
     <label class="flex flex-1 flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Rol</span>
-      <select formControlName="role_id" [class]="inputClass(form.controls.role_id)">
+      <select formControlName="role_id" [class]="roleSelectClass()">
         <option value="" disabled>Seleccioná un rol</option>
         @for (role of roles(); track role.id) {
           <option [value]="role.id">{{ role.name }}</option>
@@ -10,6 +10,8 @@
       </select>
       @if (isInvalid(form.controls.role_id)) {
         <span class="text-xs text-red-600">{{ errorMessage(form.controls.role_id) }}</span>
+      } @else if (duplicateError()) {
+        <span class="text-xs text-red-600">Ese rol con esa sucursal ya está agregado.</span>
       }
     </label>
 
@@ -21,6 +23,9 @@
           <option [value]="branch.id">{{ branch.name }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.branch_id)) {
+        <span class="text-xs text-red-600">{{ errorMessage(form.controls.branch_id) }}</span>
+      }
     </label>
 
     <button type="submit"
@@ -29,13 +34,6 @@
       Agregar
     </button>
   </form>
-
-  @if (duplicateError()) {
-    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-      <i class="ti ti-alert-circle"></i>
-      Ese rol con esa sucursal ya está agregado.
-    </div>
-  }
 
   <app-user-role-assignments-table [rows]="rows()" [editable]="true" (remove)="removeFromDraft($event)" />
 </div>

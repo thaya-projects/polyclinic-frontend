@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CreatePlanDto, Plan, UpdatePlanDto } from '../../../../core/models/plan.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../../shared/utils/form-validation.util';
+import { fieldErrorMessage, fieldInputClass, isFieldInvalid, requiredNotBlankValidator } from '../../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../../shared/utils/server-errors.util';
 
 // Claves de features con checkbox atajo. Cualquier otra clave que el usuario agregue vía JSON
 // se preserva; los checkboxes sólo tocan estas tres.
@@ -36,11 +37,12 @@ export class PlanForm {
   // y escriben este mismo string manteniendo formato y claves extra.
   form = this.fb.group({
     code: ['', [Validators.required, Validators.pattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)]],
-    name: ['', Validators.required],
+    name: ['', requiredNotBlankValidator],
     price_month: [0, [Validators.required, Validators.min(0)]],
     currency: ['BOB', [Validators.required, Validators.pattern(/^[A-Za-z]{3}$/)]],
-    max_professionals: [null as number | null],
-    max_branches: [null as number | null],
+    // Backend (SubscriptionPlan): si vienen, tienen que ser >= 1; null = sin límite.
+    max_professionals: [null as number | null, Validators.min(1)],
+    max_branches: [null as number | null, Validators.min(1)],
     allow_multi_specialty: [false],
     features_json: ['{}', Validators.required],
     is_active: [true],
@@ -107,6 +109,14 @@ export class PlanForm {
     this.featuresError.set(null);
   }
 
+  // ── Errores del backend ──────────────────────────────────────────────────
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló (`features` vive en el
+  // textarea features_json). false = no es de un campo de este form (la página muestra el banner).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err, { features: 'features_json' });
+  }
+
   // ── Submit ───────────────────────────────────────────────────────────────
 
   submit(): void {
@@ -136,7 +146,7 @@ export class PlanForm {
       // Update: enviamos todos los campos editables (backend aplica Optional<T>; enviar el mismo
       // valor no cambia nada, así se evita diff a mano en el form).
       const dto: UpdatePlanDto = {
-        name: raw.name!,
+        name: raw.name!.trim(),
         price_month: raw.price_month!,
         currency: raw.currency!,
         max_professionals: raw.max_professionals,
@@ -151,7 +161,7 @@ export class PlanForm {
 
     const createDto: CreatePlanDto = {
       code: raw.code!,
-      name: raw.name!,
+      name: raw.name!.trim(),
       price_month: raw.price_month!,
       currency: raw.currency!,
       max_professionals: raw.max_professionals,

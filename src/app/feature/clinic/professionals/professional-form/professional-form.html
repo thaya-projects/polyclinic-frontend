@@ -13,12 +13,17 @@
       <label class="text-xs font-medium text-muted uppercase tracking-wide" for="prof-license">Nº de licencia</label>
       <input id="prof-license" type="text" formControlName="license_number" placeholder="Opcional"
         [class]="inputClass(form.controls.license_number)" />
+      @if (isInvalid(form.controls.license_number)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.license_number) }}</span>
+      }
     </div>
 
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="prof-phone">Teléfono</label>
-      <input id="prof-phone" type="text" formControlName="phone" placeholder="Opcional"
-        [class]="inputClass(form.controls.phone)" />
+      <span class="text-xs font-medium text-muted uppercase tracking-wide">Teléfono (opcional)</span>
+      <app-phone-input formControlName="phone" />
+      @if (isInvalid(form.controls.phone)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.phone) }}</span>
+      }
     </div>
 
     <div class="flex flex-col gap-1.5 md:col-span-2">

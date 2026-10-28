@@ -191,12 +191,13 @@ describe('PatientMeasurementsPage (mock repositories)', () => {
     pending$.complete();
   });
 
-  it('422 al registrar: mensaje en español dentro del modal', async () => {
+  it('422 al registrar: mensaje en español debajo del campo que falló (sin banner)', async () => {
     const page = await open();
     page.openCreate();
     page.onCreate({ type: 'weight', value: 9999, unit: 'kg' });
     await settle();
-    expect(d('create-error')?.textContent).toContain('Peso: el valor debe estar entre 0,2 y 700 kg.');
+    expect(d('measurement-value-error')?.textContent).toContain('Peso: el valor debe estar entre 0,2 y 700 kg.');
+    expect(d('create-error')).toBeNull();
   });
 
   it('401 al registrar: no muestra error (lo resuelve authInterceptor)', async () => {

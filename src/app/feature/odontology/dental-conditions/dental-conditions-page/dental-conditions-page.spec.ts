@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { DentalConditionsPage } from './dental-conditions-page';
+import { DentalConditionForm } from '../dental-condition-form/dental-condition-form';
 import { DENTAL_CONDITIONS_REPOSITORY } from '../../../../core/services/dental-conditions-repository';
 import { MockDentalConditionsRepository } from '../../../../testing/dental-conditions-mock.repository';
 import {
@@ -62,11 +64,15 @@ describe('DentalConditionsPage', () => {
     expect(rowOf('fractura').textContent).toContain('Propia');
   });
 
-  it('alta con code repetido: mensaje "código ya existe" en el modal', () => {
+  it('alta con code repetido: "código ya existe" debajo del input Código (sin banner)', () => {
     page.openCreateModal();
+    fixture.detectChanges();
     page.onCreate({ code: 'sellante', name: 'Otro' });
+    fixture.detectChanges();
     expect(page.modalMode()).toBe('create');
-    expect(page.actionError()).toBe(DENTAL_CONDITION_DUPLICATE_CODE_MESSAGE);
+    expect(page.actionError()).toBeNull();
+    const form = fixture.debugElement.query(By.directive(DentalConditionForm)).componentInstance as DentalConditionForm;
+    expect(form.form.controls.code.errors?.['server']).toBe(DENTAL_CONDITION_DUPLICATE_CODE_MESSAGE);
   });
 
   it('edición OK: actualiza la fila', () => {

@@ -52,7 +52,7 @@ export class AppointmentStatusPanel {
       },
       error: err => {
         this.saving.set(false);
-        this.saveError.set(appointmentStatusChangeErrorMessage(err));
+        this.saveError.set(this.statusForm()?.applyServerError(err) ? null : appointmentStatusChangeErrorMessage(err));
       },
     });
   }

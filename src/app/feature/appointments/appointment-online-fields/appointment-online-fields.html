@@ -6,17 +6,26 @@
         <option [value]="type">{{ typeLabels[type] }}</option>
       }
     </select>
+    @if (isInvalid(form.controls.type)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.type) }}</span>
+    }
   </label>
 
   @if (showMeetingFields()) {
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Proveedor de videollamada</span>
       <input type="text" formControlName="meeting_provider" placeholder="ej. Zoom, Meet..." [class]="inputClass(form.controls.meeting_provider)" />
+      @if (isInvalid(form.controls.meeting_provider)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.meeting_provider) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5 sm:col-span-2">
       <span class="text-xs font-medium text-muted">Link de la reunión</span>
       <input type="text" formControlName="meeting_url" placeholder="Opcional" [class]="inputClass(form.controls.meeting_url)" />
+      @if (isInvalid(form.controls.meeting_url)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.meeting_url) }}</span>
+      }
     </label>
   }
 </div>

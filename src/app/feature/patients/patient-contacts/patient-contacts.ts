@@ -65,7 +65,8 @@ export class PatientContacts {
       },
       error: err => {
         this.saving.set(false);
-        this.saveError.set(contactSaveErrorMessage(err));
+        // Error de un campo: se marca en su input; el banner queda para lo que no es de un campo.
+        this.saveError.set(this.contactForm()?.applyServerError(err) ? null : contactSaveErrorMessage(err));
       },
     });
   }

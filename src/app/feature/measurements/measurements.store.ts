@@ -10,7 +10,7 @@ import { EncounterVersionChange } from '../../core/models/encounter.model';
 import { PagedResult } from '../../core/models/paged-result.model';
 import {
   MEASUREMENTS_ACCESS_DENIED_MESSAGE, MEASUREMENTS_LOAD_ERROR_MESSAGE, MEASUREMENT_TYPES_LOAD_ERROR_MESSAGE,
-  PATIENT_NOT_FOUND_MESSAGE, measurementError,
+  PATIENT_NOT_FOUND_MESSAGE, measurementError, measurementErrorField,
 } from '../../shared/utils/measurements-error.util';
 import { ENCOUNTER_NOT_FOUND_MESSAGE } from '../../shared/utils/encounters-error.util';
 import { compareMeasurements, sortMeasurements } from './measurement-format.util';
@@ -66,6 +66,9 @@ export class MeasurementsStore {
   readonly saving = signal(false);
   readonly busy = computed(() => this.saving());
   readonly actionError = signal<string | null>(null);
+  // 400/422 del alta que apunta a un campo del formulario (type, value, unit, measured_at, note): el
+  // contenedor lo marca en su input (MeasurementForm.applyServerError) y, si pudo, limpia actionError.
+  readonly fieldError = signal<{ field: string; message: string } | null>(null);
   // Se incrementa con cada alta exitosa: el formulario se limpia / el modal se cierra al verlo cambiar.
   readonly createdSeq = signal(0);
 
@@ -114,6 +117,7 @@ export class MeasurementsStore {
     this.loadRetryable.set(true);
     this.accessDenied.set(false);
     this.actionError.set(null);
+    this.fieldError.set(null);
     this.saving.set(false);
     this.currentKey = '';
     if (!scope) {
@@ -181,6 +185,7 @@ export class MeasurementsStore {
     let settled = false;
     this.saving.set(true);
     this.actionError.set(null);
+    this.fieldError.set(null);
     this.repo.create(scope.patientId, dto).pipe(
       takeUntil(this.scopeChanged$),
       takeUntilDestroyed(this.destroyRef),
@@ -274,8 +279,14 @@ export class MeasurementsStore {
         this.actionError.set(message);
         this.patientNotFound$.next(message);
         return;
+      case 'validation': {
+        this.actionError.set(message);
+        const field = measurementErrorField(err);
+        this.fieldError.set(field ? { field, message } : null);
+        return;
+      }
       default:
-        // forbidden, validation, otros.
+        // forbidden, otros.
         this.actionError.set(message);
     }
   }

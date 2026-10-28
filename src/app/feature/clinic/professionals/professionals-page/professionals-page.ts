@@ -10,8 +10,10 @@ import { PageTitleService } from '../../../../core/services/page-title.service';
 import {
   CreateProfessionalDto, Professional, UpdateProfessionalDto,
 } from '../../../../core/models/professional.model';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
-import { professionalSaveErrorMessage } from '../../../../shared/utils/professionals-error.util';
+import { clinicSettingsErrorMessage } from '../../../../shared/utils/clinic-settings-error.util';
+import {
+  PROFESSIONAL_EMAIL_TAKEN_MESSAGE, isProfessionalEmailTaken, professionalSaveErrorMessage,
+} from '../../../../shared/utils/professionals-error.util';
 import { copyToClipboard } from '../../../../shared/utils/clipboard.util';
 
 type ModalMode = 'none' | 'create' | 'edit';
@@ -47,6 +49,7 @@ export class ProfessionalsPage {
   selectedProfessional = signal<Professional | null>(null);
 
   private createFormRef = viewChild<ProfessionalForm>('createForm');
+  private editFormRef = viewChild<ProfessionalForm>('editForm');
 
   saving = signal(false);
   actionError = signal<string | null>(null);
@@ -99,7 +102,7 @@ export class ProfessionalsPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(professionalSaveErrorMessage(err));
+        this.actionError.set(this.handleFormError(this.createFormRef(), err));
       },
     });
   }
@@ -150,9 +153,19 @@ export class ProfessionalsPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(professionalSaveErrorMessage(err));
+        this.actionError.set(this.handleFormError(this.editFormRef(), err));
       },
     });
+  }
+
+  // Error de un campo (422 con field, o 409 de correo ya usado) → debajo del input y sin banner;
+  // si no, el banner con el motivo.
+  private handleFormError(form: ProfessionalForm | undefined, err: unknown): string | null {
+    if (form && isProfessionalEmailTaken(err)) {
+      form.markEmailTaken(PROFESSIONAL_EMAIL_TAKEN_MESSAGE);
+      return null;
+    }
+    return form?.applyServerError(err) ? null : professionalSaveErrorMessage(err);
   }
 
   requestDeactivate(professional: Professional): void {
@@ -177,7 +190,7 @@ export class ProfessionalsPage {
       },
       error: (err: unknown) => {
         this.deactivating.set(false);
-        this.deactivateError.set(httpErrorMessage(err));
+        this.deactivateError.set(clinicSettingsErrorMessage(err, 'No se pudo desactivar el profesional.', 'El profesional ya no existe.'));
         this.professionalToDeactivate.set(null);
       },
     });

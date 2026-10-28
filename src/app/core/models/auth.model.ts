@@ -43,6 +43,8 @@ export interface SessionTenant {
   // clínicas. Opcionales: sesiones guardadas antes de tiparlos pueden no traerlos.
   country_code?: string;
   locale?: string;
+  // AuthTenantDTO.DefaultCurrency: moneda preseleccionada en planes, facturas y servicios.
+  default_currency?: string;
 }
 
 // Respuesta del backend al loguear (o refrescar) — se tolera cualquier

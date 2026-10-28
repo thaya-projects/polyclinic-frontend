@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
 import { ServicesByCategory } from '../services-by-category/services-by-category';
 import { ServiceForm } from '../service-form/service-form';
 import { Modal } from '../../../shared/components/modal/modal';
@@ -33,6 +33,8 @@ export class ServicesPage {
   actionError = signal<string | null>(null);
 
   statusError = signal<string | null>(null);
+
+  private serviceForm = viewChild<ServiceForm>('serviceForm');
 
   constructor() {
     inject(PageTitleService).set('Catálogo de servicios');
@@ -71,7 +73,8 @@ export class ServicesPage {
       },
       error: err => {
         this.saving.set(false);
-        this.actionError.set(serviceSaveErrorMessage(err));
+        // Error de un campo → debajo del input; si no, banner con el motivo.
+        this.actionError.set(this.serviceForm()?.applyServerError(err) ? null : serviceSaveErrorMessage(err));
       },
     });
   }

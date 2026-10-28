@@ -22,12 +22,17 @@
       <label class="text-xs font-medium text-muted uppercase tracking-wide" for="branch-address">Dirección</label>
       <input id="branch-address" type="text" formControlName="address" placeholder="Opcional"
         [class]="inputClass(form.controls.address)" />
+      @if (isInvalid(form.controls.address)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.address) }}</span>
+      }
     </div>
 
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-medium text-muted uppercase tracking-wide" for="branch-phone">Teléfono</label>
-      <input id="branch-phone" type="text" formControlName="phone" placeholder="Opcional"
-        [class]="inputClass(form.controls.phone)" />
+      <span class="text-xs font-medium text-muted uppercase tracking-wide">Teléfono (opcional)</span>
+      <app-phone-input formControlName="phone" />
+      @if (isInvalid(form.controls.phone)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.phone) }}</span>
+      }
     </div>
   </div>
 </form>

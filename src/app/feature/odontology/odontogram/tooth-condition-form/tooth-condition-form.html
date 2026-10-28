@@ -12,29 +12,37 @@
   }
 
   <div class="flex flex-col gap-1.5">
-    <label class="text-xs font-medium tracking-wide text-muted uppercase" for="tooth-condition-condition">Condición</label>
-    <div class="flex items-center gap-2">
-      <span class="inline-block h-5 w-5 shrink-0 rounded-md border border-border" data-testid="condition-swatch"
-        [style.background-color]="selectedCondition()?.default_color ?? 'transparent'"
-        [attr.title]="selectedCondition()?.default_color ?? 'Sin color'"></span>
-      <select id="tooth-condition-condition" formControlName="condition_id" data-testid="condition-select"
-        [class]="inputClass(form.controls.condition_id) + ' min-w-0 flex-1'">
-        <option value="" disabled>Elegí una condición</option>
-        @if (globalConditions().length) {
-          <optgroup label="Globales">
-            @for (c of globalConditions(); track c.id) {
-              <option [value]="c.id">{{ c.name }}{{ c.default_color ? ' · ' + c.default_color : '' }}</option>
+    <span class="text-xs font-medium tracking-wide text-muted uppercase" id="tooth-condition-condition">Condición</span>
+    <!-- Opciones como chips con el color real del catálogo (un <select> nativo no puede pintar colores) -->
+    <div role="radiogroup" aria-labelledby="tooth-condition-condition" data-testid="condition-select"
+      class="flex flex-col gap-2 rounded-xl border p-2"
+      [class.border-border]="!isInvalid(form.controls.condition_id)"
+      [class.border-red-400]="isInvalid(form.controls.condition_id)">
+      @for (group of conditionGroups(); track group.label) {
+        <div class="flex flex-col gap-1" [attr.data-testid]="'condition-group-' + group.label">
+          <span class="px-1 text-[10px] font-semibold tracking-wide text-muted uppercase">{{ group.label }}</span>
+          <div class="grid grid-cols-2 gap-1">
+            @for (c of group.items; track c.id) {
+              @let selected = c.id === conditionValue();
+              <button type="button" role="radio" [attr.aria-checked]="selected" (click)="chooseCondition(c.id)"
+                [attr.data-testid]="'condition-option-' + c.id"
+                class="flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs transition-colors"
+                [class]="selected
+                  ? 'border-brand bg-icon-soft font-semibold text-navy'
+                  : 'border-transparent text-text hover:bg-icon-soft/60'">
+                <span class="h-3.5 w-3.5 shrink-0 rounded-full border border-black/10" data-testid="condition-swatch"
+                  [style.background-color]="c.default_color ?? 'transparent'"></span>
+                <span class="truncate">{{ c.name }}</span>
+                @if (selected) {
+                  <i class="ti ti-check ml-auto text-brand"></i>
+                }
+              </button>
             }
-          </optgroup>
-        }
-        @if (ownConditions().length) {
-          <optgroup label="Propias">
-            @for (c of ownConditions(); track c.id) {
-              <option [value]="c.id">{{ c.name }}{{ c.default_color ? ' · ' + c.default_color : '' }}</option>
-            }
-          </optgroup>
-        }
-      </select>
+          </div>
+        </div>
+      } @empty {
+        <span class="px-1 py-2 text-xs text-muted">No hay condiciones en el catálogo.</span>
+      }
     </div>
     @if (isInvalid(form.controls.condition_id)) {
       <span class="text-xs text-red-500">{{ errorMessage(form.controls.condition_id) }}</span>
@@ -50,6 +58,9 @@
           <option [value]="option.value">{{ option.label }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.surface)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.surface) }}</span>
+      }
     </div>
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-medium tracking-wide text-muted uppercase" for="tooth-condition-state">Estado</label>
@@ -59,13 +70,20 @@
           <option [value]="option.value">{{ option.label }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.state)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.state) }}</span>
+      }
     </div>
   </div>
 
   <div class="flex flex-col gap-1.5">
     <label class="text-xs font-medium tracking-wide text-muted uppercase" for="tooth-condition-note">Nota</label>
     <textarea id="tooth-condition-note" formControlName="note" rows="2" placeholder="Opcional" data-testid="note-input"
+      [attr.maxlength]="noteMaxLength"
       class="rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+    @if (isInvalid(form.controls.note)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.note) }}</span>
+    }
   </div>
 
   <div class="flex items-center justify-end gap-2">

@@ -96,12 +96,26 @@
       </div>
     }
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <div class="rounded-xl border border-border bg-surface p-4">
+    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div class="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 sm:p-6">
         <app-odontogram-chart [dentition]="o.dentition" [selectedTooth]="selectedTooth()" [selectedSurface]="selectedSurface()"
           [paint]="paint()" (toothSelected)="selectTooth($event)" (faceSelected)="selectFace($event)" />
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4 text-xs" data-testid="odontogram-legend">
+          @for (entry of legend(); track entry.id) {
+            <span class="inline-flex items-center gap-1.5 text-text">
+              <span class="h-3 w-3 rounded-full border border-black/10" [style.background-color]="entry.color"></span>
+              {{ entry.name }}
+              <span class="text-muted tabular-nums">· {{ entry.count }} {{ entry.count === 1 ? 'pieza' : 'piezas' }}</span>
+            </span>
+          } @empty {
+            <span class="inline-flex items-center gap-1.5 text-muted">
+              <i class="ti ti-info-circle"></i>
+              Sin condiciones marcadas. Elegí una pieza o una cara para empezar.
+            </span>
+          }
+        </div>
       </div>
-      <app-selected-tooth-panel [tooth]="selectedTooth()" (cleared)="clearSelection()">
+      <app-selected-tooth-panel class="lg:sticky lg:top-4" [tooth]="selectedTooth()" (cleared)="clearSelection()">
         @if (selectedTooth(); as fdi) {
           <app-tooth-conditions-panel toothActions [odontogramId]="o.id" [dentition]="o.dentition" [tooth]="fdi"
             [surface]="selectedSurface()" [catalog]="catalog()" [items]="teeth()"

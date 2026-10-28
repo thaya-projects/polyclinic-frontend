@@ -3,7 +3,8 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Va
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AppointmentStatus } from '../../../core/models/appointment.model';
 import { APPOINTMENT_STATUS_LABELS, statusOptionsFor } from '../../../core/constants/appointment-status.const';
-import { fieldInputClass } from '../../../shared/utils/form-validation.util';
+import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 
 export interface AppointmentStatusChange {
   to_status: AppointmentStatus;
@@ -12,11 +13,19 @@ export interface AppointmentStatusChange {
 }
 
 // Único requisito de validación del ticket: no se puede confirmar el
-// cambio a "cancelled" sin cancelled_reason.
+// cambio a "cancelled" sin cancelled_reason. El error queda en el control
+// cancelled_reason para mostrarlo debajo de ese input.
 function cancelledReasonValidator(group: AbstractControl): ValidationErrors | null {
+  const reasonCtrl = group.get('cancelled_reason');
+  if (!reasonCtrl) return null;
   const toStatus = group.get('to_status')?.value;
-  const reason = group.get('cancelled_reason')?.value as string | null;
-  if (toStatus === 'cancelled' && !reason?.trim()) return { cancelledReasonRequired: true };
+  const reason = reasonCtrl.value as string | null;
+
+  const otherErrors = { ...reasonCtrl.errors };
+  delete otherErrors['cancelledReasonRequired'];
+  if (toStatus === 'cancelled' && !reason?.trim()) otherErrors['cancelledReasonRequired'] = true;
+
+  reasonCtrl.setErrors(Object.keys(otherErrors).length ? otherErrors : null);
   return null;
 }
 
@@ -37,6 +46,7 @@ export class AppointmentStatusForm {
   changed = output<AppointmentStatusChange>();
 
   readonly inputClass = fieldInputClass;
+  readonly isInvalid = isFieldInvalid;
   readonly statusLabels = APPOINTMENT_STATUS_LABELS;
 
   // "scheduled" no se ofrece como destino si el status actual es terminal
@@ -55,8 +65,16 @@ export class AppointmentStatusForm {
   private readonly selectedStatus = toSignal(this.form.controls.to_status.valueChanges, { initialValue: '' });
   readonly showCancelledReason = computed(() => this.selectedStatus() === 'cancelled');
 
-  get hasCancelledReasonError(): boolean {
-    return !!this.form.errors?.['cancelledReasonRequired'] && this.form.controls.cancelled_reason.touched;
+  errorMessage(control: AbstractControl | null): string {
+    if (control?.errors?.['cancelledReasonRequired']) return 'Es obligatorio indicar el motivo para cancelar la cita.';
+    if (control === this.form.controls.to_status && control.errors?.['required']) return 'Seleccioná el nuevo estado.';
+    return fieldErrorMessage(control);
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el panel muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   submit(): void {

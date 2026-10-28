@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { CalendarToolbar } from '../calendar-toolbar/calendar-toolbar';
 import { CalendarView } from '../calendar-view/calendar-view';
 import { AppointmentForm } from '../appointment-form/appointment-form';
@@ -29,6 +29,7 @@ export class AppointmentsPage {
   private roomsSvc = inject(RoomsService);
   private servicesSvc = inject(ServicesService);
   private patientsSvc = inject(PatientsService);
+  private readonly apptForm = viewChild<AppointmentForm>('apptForm');
 
   readonly branches = this.branchesSvc.getAll();
   readonly professionals = this.professionalsSvc.getAll();
@@ -120,10 +121,11 @@ export class AppointmentsPage {
         this.closeModal();
       },
       // 409: choque de horario (overlap) — se muestra dentro del propio
-      // modal en vez de cerrarlo solo (criterio de aceptación de T6).
+      // modal en vez de cerrarlo solo (criterio de aceptación de T6). 400/422 de un campo: se
+      // marca debajo de ese input y no hace falta el banner.
       error: err => {
         this.saving.set(false);
-        this.actionError.set(appointmentSaveErrorMessage(err));
+        this.actionError.set(this.apptForm()?.applyServerError(err) ? null : appointmentSaveErrorMessage(err));
       },
     });
   }

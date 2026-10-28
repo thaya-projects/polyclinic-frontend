@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { validationErrorMessage } from './http-error.util';
+import { specificErrorMessage, validationErrorMessage } from './http-error.util';
 
 // T5: mensajes específicos para los códigos que puede devolver
 // /tenants/invoices(...) — 401/403 (feature invoicing apagado)/404/422
@@ -15,7 +15,7 @@ function baseInvoicesMessage(err: HttpErrorResponse): string | null {
 // GET /tenants/invoices
 export function invoicesListErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    return baseInvoicesMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudieron cargar las facturas.');
+    return baseInvoicesMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudieron cargar las facturas.');
   }
   return 'No se pudieron cargar las facturas.';
 }
@@ -23,7 +23,7 @@ export function invoicesListErrorMessage(err: unknown): string {
 // GET /tenants/invoices/:id
 export function invoiceDetailErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    return baseInvoicesMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo cargar la factura.');
+    return baseInvoicesMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudo cargar la factura.');
   }
   return 'No se pudo cargar la factura.';
 }
@@ -32,9 +32,12 @@ export function invoiceDetailErrorMessage(err: unknown): string {
 // la factura ya no está en borrador (no se puede editar).
 export function invoiceSaveErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     if (err.status === 409) return 'Esta factura ya no es un borrador — no se puede editar.';
-    if (err.status === 422) return validationErrorMessage(err) ?? 'Revisá los datos ingresados e intentá de nuevo.';
-    return baseInvoicesMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo guardar la factura.');
+    if (err.status === 400 || err.status === 422) return validationErrorMessage(err) ?? 'El servidor rechazó los datos de la factura.';
+    return baseInvoicesMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudo guardar la factura.');
   }
   return 'No se pudo guardar la factura.';
 }
@@ -42,8 +45,11 @@ export function invoiceSaveErrorMessage(err: unknown): string {
 // POST /tenants/invoices/:id/issue
 export function invoiceIssueErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     if (err.status === 409) return 'La factura ya no se puede emitir en su estado actual.';
-    return baseInvoicesMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo emitir la factura.');
+    return baseInvoicesMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudo emitir la factura.');
   }
   return 'No se pudo emitir la factura.';
 }
@@ -51,8 +57,11 @@ export function invoiceIssueErrorMessage(err: unknown): string {
 // POST /tenants/invoices/:id/void
 export function invoiceVoidErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
+    // El motivo concreto del backend (regla de negocio o campo) antes que el texto por status.
+    const specific = specificErrorMessage(err);
+    if (specific) return specific;
     if (err.status === 409) return 'La factura ya no se puede anular en su estado actual.';
-    return baseInvoicesMessage(err) ?? (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo anular la factura.');
+    return baseInvoicesMessage(err) ?? (validationErrorMessage(err) ?? 'No se pudo anular la factura.');
   }
   return 'No se pudo anular la factura.';
 }

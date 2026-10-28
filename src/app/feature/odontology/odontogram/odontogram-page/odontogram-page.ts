@@ -14,7 +14,9 @@ import { ODONTOGRAM_REPOSITORY } from '../../../../core/services/odontogram-repo
 import { TOOTH_CONDITIONS_REPOSITORY } from '../../../../core/services/tooth-conditions-repository';
 import { DENTAL_CONDITIONS_REPOSITORY } from '../../../../core/services/dental-conditions-repository';
 import { DentalCondition } from '../../../../core/models/dental-condition.model';
-import { ToothCondition, ToothSurface, buildOdontogramPaint } from '../../../../core/models/tooth-condition.model';
+import {
+  TOOTH_CONDITION_FALLBACK_COLOR, ToothCondition, ToothSurface, buildOdontogramPaint,
+} from '../../../../core/models/tooth-condition.model';
 import {
   DENTITION_OPTIONS, Dentition, Odontogram, OdontogramPatientOption, dentitionLabel,
 } from '../../../../core/models/odontogram.model';
@@ -91,6 +93,21 @@ export class OdontogramPage {
   readonly paint = computed(() => {
     const colors = new Map(this.catalog().map(c => [c.id, c.default_color]));
     return buildOdontogramPaint(this.teeth(), id => colors.get(id));
+  });
+  // Leyenda bajo el chart: solo las condiciones que efectivamente están marcadas, con cuántas piezas.
+  readonly legend = computed(() => {
+    const byId = new Map(this.catalog().map(c => [c.id, c]));
+    const teethByCondition = new Map<string, Set<number>>();
+    for (const item of this.teeth()) {
+      (teethByCondition.get(item.condition_id) ?? teethByCondition.set(item.condition_id, new Set()).get(item.condition_id)!)
+        .add(item.tooth_fdi);
+    }
+    return [...teethByCondition].map(([id, teeth]) => ({
+      id,
+      name: byId.get(id)?.name ?? 'Condición',
+      color: byId.get(id)?.default_color || TOOTH_CONDITION_FALLBACK_COLOR,
+      count: teeth.size,
+    })).sort((a, b) => a.name.localeCompare(b.name));
   });
 
   // Alta de odontograma nuevo.

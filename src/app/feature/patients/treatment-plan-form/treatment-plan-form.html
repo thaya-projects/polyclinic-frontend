@@ -4,16 +4,21 @@
       <span class="text-xs font-medium text-muted">Notas</span>
       <textarea formControlName="notes" rows="2"
         class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+      @if (isInvalid(form.controls.notes)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.notes) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5 sm:w-60">
-      <span class="text-xs font-medium text-muted">Moneda (opcional)</span>
+      <span class="text-xs font-medium text-muted">Moneda</span>
       <select formControlName="currency" [class]="inputClass(form.controls.currency)">
-        <option value="">Usar la del tenant</option>
         @for (currency of currencies; track currency) {
           <option [value]="currency">{{ currency }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.currency)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.currency) }}</span>
+      }
     </label>
   </form>
 

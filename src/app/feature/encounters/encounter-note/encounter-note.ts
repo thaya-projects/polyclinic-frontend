@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { EncounterStatusBadge } from '../encounter-status-badge/encounter-status-badge';
 import { ENCOUNTER_LIMITS, Encounter, EncounterNotePatch } from '../../../core/models/encounter.model';
 import { fieldErrorMessage, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
 import { formatEncounterDateTime } from '../encounter-format.util';
 
 const TEXTAREA_BASE =
@@ -125,6 +126,12 @@ export class EncounterNote {
       : 'border-border focus:border-brand focus:ring-brand/18';
     const ro = this.fieldsLocked() ? ' bg-surface-alt/40 cursor-default' : '';
     return `${TEXTAREA_BASE} ${state}${ro}`;
+  }
+
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el contenedor muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
   }
 
   submit(): void {

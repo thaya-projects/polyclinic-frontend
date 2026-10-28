@@ -125,6 +125,17 @@ export class PatientPrescriptionsPage {
     inject(PageTitleService).set('Recetas');
     this.lookups.loadProfessionals();
 
+    // 400/422 de un campo de "Nueva receta": se marca en su input; el banner queda para el resto.
+    // También sigue a createForm(): si el error llega antes de que el form del modal exista.
+    effect(() => {
+      const error = this.store.actionFieldError();
+      const form = this.createForm();
+      if (!error || !form) return;
+      untracked(() => {
+        if (form.applyServerError(error.index, error.field, error.message)) this.store.actionError.set(null);
+      });
+    });
+
     if (isPlatformBrowser(this.platformId)) {
       const timer = setInterval(() => this.now.set(Date.now()), CLOCK_TICK_MS);
       this.destroyRef.onDestroy(() => clearInterval(timer));
@@ -175,6 +186,7 @@ export class PatientPrescriptionsPage {
   openCreate(): void {
     if (!this.canCreate() || this.store.busy()) return;
     this.store.actionError.set(null);
+    this.store.actionFieldError.set(null);
     this.createOpen.set(true);
   }
 
@@ -183,6 +195,7 @@ export class PatientPrescriptionsPage {
     if (this.store.busy()) return;
     this.createOpen.set(false);
     this.store.actionError.set(null);
+    this.store.actionFieldError.set(null);
   }
 
   submitCreate(): void {

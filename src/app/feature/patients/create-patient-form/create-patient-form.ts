@@ -1,14 +1,18 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { CreatePatientDto, Patient, PatientSex } from '../../../core/models/patient.model';
 import { DOCUMENT_TYPES, SEX_OPTIONS } from '../../../core/constants/patient-options.const';
 import {
+  emailValidator,
   fieldErrorMessage,
   fieldInputClass,
   isFieldInvalid,
   notFutureDateValidator,
+  phoneValidator,
   requiredNotBlankValidator,
 } from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
+import { PhoneInput } from '../../../shared/components/phone-input/phone-input';
 
 // Si document_number viene con valor, document_type se vuelve obligatorio.
 function documentRequiresTypeValidator(group: AbstractControl): ValidationErrors | null {
@@ -31,7 +35,7 @@ function documentRequiresTypeValidator(group: AbstractControl): ValidationErrors
 
 @Component({
   selector: 'app-create-patient-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PhoneInput],
   templateUrl: './create-patient-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -63,9 +67,9 @@ export class CreatePatientForm {
       document_number: [''],
       birth_date: ['', notFutureDateValidator],
       sex: [''],
-      whatsapp_phone: [''],
-      phone_alt: [''],
-      email: ['', Validators.email],
+      whatsapp_phone: ['', phoneValidator],
+      phone_alt: ['', phoneValidator],
+      email: ['', emailValidator],
       address: [''],
       notes: [''],
     },
@@ -95,6 +99,12 @@ export class CreatePatientForm {
     });
   }
 
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -108,9 +118,12 @@ export class CreatePatientForm {
       document_number: raw.document_number || null,
       birth_date: raw.birth_date || null,
       sex: (raw.sex || null) as PatientSex | null,
-      whatsapp_phone: raw.whatsapp_phone || null,
-      phone_alt: raw.phone_alt || null,
-      email: raw.email || null,
+      // Teléfonos/correo vacíos van como '' (no null): en el PATCH null = "no tocar" y '' = vaciar,
+      // así borrar un teléfono en la edición realmente lo borra (y no siguen saliendo recordatorios
+      // a ese número). El backend normaliza '' a null.
+      whatsapp_phone: raw.whatsapp_phone ?? '',
+      phone_alt: raw.phone_alt ?? '',
+      email: raw.email?.trim() ?? '',
       address: raw.address || null,
       notes: raw.notes || null,
     });

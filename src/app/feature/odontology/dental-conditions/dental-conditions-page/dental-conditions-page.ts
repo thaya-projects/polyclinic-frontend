@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, inject, signal, viewChild } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DentalConditionsTable } from '../dental-conditions-table/dental-conditions-table';
@@ -26,6 +26,8 @@ export class DentalConditionsPage {
   private repo = inject(DENTAL_CONDITIONS_REPOSITORY);
   private destroyRef = inject(DestroyRef);
   private platformId = inject(PLATFORM_ID);
+  private readonly createForm = viewChild<DentalConditionForm>('createForm');
+  private readonly editForm = viewChild<DentalConditionForm>('editForm');
 
   readonly conditions = signal<DentalCondition[]>([]);
   // Arranca en true: en el prerender (SSR) no se pide nada y se muestra el estado de carga.
@@ -103,7 +105,8 @@ export class DentalConditionsPage {
           this.showModuleDisabled(error.message);
           return;
         }
-        this.actionError.set(error.message);
+        // Error de un campo (o código duplicado): se marca en su input; el banner queda para el resto.
+        this.actionError.set(this.createForm()?.applyServerError(err, error) ? null : error.message);
       },
     });
   }
@@ -126,7 +129,8 @@ export class DentalConditionsPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        const { kind, message } = this.classify(err, 'No se pudo guardar la condición.', 'write');
+        const error = this.classify(err, 'No se pudo guardar la condición.', 'write');
+        const { kind, message } = error;
         if (kind === 'feature_disabled') {
           this.showModuleDisabled(message);
           return;
@@ -138,7 +142,7 @@ export class DentalConditionsPage {
           this.load();
           return;
         }
-        this.actionError.set(message);
+        this.actionError.set(this.editForm()?.applyServerError(err, error) ? null : message);
       },
     });
   }

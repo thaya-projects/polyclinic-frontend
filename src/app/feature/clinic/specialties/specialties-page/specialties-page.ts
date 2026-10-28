@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { SpecialtiesTable } from '../specialties-table/specialties-table';
 import { SpecialtyForm } from '../specialty-form/specialty-form';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { SpecialtiesService } from '../../../../core/services/specialties.service';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { CreateSpecialtyDto, Specialty, UpdateSpecialtyDto } from '../../../../core/models/specialty.model';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { clinicSettingsErrorMessage } from '../../../../shared/utils/clinic-settings-error.util';
 
 type ModalMode = 'none' | 'create' | 'edit';
 
@@ -28,6 +29,9 @@ export class SpecialtiesPage {
 
   saving = signal(false);
   actionError = signal<string | null>(null);
+
+  private createForm = viewChild<SpecialtyForm>('createForm');
+  private editForm = viewChild<SpecialtyForm>('editForm');
 
   toggling = signal<string | null>(null);
   toggleError = signal<string | null>(null);
@@ -67,7 +71,16 @@ export class SpecialtiesPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        const form = this.createForm();
+        if (form && err instanceof HttpErrorResponse && err.status === 409) {
+          form.markCodeTaken();
+          this.actionError.set(null);
+          return;
+        }
+        // Error de un campo → debajo del input; si no, banner con el motivo.
+        this.actionError.set(form?.applyServerError(err)
+          ? null
+          : clinicSettingsErrorMessage(err, 'No se pudo crear la especialidad.', 'La especialidad ya no existe.'));
       },
     });
   }
@@ -84,7 +97,9 @@ export class SpecialtiesPage {
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.actionError.set(httpErrorMessage(err));
+        this.actionError.set(this.editForm()?.applyServerError(err)
+          ? null
+          : clinicSettingsErrorMessage(err, 'No se pudo guardar la especialidad.', 'La especialidad ya no existe.'));
       },
     });
   }
@@ -97,7 +112,7 @@ export class SpecialtiesPage {
       next: () => this.toggling.set(null),
       error: (err: unknown) => {
         this.toggling.set(null);
-        this.toggleError.set(httpErrorMessage(err));
+        this.toggleError.set(clinicSettingsErrorMessage(err, 'No se pudo actualizar el estado de la especialidad.', 'La especialidad ya no existe.'));
       },
     });
   }

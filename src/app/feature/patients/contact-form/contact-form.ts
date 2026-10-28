@@ -1,11 +1,19 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { PatientContact, PatientContactDto } from '../../../core/models/patient-contact.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import {
+  fieldErrorMessage,
+  fieldInputClass,
+  isFieldInvalid,
+  phoneValidator,
+  requiredNotBlankValidator,
+} from '../../../shared/utils/form-validation.util';
+import { applyServerError } from '../../../shared/utils/server-errors.util';
+import { PhoneInput } from '../../../shared/components/phone-input/phone-input';
 
 @Component({
   selector: 'app-contact-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PhoneInput],
   templateUrl: './contact-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -23,11 +31,11 @@ export class ContactForm {
   readonly isInvalid = isFieldInvalid;
   readonly errorMessage = fieldErrorMessage;
 
-  // Solo full_name es obligatorio (T4).
+  // Solo full_name es obligatorio (T4). El teléfono, si viene, en E.164 (<app-phone-input>).
   form = this.fb.group({
-    full_name: ['', Validators.required],
+    full_name: ['', requiredNotBlankValidator],
     relationship: [''],
-    phone: [''],
+    phone: ['', phoneValidator],
   });
 
   constructor() {
@@ -40,12 +48,22 @@ export class ContactForm {
     });
   }
 
+  // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo
+  // de este form (el caller muestra el mensaje general).
+  applyServerError(err: unknown): boolean {
+    return applyServerError(this.form, err);
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    this.submitted.emit(this.form.getRawValue() as PatientContactDto);
+    const raw = this.form.getRawValue();
+    this.submitted.emit({
+      ...raw,
+      full_name: (raw.full_name ?? '').trim(),
+    } as PatientContactDto);
   }
 
   // T5: el guardado ahora es async — el form ya no se limpia solo al

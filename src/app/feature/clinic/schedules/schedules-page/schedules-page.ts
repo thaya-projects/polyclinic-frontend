@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ScheduleGrid } from '../schedule-grid/schedule-grid';
 import { ExceptionsSection } from '../exceptions-section/exceptions-section';
@@ -9,7 +9,7 @@ import { PageTitleService } from '../../../../core/services/page-title.service';
 import {
   CreateScheduleExceptionDto, ScheduleBlockInput,
 } from '../../../../core/models/schedule.model';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { scheduleSaveErrorMessage } from '../../../../shared/utils/clinic-settings-error.util';
 
 @Component({
   selector: 'app-schedules-page',
@@ -39,6 +39,9 @@ export class SchedulesPage {
   savingSchedule = signal(false);
   saveScheduleError = signal<string | null>(null);
   savingException = signal(false);
+  deleteExceptionError = signal<string | null>(null);
+
+  private exceptionsSection = viewChild(ExceptionsSection);
   removingExceptionId = signal<string | null>(null);
 
   constructor() {
@@ -75,7 +78,7 @@ export class SchedulesPage {
       next: () => this.savingSchedule.set(false),
       error: (err: unknown) => {
         this.savingSchedule.set(false);
-        this.saveScheduleError.set(httpErrorMessage(err));
+        this.saveScheduleError.set(scheduleSaveErrorMessage(err, 'No se pudo guardar el horario.'));
       },
     });
   }
@@ -83,16 +86,30 @@ export class SchedulesPage {
   onCreateException(dto: CreateScheduleExceptionDto): void {
     this.savingException.set(true);
     this.schedulesSvc.createException(dto).subscribe({
-      next: () => this.savingException.set(false),
-      error: () => this.savingException.set(false),
+      next: () => {
+        this.savingException.set(false);
+        this.exceptionsSection()?.closeModal();
+      },
+      error: (err: unknown) => {
+        this.savingException.set(false);
+        // Error de un campo → debajo del input del modal; si no, banner del modal con el motivo.
+        const section = this.exceptionsSection();
+        if (section && !section.applyServerError(err)) {
+          section.showError(scheduleSaveErrorMessage(err, 'No se pudo crear la excepción.'));
+        }
+      },
     });
   }
 
   onRemoveException(id: string): void {
     this.removingExceptionId.set(id);
+    this.deleteExceptionError.set(null);
     this.schedulesSvc.deleteException(id).subscribe({
       next: () => this.removingExceptionId.set(null),
-      error: () => this.removingExceptionId.set(null),
+      error: (err: unknown) => {
+        this.removingExceptionId.set(null);
+        this.deleteExceptionError.set(scheduleSaveErrorMessage(err, 'No se pudo eliminar la excepción.'));
+      },
     });
   }
 }

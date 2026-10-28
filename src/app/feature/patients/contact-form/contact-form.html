@@ -11,12 +11,18 @@
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Relación</span>
       <input type="text" formControlName="relationship" placeholder="ej. Madre, esposo..." [class]="inputClass(form.controls.relationship)" />
+      @if (isInvalid(form.controls.relationship)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.relationship) }}</span>
+      }
     </label>
 
-    <label class="flex flex-col gap-1.5">
+    <div class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Teléfono</span>
-      <input type="tel" formControlName="phone" [class]="inputClass(form.controls.phone)" />
-    </label>
+      <app-phone-input formControlName="phone" />
+      @if (isInvalid(form.controls.phone)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.phone) }}</span>
+      }
+    </div>
   </div>
 
   <div class="flex justify-end gap-3">

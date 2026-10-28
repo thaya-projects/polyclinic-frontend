@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SuperAdminLoginDto } from '../../../core/models/auth.model';
-import { fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
+import { emailValidator, fieldErrorMessage, fieldInputClass, isFieldInvalid } from '../../../shared/utils/form-validation.util';
 
 @Component({
   selector: 'app-superadmin-login-form',
@@ -24,7 +24,7 @@ export class SuperAdminLoginForm {
 
   // Sin tenant_slug — un super admin no pertenece a ningún tenant.
   form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required, emailValidator]],
     password: ['', Validators.required],
   });
 

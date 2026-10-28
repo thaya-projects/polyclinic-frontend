@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   MEASUREMENT_CONFLICT_MESSAGE, MEASUREMENT_ENCOUNTER_FORBIDDEN_MESSAGE, MEASUREMENT_FORBIDDEN_MESSAGE,
   MEASUREMENT_INACTIVE_PROFESSIONAL_MESSAGE, MEASUREMENT_TYPE_FORMAT_MESSAGE, MEASUREMENT_VALIDATION_MESSAGE,
-  PATIENT_NOT_FOUND_MESSAGE, measurementError, translateMeasurementBackendMessage,
+  PATIENT_NOT_FOUND_MESSAGE, measurementError, measurementErrorField, translateMeasurementBackendMessage,
 } from './measurements-error.util';
 import { ENCOUNTER_NOT_FOUND_MESSAGE } from './encounters-error.util';
 import { formatMeasurementRange } from '../../core/models/measurement.model';
@@ -95,5 +95,17 @@ describe('measurementError', () => {
 
   it('translateMeasurementBackendMessage: null si no se reconoce', () => {
     expect(translateMeasurementBackendMessage('nope')).toBeNull();
+  });
+});
+
+describe('measurementErrorField', () => {
+  it('deduce el campo del detail (el middleware no informa field para "value")', () => {
+    expect(measurementErrorField(error(422, "value for type 'weight' must be between 0.2 and 700 kg. (Parameter 'value')")))
+      .toBe('value');
+    expect(measurementErrorField(error(422, 'unit is required for custom measurement types.'))).toBe('unit');
+    expect(measurementErrorField(error(422, 'measured_at cannot be in the future.'))).toBe('measured_at');
+    // Regla conocida (server-errors.util): nombra el profesional; el form de medición no tiene ese input.
+    expect(measurementErrorField(error(422, "Professional with id 'p' is inactive."))).toBe('professional_id');
+    expect(measurementErrorField(error(409, 'value for type x'))).toBeNull();
   });
 });

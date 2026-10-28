@@ -5,7 +5,7 @@ import { map } from 'rxjs';
 import { FEATURE_KEYS, UpdateEnabledModulesDto } from '../../../../core/models/features.model';
 import { FeaturesService } from '../../../../core/services/features.service';
 import { PageTitleService } from '../../../../core/services/page-title.service';
-import { httpErrorMessage } from '../../../../shared/utils/http-error.util';
+import { httpErrorMessage, validationErrorMessage } from '../../../../shared/utils/http-error.util';
 
 // T7 FF: toggles en detalle de tenant (super admin). 3 estados por módulo:
 //   'plan'  → no hay override, se resuelve por plan.features.
@@ -121,7 +121,7 @@ export class TenantSettingsModulesPage {
       },
       error: err => {
         this.saving.set(false);
-        this.saveError.set(httpErrorMessage(err));
+        this.saveError.set(validationErrorMessage(err) ?? httpErrorMessage(err));
       },
     });
   }

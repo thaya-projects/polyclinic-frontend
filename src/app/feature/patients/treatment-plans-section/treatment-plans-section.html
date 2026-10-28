@@ -23,7 +23,7 @@
 }
 
 <app-modal [open]="creating()" title="Nuevo plan de tratamiento" size="lg" (closed)="closeCreate()">
-  <app-treatment-plan-form [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
+  <app-treatment-plan-form #createPlanForm [saving]="saving()" [saveError]="actionError()" (submitted)="onCreate($event)" (cancelled)="closeCreate()" />
 </app-modal>
 
 <app-modal [open]="selectedPlan() !== null" title="Detalle del plan de tratamiento" size="lg" (closed)="closeDetail()">
@@ -37,6 +37,7 @@
   @if (selectedPlan(); as plan) {
     @if (editing()) {
       <app-treatment-plan-form
+        #editPlanForm
         [plan]="plan"
         [saving]="saving()"
         [saveError]="actionError()"
@@ -107,7 +108,7 @@
 
           @if (addingItem()) {
             <div class="rounded-xl border border-border bg-surface p-4">
-              <app-treatment-plan-item-form (added)="onItemAdded($event)" />
+              <app-treatment-plan-item-form [resetOnAdd]="false" (added)="onItemAdded($event)" />
             </div>
           }
 

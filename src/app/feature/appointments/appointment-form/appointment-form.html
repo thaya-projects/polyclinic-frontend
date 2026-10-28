@@ -3,11 +3,14 @@
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Sucursal</span>
       <select formControlName="branch_id" [class]="inputClass(form.controls.branch_id)">
-        <option value="">Sin especificar</option>
+        <option value="">Seleccioná una sucursal</option>
         @for (b of branches(); track b.id) {
           <option [value]="b.id">{{ b.name }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.branch_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.branch_id) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
@@ -18,26 +21,35 @@
           <option [value]="r.id">{{ r.name }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.room_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.room_id) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Paciente</span>
       <select formControlName="patient_id" [class]="inputClass(form.controls.patient_id)">
-        <option value="">Sin especificar</option>
+        <option value="">Seleccioná un paciente</option>
         @for (p of patients(); track p.id) {
           <option [value]="p.id">{{ patientLabel(p) }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.patient_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.patient_id) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Profesional</span>
       <select formControlName="professional_id" [class]="inputClass(form.controls.professional_id)">
-        <option value="">Sin especificar</option>
+        <option value="">Seleccioná un profesional</option>
         @for (p of professionals(); track p.id) {
           <option [value]="p.id">{{ p.full_name }}</option>
         }
       </select>
+      @if (isInvalid(form.controls.professional_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.professional_id) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5 sm:col-span-2">
@@ -48,25 +60,27 @@
           <option [value]="s.id">{{ s.name }} ({{ s.duration_minutes }} min)</option>
         }
       </select>
+      @if (isInvalid(form.controls.service_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.service_id) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Inicio</span>
       <input type="datetime-local" formControlName="starts_at" [class]="inputClass(form.controls.starts_at)" />
+      @if (isInvalid(form.controls.starts_at)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.starts_at) }}</span>
+      }
     </label>
 
     <label class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-muted">Fin</span>
       <input type="datetime-local" formControlName="ends_at" [class]="inputClass(form.controls.ends_at)" />
+      @if (isInvalid(form.controls.ends_at)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.ends_at) }}</span>
+      }
     </label>
   </div>
-
-  @if (hasDateRangeError) {
-    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-      <i class="ti ti-alert-circle"></i>
-      La hora de fin tiene que ser posterior a la hora de inicio.
-    </div>
-  }
 
   <app-appointment-online-fields
     [initialType]="appointment()?.type ?? 'in_person'"
@@ -76,11 +90,19 @@
   <label class="flex flex-col gap-1.5">
     <span class="text-xs font-medium text-muted">Motivo</span>
     <input type="text" formControlName="reason" [class]="inputClass(form.controls.reason)" />
+    @if (isInvalid(form.controls.reason)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.reason) }}</span>
+    }
   </label>
 
   <label class="flex flex-col gap-1.5">
     <span class="text-xs font-medium text-muted">Notas</span>
     <textarea formControlName="notes" rows="2"
-      class="rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:border-brand focus:ring-3 focus:ring-brand/18 focus:outline-none"></textarea>
+      class="rounded-xl border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted focus:ring-3 focus:outline-none"
+      [class.border-border]="!isInvalid(form.controls.notes)"
+      [class.border-red-400]="isInvalid(form.controls.notes)"></textarea>
+    @if (isInvalid(form.controls.notes)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.notes) }}</span>
+    }
   </label>
 </form>
