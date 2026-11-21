@@ -1,4 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
+import { BranchesService } from './branches.service';
+import { ServicesService } from './services.service';
 
 export interface InvoiceBranchOption {
   id: string;
@@ -21,18 +23,11 @@ export interface InvoiceTreatmentPlanItemOption {
   unit_price: number;
 }
 
-// Mock (T1/T2) — pendiente de conectar a BranchesService/ServicesService/TreatmentPlanItemsService reales.
-const MOCK_BRANCHES: InvoiceBranchOption[] = [
-  { id: 'inv-branch-centro', name: 'Sede Centro' },
-  { id: 'inv-branch-norte', name: 'Sede Norte' },
-];
-
-const MOCK_SERVICES: InvoiceServiceOption[] = [
-  { id: 'inv-svc-1', name: 'Consulta general', base_price: 80, currency: 'PEN' },
-  { id: 'inv-svc-2', name: 'Limpieza dental', base_price: 120, currency: 'PEN' },
-  { id: 'inv-svc-3', name: 'Control pediátrico', base_price: 60, currency: 'PEN' },
-];
-
+// Sucursales y servicios: catálogos reales (BranchesService/ServicesService
+// ya conectados a HTTP), mapeados al shape liviano que espera el picker de
+// items. Items de plan de tratamiento: TODAVÍA mock — el backend no expone
+// un listado plano "todos los items de un paciente" (solo por plan), así
+// que ese picker queda pendiente de un endpoint nuevo.
 const MOCK_TREATMENT_PLAN_ITEMS: InvoiceTreatmentPlanItemOption[] = [
   { id: 'inv-tpi-1', patient_id: 'inv-patient-1', description: 'Resina (1 cara) — pieza 36', unit_price: 180 },
   { id: 'inv-tpi-2', patient_id: 'inv-patient-1', description: 'Corona de porcelana — pieza 46', unit_price: 950 },
@@ -41,19 +36,31 @@ const MOCK_TREATMENT_PLAN_ITEMS: InvoiceTreatmentPlanItemOption[] = [
 
 @Injectable({ providedIn: 'root' })
 export class InvoiceOptionsService {
-  private readonly branchesSignal = signal<InvoiceBranchOption[]>(MOCK_BRANCHES);
-  private readonly servicesSignal = signal<InvoiceServiceOption[]>(MOCK_SERVICES);
-  private readonly treatmentPlanItemsSignal = signal<InvoiceTreatmentPlanItemOption[]>(MOCK_TREATMENT_PLAN_ITEMS);
+  private branchesSvc = inject(BranchesService);
+  private servicesSvc = inject(ServicesService);
+
+  private readonly branchOptions = computed<InvoiceBranchOption[]>(() =>
+    this.branchesSvc.getAll()().map(b => ({ id: b.id, name: b.name })),
+  );
+  private readonly serviceOptions = computed<InvoiceServiceOption[]>(() =>
+    this.servicesSvc.getAll()().filter(s => s.is_active).map(s => ({
+      id: s.id, name: s.name, base_price: s.base_price, currency: s.currency,
+    })),
+  );
+
+  constructor() {
+    this.servicesSvc.load();
+  }
 
   branches() {
-    return this.branchesSignal.asReadonly();
+    return this.branchOptions;
   }
 
   services() {
-    return this.servicesSignal.asReadonly();
+    return this.serviceOptions;
   }
 
   treatmentPlanItems() {
-    return this.treatmentPlanItemsSignal.asReadonly();
+    return () => MOCK_TREATMENT_PLAN_ITEMS;
   }
 }

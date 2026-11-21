@@ -4,6 +4,7 @@ import { translatedValidationMessage } from './translated-validation.util';
 import {
   ODONTOGRAM_DISABLED_MESSAGE, ODONTOGRAM_MODULE_KEY, hasProblemDetail, isModuleDisabledProblem,
 } from './module-disabled.util';
+import { Dentition, dentitionLabel } from '../../core/models/odontogram.model';
 
 export { ODONTOGRAM_DISABLED_MESSAGE } from './module-disabled.util';
 
@@ -108,15 +109,15 @@ const VALIDATION_MESSAGES: KnownMessage[] = [
   // Encounter.AuthorizeClinicalChildChange (alta con encounter_id): profesional del encounter inactivo.
   { pattern: /^Professional with id '.*' is inactive\.?$/i,
     translate: () => ODONTOGRAM_ENCOUNTER_PROFESSIONAL_INACTIVE_MESSAGE },
-  { pattern: /^dentition must be one of: permanente, temporal, mixta\.?$/i,
+  { pattern: /^dentition must be one of: permanent, temporary, mixed\.?$/i,
     translate: () => 'La dentición debe ser permanente, temporal o mixta.' },
   // Condiciones por pieza (/tenants/odontograms/{id}/teeth): ToothFdi, ToothCondition,
   // ToothConditionService y sus excepciones (ToothFdiNotInDentition, ToothConditionDentalConditionNotFound).
   { pattern: /^tooth_fdi is required\.?$/i, translate: () => 'Elegí la pieza a marcar.' },
   { pattern: /^tooth_fdi (-?\d+) is not a valid FDI tooth number\b.*$/i,
     translate: m => `La pieza ${m[1]} no es un número FDI válido (11-18, 21-28, 31-38, 41-48, 51-55, 61-65, 71-75, 81-85).` },
-  { pattern: /^tooth_fdi (\d+) is not valid for a '(permanente|temporal|mixta)' dentition\.?$/i,
-    translate: m => `La pieza ${m[1]} no corresponde a la dentición ${m[2].toLowerCase()} de este odontograma.` },
+  { pattern: /^tooth_fdi (\d+) is not valid for a '(permanent|temporary|mixed)' dentition\.?$/i,
+    translate: m => `La pieza ${m[1]} no corresponde a la dentición ${dentitionLabel(m[2].toLowerCase() as Dentition).toLowerCase()} de este odontograma.` },
   { pattern: /^condition_id (is required|cannot be empty)\.?$/i, translate: () => 'Elegí una condición del catálogo.' },
   { pattern: /^condition_id '.*' does not exist in the dental condition catalog\.?$/i,
     translate: () => 'La condición elegida ya no existe en el catálogo dental. Recargá la página y elegí otra.' },

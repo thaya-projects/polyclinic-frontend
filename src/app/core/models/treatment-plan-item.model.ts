@@ -1,4 +1,4 @@
-export type TreatmentPlanItemStatus = 'pendiente' | 'agendado' | 'en_proceso' | 'realizado' | 'cancelado';
+export type TreatmentPlanItemStatus = 'pending' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
 // Fase 6 (odontogram) todavía no está construido en el frontend — este
 // enum es el mínimo necesario para treatment_plan_item.surfaces en esta

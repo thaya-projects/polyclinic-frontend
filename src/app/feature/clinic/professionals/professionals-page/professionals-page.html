@@ -31,7 +31,7 @@
     </div>
   } @else {
     <app-professionals-table [professionals]="professionals()" [specialtyNameById]="specialtyNameById()"
-      (edit)="openEdit($event)" (deactivate)="requestDeactivate($event)" />
+      (schedule)="goToSchedule($event)" (edit)="openEdit($event)" (deactivate)="requestDeactivate($event)" />
   }
 </div>
 
@@ -39,13 +39,13 @@
 <app-modal [open]="modalMode() === 'create'" title="Nuevo profesional" size="lg" (closed)="closeModal()">
   @if (temporaryPassword(); as tempPassword) {
     <div class="flex flex-col gap-4 px-6 py-5">
-      <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-        <i class="ti ti-alert-triangle mt-0.5"></i>
+      <div class="flex items-start gap-3 rounded-xl border border-brand/20 bg-icon-soft px-4 py-3 text-sm text-navy">
+        <i class="ti ti-key mt-0.5 text-brand"></i>
         <div>
-          <p class="font-medium">No se pudo enviar el correo con la clave de acceso.</p>
-          <p class="mt-1">
-            Copiá esta contraseña temporal y entregásela al profesional de forma segura. No se va a
-            volver a mostrar en ningún otro lugar.
+          <p class="font-medium">Copiá esta contraseña temporal ahora.</p>
+          <p class="mt-1 text-muted">
+            No se envía por correo (la clínica no tiene ese servicio habilitado) y no se vuelve a
+            mostrar en ningún otro lugar — entregásela al profesional de forma segura.
           </p>
         </div>
       </div>

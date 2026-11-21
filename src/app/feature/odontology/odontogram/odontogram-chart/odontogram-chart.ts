@@ -155,6 +155,6 @@ export class OdontogramChart {
   }
 
   chartLabel(chart: DentitionChart): string {
-    return chart.kind === 'temporal' ? 'Dentición temporal' : 'Dentición permanente';
+    return chart.kind === 'temporary' ? 'Dentición temporal' : 'Dentición permanente';
   }
 }

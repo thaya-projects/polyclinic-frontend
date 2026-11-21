@@ -33,14 +33,9 @@ export function professionalSaveErrorMessage(err: unknown): string {
     const base = baseProfessionalsMessage(err);
     if (base) return base;
 
+    // "Email is required"/"Cannot combine..." ya los traduce specificErrorMessage() arriba
+    // (server-errors.util.ts); acá solo queda el fallback genérico de validación.
     if (err.status === 400 || err.status === 422) {
-      const detail = problemDetail(err);
-      if (detail?.includes('Email is required')) {
-        return 'Para crear una cuenta de acceso, el correo es obligatorio.';
-      }
-      if (detail?.includes('Cannot combine')) {
-        return 'No podés vincular un usuario existente y crear una cuenta nueva al mismo tiempo.';
-      }
       return validationErrorMessage(err) ?? 'No se pudo guardar el profesional: uno de los datos no es válido.';
     }
 

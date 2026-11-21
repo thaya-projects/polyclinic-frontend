@@ -1,0 +1,82 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between gap-4">
+    <p class="text-sm text-muted">Catálogo de unidades de medida para los materiales (ml, caja, unidad...).</p>
+    <button type="button" (click)="openCreateModal()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-plus"></i>
+      Nueva unidad
+    </button>
+  </div>
+
+  @if (listError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ listError() }}
+    </div>
+  }
+
+  @if (statusError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ statusError() }}
+    </div>
+  }
+
+  @if (listLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando unidades...
+    </div>
+  } @else {
+    <app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Todavía no hay unidades de medida cargadas.">
+      <ng-template appDataTableCell="code" let-row>
+        <code class="rounded bg-icon-soft px-1.5 py-0.5 text-xs text-muted">{{ row.code || '—' }}</code>
+      </ng-template>
+
+      <ng-template appDataTableCell="name" let-row>
+        <span class="font-semibold text-text">{{ row.name }}</span>
+      </ng-template>
+
+      <ng-template appDataTableCell="is_active" let-row>
+        <app-status-chip [label]="row.is_active ? 'Sí' : 'No'" [tone]="row.is_active ? 'ok' : 'neutral'" />
+      </ng-template>
+
+      <ng-template appDataTableCell="actions" let-row>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" (click)="openEditModal(row)"
+            class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+            Editar
+          </button>
+          <button type="button" (click)="onToggleActive(row)"
+            class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors"
+            [class]="row.is_active ? 'hover:border-red-400 hover:text-red-500' : 'hover:border-brand hover:text-brand'">
+            {{ row.is_active ? 'Desactivar' : 'Activar' }}
+          </button>
+        </div>
+      </ng-template>
+    </app-data-table>
+  }
+</div>
+
+<app-modal [open]="modalMode() !== 'none'" [title]="modalMode() === 'create' ? 'Nueva unidad' : 'Editar unidad'" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  @if (modalMode() !== 'none') {
+    <app-unit-of-measure-form #unitForm [unit]="selectedUnit()" (submitted)="onSave($event)" />
+  }
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submitForm()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+</app-modal>

@@ -1,7 +1,7 @@
 // Fase 8: factura de un paciente. Solo los campos de invoice permitidos
 // por el schema — sin subscription_invoice/stripe/AFIP-SIN (prohibido en
 // esta fase). tenant_id no viaja al frontend (sale del token).
-export type InvoiceStatus = 'borrador' | 'emitida' | 'pagada' | 'parcial' | 'anulada' | 'vencida';
+export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'partial' | 'voided' | 'overdue';
 
 export interface Invoice {
   id: string;

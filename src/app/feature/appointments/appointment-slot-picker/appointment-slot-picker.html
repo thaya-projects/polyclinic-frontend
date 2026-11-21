@@ -1,0 +1,24 @@
+@if (!professionalId() || !branchId() || !date()) {
+  <p class="text-xs text-muted">Elegí sucursal, profesional y fecha para ver los horarios libres.</p>
+} @else if (loading()) {
+  <div class="flex items-center gap-2 text-xs text-muted">
+    <i class="ti ti-loader-2 animate-spin"></i>
+    Buscando horarios libres...
+  </div>
+} @else if (error()) {
+  <p class="text-xs text-red-500">{{ error() }}</p>
+} @else if (noScheduleForDay()) {
+  <p class="text-xs text-amber-600">Este profesional no tiene horario laboral cargado para este día en esta sucursal. Cargalo en Horarios antes de agendar.</p>
+} @else if (slots().length === 0) {
+  <p class="text-xs text-muted">Está completo ese día con esta duración — probá otra fecha o una duración más corta.</p>
+} @else {
+  <div class="flex flex-wrap gap-2">
+    @for (slot of slots(); track slot.getTime()) {
+      <button type="button" (click)="pick(slot)"
+        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+        [class]="isSelected(slot) ? 'border-brand bg-brand text-white' : 'border-border text-navy hover:border-brand hover:text-brand'">
+        {{ slot | date: 'HH:mm' }}
+      </button>
+    }
+  </div>
+}

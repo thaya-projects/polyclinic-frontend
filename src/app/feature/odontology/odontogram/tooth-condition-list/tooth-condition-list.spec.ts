@@ -8,7 +8,7 @@ const CATALOG: DentalCondition[] = [
 ];
 
 const item = (id: string, conditionId: string, note: string | null = null): ToothCondition => ({
-  id, odontogram_id: 'odo-2', tooth_fdi: 16, surface: 'oclusal', condition_id: conditionId, state: 'realizado', note,
+  id, odontogram_id: 'odo-2', tooth_fdi: 16, surface: 'oclusal', condition_id: conditionId, state: 'done', note,
   created_at: '2026-03-10T14:35:00Z', created_by: 'user-mock',
 });
 

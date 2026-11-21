@@ -130,10 +130,17 @@
               [appointments]="appointmentOptions()"
               [savingItemId]="itemStatusSavingId()"
               (changed)="onItemStatusChanged($event)"
-              (remove)="onItemRemoved($event)" />
+              (remove)="onItemRemoved($event)"
+              (bill)="openBill($event)" />
           }
         </section>
       </div>
     }
   }
 </app-modal>
+
+<app-bill-treatment-plan-item-modal
+  [patientId]="patientId()"
+  [item]="billingItem()"
+  [currency]="selectedPlan()?.currency ?? null"
+  (closed)="closeBill()" />

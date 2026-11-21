@@ -27,7 +27,7 @@ const COLLAPSE_KEY = 'mc_sidebar_collapsed';
 // Sidebar de la plataforma (super admin): solo lo global de la plataforma.
 // Nunca se le muestra el menú de clínica (ni pacientes ni agenda).
 const SUPERADMIN_NAV_ITEMS: NavEntry[] = [
-  { kind: 'leaf', label: 'Dashboard', icon: 'layout-dashboard', route: '/' },
+  { kind: 'leaf', label: 'Inicio', icon: 'layout-dashboard', route: '/' },
   { kind: 'leaf', label: 'Clínicas', icon: 'building-hospital', route: '/superadmin/tenants' },
   { kind: 'leaf', label: 'Planes', icon: 'package', route: '/superadmin/plans' },
   // Fase 10 T3: solo aparece acá (nunca en CLINIC_NAV_ITEMS) — junto con
@@ -39,19 +39,12 @@ const SUPERADMIN_NAV_ITEMS: NavEntry[] = [
 // se le oculta Pacientes a recepción.
 const CLINIC_NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Agenda', icon: 'calendar-event', route: '/appointments' },
+  // Encuentros y Odontograma ya no van sueltos acá: se llega a ellos desde la
+  // ficha del paciente (único lugar, evita duplicar la entrada a lo mismo).
   { kind: 'leaf', label: 'Pacientes', icon: 'user-heart', route: '/patients' },
-  // Fase 4 T6: encuentros clínicos (notas de evolución). Visible solo con acceso clínico
-  // (profesional activo o clinical.void).
-  { kind: 'leaf', label: 'Encuentros', icon: 'notes', route: '/encounters', requiresEncountersAccess: true },
   { kind: 'leaf', label: 'Servicios', icon: 'stethoscope', route: '/services' },
-  // Fase 6: grupo Odontología gated por feature 'odontogram' (cada hijo lleva el moduleKey; un
-  // grupo sin hijos visibles se oculta entero). Reemplaza la entry demo "Odontograma" de T6 FF.
-  {
-    kind: 'group', label: 'Odontología', icon: 'dental', children: [
-      { kind: 'leaf', label: 'Catálogo', icon: 'list-details', route: '/odontology/catalog', moduleKey: 'odontogram' },
-      { kind: 'leaf', label: 'Odontograma', icon: 'dental', route: '/odontology/odontogram', moduleKey: 'odontogram' },
-    ],
-  },
+  // Fase 6: catálogo de condiciones dentales — gated por feature 'odontogram'.
+  { kind: 'leaf', label: 'Catálogo dental', icon: 'dental', route: '/odontology/catalog', moduleKey: 'odontogram' },
   // Fase 8: gated por feature 'invoicing' — mismo criterio que Odontología.
   { kind: 'leaf', label: 'Facturas', icon: 'file-invoice', route: '/invoices', moduleKey: 'invoicing' },
   // Fase 9: gated por feature 'whatsapp' (es la key existente más cercana
@@ -68,7 +61,11 @@ const CLINIC_ADMIN_EXTRA_NAV_ITEMS: NavEntry[] = [
   { kind: 'leaf', label: 'Especialidades', icon: 'certificate', route: '/specialties' },
   { kind: 'leaf', label: 'Profesionales', icon: 'stethoscope', route: '/professionals' },
   { kind: 'leaf', label: 'Salas', icon: 'door', route: '/rooms' },
-  { kind: 'leaf', label: 'Horarios', icon: 'calendar-time', route: '/schedules' },
+  // feature/inventories: catálogo de materiales + stock. Escritura requiere organization.manage
+  // (lo aplica el backend) — mismo criterio admin-only que Reportes/Roles/Sucursales.
+  { kind: 'leaf', label: 'Inventario', icon: 'package', route: '/inventory' },
+  // Horarios ya no va suelto acá: se llega desde la tabla de Profesionales
+  // (botón "Horarios" por fila) — único lugar, con el profesional ya elegido.
   { kind: 'leaf', label: 'Roles', icon: 'shield-lock', route: '/roles' },
   // Fase 10: reportes con datos financieros (facturación) — mismo
   // criterio que Roles/Sucursales, solo admin.

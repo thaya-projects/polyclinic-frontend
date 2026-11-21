@@ -18,6 +18,7 @@ export class ProfessionalsTable {
 
   edit = output<Professional>();
   deactivate = output<Professional>();
+  schedule = output<Professional>();
 
   rows = computed(() => this.professionals() as unknown as Record<string, unknown>[]);
 
@@ -27,7 +28,7 @@ export class ProfessionalsTable {
     { key: 'email', label: 'Email', width: '220px' },
     { key: 'phone', label: 'Teléfono', width: '140px' },
     { key: 'is_active', label: 'Estado', align: 'center', width: '120px' },
-    { key: 'actions', label: '', align: 'right', width: '160px' },
+    { key: 'actions', label: '', align: 'right', width: '240px' },
   ];
 
   specialtyNamesFor(ids: string[] | undefined): string[] {

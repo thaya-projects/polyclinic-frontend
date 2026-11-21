@@ -1,0 +1,102 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Nombre</span>
+      <input type="text" formControlName="name" [class]="inputClass(form.controls.name)" />
+      @if (isInvalid(form.controls.name)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.name) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Código</span>
+      <input type="text" [value]="generatedCode() || '—'" disabled
+        class="h-11 rounded-xl border border-border bg-icon-soft px-3.5 text-sm text-muted" />
+      <span class="text-xs text-muted">Se genera automáticamente a partir del nombre.</span>
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Categoría</span>
+      <select formControlName="category" [class]="inputClass(form.controls.category)">
+        @for (cat of categories; track cat) {
+          <option [value]="cat">{{ categoryLabels[cat] }}</option>
+        }
+      </select>
+      @if (isInvalid(form.controls.category)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.category) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Unidad de medida</span>
+      <div class="flex items-center gap-2">
+        <select formControlName="unit_of_measure_id" class="flex-1" [class]="inputClass(form.controls.unit_of_measure_id)">
+          <option value="" disabled>Elegí una unidad...</option>
+          @for (unit of activeUnits(); track unit.id) {
+            <option [value]="unit.id">{{ unit.name }}{{ unit.code ? ' (' + unit.code + ')' : '' }}</option>
+          }
+        </select>
+        <button type="button" (click)="openQuickAddUnit()" title="Nueva unidad de medida"
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border text-navy transition-colors hover:border-brand hover:text-brand">
+          <i class="ti ti-plus"></i>
+        </button>
+      </div>
+      @if (isInvalid(form.controls.unit_of_measure_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.unit_of_measure_id) }}</span>
+      } @else if (!unitsLoading() && activeUnits().length === 0) {
+        <span class="text-xs text-amber-600">Todavía no hay unidades de medida. Creá una con el botón "+".</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Costo unitario</span>
+      <input type="number" min="0" step="0.01" formControlName="unit_cost" [class]="inputClass(form.controls.unit_cost)" />
+      @if (isInvalid(form.controls.unit_cost)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.unit_cost) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Stock mínimo</span>
+      <input type="number" min="0" step="1" formControlName="min_stock" [class]="inputClass(form.controls.min_stock)" />
+      @if (isInvalid(form.controls.min_stock)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.min_stock) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Moneda</span>
+      <select formControlName="currency" [class]="inputClass(form.controls.currency)">
+        @for (currency of currencies; track currency) {
+          <option [value]="currency">{{ currency }}</option>
+        }
+      </select>
+      @if (isInvalid(form.controls.currency)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.currency) }}</span>
+      }
+    </label>
+  </div>
+</form>
+
+<app-modal [open]="quickAddOpen()" title="Nueva unidad de medida" (closed)="closeQuickAddUnit()">
+  @if (quickAddError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ quickAddError() }}
+    </div>
+  }
+  @if (quickAddOpen()) {
+    <app-unit-of-measure-form #quickAddForm (submitted)="onQuickAddUnitSave($event)" />
+  }
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeQuickAddUnit()" [disabled]="quickAddSaving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submitQuickAddUnit()" [disabled]="quickAddSaving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ quickAddSaving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+</app-modal>

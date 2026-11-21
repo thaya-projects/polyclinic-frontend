@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { Appointment, AppointmentStatus, AppointmentType } from '../../../core/models/appointment.model';
+import { ScheduleBlock } from '../../../core/models/schedule.model';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_TONES } from '../../../core/constants/appointment-status.const';
 import { StatusChip } from '../../../shared/components/status-chip/status-chip';
+import { computeDayLayout } from './calendar-layout.util';
 
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -45,6 +47,7 @@ const POPOVER_MIN_HEIGHT = 240;
   selector: 'app-calendar-view',
   imports: [StatusChip],
   templateUrl: './calendar-view.html',
+  styleUrl: './calendar-view.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Con position fixed el popover quedaría desfasado al scrollear.
   host: { '(window:scroll)': 'hideHover()', '(window:resize)': 'hideHover()' },
@@ -55,11 +58,17 @@ export class CalendarView {
   appointments = input.required<Appointment[]>();
   viewMode = input.required<'day' | 'week'>();
   referenceDate = input.required<Date>();
+  // Si hay un profesional filtrado en el toolbar, se usa su horario laboral real
+  // para bloquear las horas en las que no atiende (vacío = sin filtro, no bloquea nada).
+  professionalId = input('');
+  scheduleBlocks = input<ScheduleBlock[]>([]);
 
   select = output<Appointment>();
+  createAt = output<Date>();
 
   readonly startHour = 7;
   readonly endHour = 20;
+  readonly rowHeight = 64;
   readonly hours = Array.from({ length: this.endHour - this.startHour }, (_, i) => this.startHour + i);
   readonly popoverWidth = POPOVER_WIDTH;
 
@@ -78,18 +87,10 @@ export class CalendarView {
     });
   });
 
-  // Filas por hora de alto variable: cada celda (día × hora) lista, una
-  // debajo de otra, las citas que EMPIEZAN en esa hora, y la fila crece con
-  // la celda más cargada. Así las citas simultáneas nunca se enciman ni se
-  // achican; la duración se lee en la propia tarjeta. Las citas fuera del
-  // rango visible se agrupan en la primera/última fila.
-  readonly grid = computed(() => {
-    const byDay = this.days().map(day => this.appointmentsFor(day));
-    return this.hours.map(hour => ({
-      hour,
-      cells: byDay.map(appts => appts.filter(a => this.rowHourFor(a) === hour)),
-    }));
-  });
+  // Tarjetas posicionadas por hora/duración real (no por fila fija), con carriles
+  // lado a lado para las que se superponen — ver calendar-layout.util.ts.
+  readonly dayLayouts = computed(() =>
+    this.days().map(day => computeDayLayout(this.appointmentsFor(day), day, this.startHour, this.endHour, this.rowHeight)));
 
   readonly gridTemplate = computed(() => `4rem repeat(${this.days().length}, minmax(0, 1fr))`);
 
@@ -97,11 +98,6 @@ export class CalendarView {
     return this.appointments()
       .filter(a => isSameDay(new Date(a.starts_at), day))
       .sort((a, b) => timeOf(a.starts_at) - timeOf(b.starts_at) || timeOf(b.ends_at) - timeOf(a.ends_at));
-  }
-
-  private rowHourFor(appt: Appointment): number {
-    const hour = new Date(appt.starts_at).getHours();
-    return Math.min(Math.max(hour, this.startHour), this.endHour - 1);
   }
 
   isToday(day: Date): boolean {
@@ -173,6 +169,39 @@ export class CalendarView {
   onSelect(appt: Appointment): void {
     this.hideHover();
     this.select.emit(appt);
+  }
+
+  // Bloquea reservar en un horario que ya pasó (la hora completa cuenta como pasada).
+  isPastCell(day: Date, hour: number): boolean {
+    const cellEnd = new Date(day);
+    cellEnd.setHours(hour + 1, 0, 0, 0);
+    return cellEnd <= new Date();
+  }
+
+  // Con un profesional filtrado: bloquea las horas fuera de su horario laboral real
+  // (ej. si solo atiende de tarde, bloquea toda la mañana). Sin filtro, no bloquea nada.
+  isOutsideSchedule(day: Date, hour: number): boolean {
+    if (!this.professionalId()) return false;
+    const weekday = day.getDay();
+    const cellStart = hour * 60;
+    const cellEnd = cellStart + 60;
+    return !this.scheduleBlocks().some(b => {
+      if (b.weekday !== weekday) return false;
+      const [sh, sm] = b.start_time.split(':').map(Number);
+      const [eh, em] = b.end_time.split(':').map(Number);
+      return cellStart < eh * 60 + em && cellEnd > sh * 60 + sm;
+    });
+  }
+
+  isBlockedCell(day: Date, hour: number): boolean {
+    return this.isPastCell(day, hour) || this.isOutsideSchedule(day, hour);
+  }
+
+  onCellClick(day: Date, hour: number): void {
+    if (this.isBlockedCell(day, hour)) return;
+    const at = new Date(day);
+    at.setHours(hour, 0, 0, 0);
+    this.createAt.emit(at);
   }
 
   // A la derecha del elemento; si no entra, a la izquierda. Verticalmente

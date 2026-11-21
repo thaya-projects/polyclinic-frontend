@@ -1,6 +1,6 @@
 // Fase 8 T4: pago de una factura. Sin pasarelas de pago ni QR real — solo
 // registra lo que ya se cobró por fuera (efectivo, tarjeta física, etc.).
-export type PaymentMethod = 'efectivo' | 'tarjeta' | 'qr' | 'transferencia' | 'otro';
+export type PaymentMethod = 'cash' | 'card' | 'qr' | 'transfer' | 'other';
 
 export interface Payment {
   id: string;

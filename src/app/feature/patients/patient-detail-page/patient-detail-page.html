@@ -1,0 +1,80 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <a routerLink="/patients" class="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand">
+      <i class="ti ti-arrow-left"></i>
+      Pacientes
+    </a>
+    <h2 class="mt-1 text-2xl font-bold text-navy">Ficha del paciente</h2>
+  </div>
+
+  @if (loadError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ loadError() }}
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando paciente...
+    </div>
+  } @else if (patient(); as patient) {
+    @if (actionError()) {
+      <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <i class="ti ti-alert-circle"></i>
+        {{ actionError() }}
+      </div>
+    }
+
+    <div class="rounded-2xl border border-border bg-surface p-6">
+      <app-patient-detail [patient]="patient" />
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      @if (patient.is_active) {
+        <button type="button" (click)="requestDeactivate(patient)"
+          class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-red-400 hover:text-red-500">
+          Desactivar
+        </button>
+      } @else {
+        <span class="text-xs text-muted">Paciente inactivo.</span>
+      }
+      <button type="button" (click)="openEdit()"
+        class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark">
+        Editar
+      </button>
+    </div>
+  }
+</div>
+
+<!-- Edición de paciente (sigue siendo modal) -->
+<app-modal [open]="editOpen()" title="Editar paciente" size="lg" (closed)="closeEdit()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  <app-create-patient-form #editForm [patient]="patient()" (submitted)="onSaveEdit($event)" />
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeEdit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="editForm.submit()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+    </button>
+  </div>
+</app-modal>
+
+<app-confirm-dialog
+  [open]="patientToDeactivate() !== null"
+  title="Desactivar paciente"
+  [message]="deactivateMessage()"
+  [confirmLabel]="deactivating() ? 'Desactivando...' : 'Desactivar'"
+  tone="danger"
+  (confirmed)="confirmDeactivate()"
+  (cancelled)="cancelDeactivate()" />

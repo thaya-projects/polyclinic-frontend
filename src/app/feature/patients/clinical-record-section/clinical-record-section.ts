@@ -14,6 +14,7 @@ export class ClinicalRecordSection {
   private recordsSvc = inject(ClinicalRecordsService);
 
   patientId = input.required<string>();
+  section = input<'clinical' | 'habits'>('clinical');
 
   readonly record = computed(() => this.recordsSvc.findByPatientId(this.patientId()));
   readonly listLoading = this.recordsSvc.loading;

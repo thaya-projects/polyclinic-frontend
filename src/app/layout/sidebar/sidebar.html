@@ -29,7 +29,8 @@
             }
           </span>
         } @else {
-          <a [routerLink]="item.route" routerLinkActive="bg-sidebar-active text-white" [class]="navLinkClass()"
+          <a [routerLink]="item.route" routerLinkActive="bg-sidebar-active text-white"
+             [routerLinkActiveOptions]="{ exact: item.route === '/' }" [class]="navLinkClass()"
              [title]="collapsed() ? item.label : null">
             <i [class]="'ti ti-' + item.icon"></i>
             @if (!collapsed()) { <span class="min-w-0 flex-1">{{ item.label }}</span> }

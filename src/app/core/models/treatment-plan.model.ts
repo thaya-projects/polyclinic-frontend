@@ -3,7 +3,7 @@
 // notification (prohibido en esta fase). tenant_id no viaja al frontend
 // (sale del token) y created_by se omite: todavía no hay lookup de
 // app_user para mostrarlo.
-export type TreatmentPlanStatus = 'propuesto' | 'aceptado' | 'en_proceso' | 'completado' | 'cancelado';
+export type TreatmentPlanStatus = 'proposed' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface TreatmentPlan {
   id: string;

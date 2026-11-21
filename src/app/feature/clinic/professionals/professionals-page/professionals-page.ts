@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { of, switchMap } from 'rxjs';
 import { ProfessionalsTable } from '../professionals-table/professionals-table';
 import { ProfessionalForm } from '../professional-form/professional-form';
@@ -27,6 +28,7 @@ type ModalMode = 'none' | 'create' | 'edit';
 export class ProfessionalsPage {
   private professionalsSvc = inject(ProfessionalsService);
   private specialtiesSvc = inject(SpecialtiesService);
+  private router = inject(Router);
   private allProfessionals = this.professionalsSvc.getAll();
   private allSpecialties = this.specialtiesSvc.getAll();
 
@@ -73,6 +75,12 @@ export class ProfessionalsPage {
     this.selectedProfessional.set(null);
     this.actionError.set(null);
     this.modalMode.set('create');
+  }
+
+  // Horarios ya no tiene entrada propia en el sidebar: se llega acá, con el
+  // profesional ya preseleccionado (único lugar para esto).
+  goToSchedule(professional: Professional): void {
+    this.router.navigate(['/schedules'], { queryParams: { professional_id: professional.id } });
   }
 
   openEdit(professional: Professional): void {

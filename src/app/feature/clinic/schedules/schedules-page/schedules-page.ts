@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { ScheduleGrid } from '../schedule-grid/schedule-grid';
 import { ExceptionsSection } from '../exceptions-section/exceptions-section';
 import { SchedulesService } from '../../../../core/services/schedules.service';
@@ -21,6 +22,7 @@ export class SchedulesPage {
   private schedulesSvc = inject(SchedulesService);
   private professionalsSvc = inject(ProfessionalsService);
   private branchesSvc = inject(BranchesService);
+  private route = inject(ActivatedRoute);
 
   readonly schedule = this.schedulesSvc.schedule;
   readonly scheduleLoading = this.schedulesSvc.scheduleLoading;
@@ -34,7 +36,9 @@ export class SchedulesPage {
   readonly branches = computed(() => this.branchesSvc.getAll()());
   readonly activeBranches = computed(() => this.branches().filter(b => b.is_active));
 
-  selectedProfessionalId = signal<string | null>(null);
+  // Si se llega desde "Horarios" en la tabla de Profesionales, viene con
+  // ?professional_id= y arranca ya elegido (sin eso, se autoselecciona el primero).
+  selectedProfessionalId = signal<string | null>(this.route.snapshot.queryParamMap.get('professional_id'));
 
   savingSchedule = signal(false);
   saveScheduleError = signal<string | null>(null);

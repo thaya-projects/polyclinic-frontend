@@ -2,25 +2,25 @@ import { TreatmentPlanStatus } from '../models/treatment-plan.model';
 import { StatusChipTone } from '../../shared/components/status-chip/status-chip';
 
 export const TREATMENT_PLAN_STATUSES: TreatmentPlanStatus[] = [
-  'propuesto',
-  'aceptado',
-  'en_proceso',
-  'completado',
-  'cancelado',
+  'proposed',
+  'accepted',
+  'in_progress',
+  'completed',
+  'cancelled',
 ];
 
 export const TREATMENT_PLAN_STATUS_LABELS: Record<TreatmentPlanStatus, string> = {
-  propuesto: 'Propuesto',
-  aceptado: 'Aceptado',
-  en_proceso: 'En proceso',
-  completado: 'Completado',
-  cancelado: 'Cancelado',
+  proposed: 'Propuesto',
+  accepted: 'Aceptado',
+  in_progress: 'En proceso',
+  completed: 'Completado',
+  cancelled: 'Cancelado',
 };
 
 export const TREATMENT_PLAN_STATUS_TONES: Record<TreatmentPlanStatus, StatusChipTone> = {
-  propuesto: 'neutral',
-  aceptado: 'wait',
-  en_proceso: 'wait',
-  completado: 'ok',
-  cancelado: 'danger',
+  proposed: 'neutral',
+  accepted: 'wait',
+  in_progress: 'wait',
+  completed: 'ok',
+  cancelled: 'danger',
 };

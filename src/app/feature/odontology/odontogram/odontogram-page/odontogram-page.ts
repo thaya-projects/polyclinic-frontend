@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, catchError, of, switchMap, throwError } from 'rxjs';
 import { OdontogramChart, ToothFaceSelection } from '../odontogram-chart/odontogram-chart';
 import { SelectedToothPanel } from '../selected-tooth-panel/selected-tooth-panel';
@@ -9,6 +9,7 @@ import { PatientPicker } from '../patient-picker/patient-picker';
 import { ToothConditionsPanel } from '../tooth-conditions-panel/tooth-conditions-panel';
 import { StatusChip } from '../../../../shared/components/status-chip/status-chip';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { PatientFichaTabs } from '../../../patients/patient-ficha-tabs/patient-ficha-tabs';
 import { PageTitleService } from '../../../../core/services/page-title.service';
 import { ODONTOGRAM_REPOSITORY } from '../../../../core/services/odontogram-repository';
 import { TOOTH_CONDITIONS_REPOSITORY } from '../../../../core/services/tooth-conditions-repository';
@@ -55,7 +56,7 @@ const NO_CLINICAL_RECORD_MESSAGE =
 // ser current) se avisa y se recarga el current.
 @Component({
   selector: 'app-odontogram-page',
-  imports: [OdontogramChart, SelectedToothPanel, ToothConditionsPanel, PatientPicker, StatusChip, Modal, RouterLink],
+  imports: [OdontogramChart, SelectedToothPanel, ToothConditionsPanel, PatientPicker, StatusChip, Modal, PatientFichaTabs],
   templateUrl: './odontogram-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -113,7 +114,7 @@ export class OdontogramPage {
   // Alta de odontograma nuevo.
   readonly dentitionOptions = DENTITION_OPTIONS;
   readonly createOpen = signal(false);
-  readonly newDentition = signal<Dentition>('permanente');
+  readonly newDentition = signal<Dentition>('permanent');
   readonly creating = signal(false);
   readonly actionError = signal<string | null>(null);
   // Aviso no bloqueante (snapshot histórico tras crear / conflicto de current).
@@ -250,6 +251,11 @@ export class OdontogramPage {
     this.router.navigate(['/patients', patient.id, 'odontogram']);
   }
 
+  goToFicha(): void {
+    const id = this.patientId();
+    if (id) this.router.navigate(['/patients', id]);
+  }
+
   selectTooth(fdi: number): void {
     // Click sobre la pieza ya seleccionada la deselecciona.
     this.selectedTooth.update(current => (current === fdi ? null : fdi));
@@ -273,7 +279,7 @@ export class OdontogramPage {
 
   openCreate(): void {
     if (!this.canCreate()) return;
-    this.newDentition.set(this.odontogram()?.dentition ?? 'permanente');
+    this.newDentition.set(this.odontogram()?.dentition ?? 'permanent');
     this.actionError.set(null);
     this.createOpen.set(true);
   }

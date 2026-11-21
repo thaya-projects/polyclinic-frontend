@@ -45,7 +45,7 @@ export class PaymentForm {
 
   form = this.fb.group({
     amount: [0, [Validators.required, amountValidatorFor(() => this.balance())]],
-    method: this.fb.control<PaymentMethod>('efectivo', Validators.required),
+    method: this.fb.control<PaymentMethod>('cash', Validators.required),
     reference: [''],
     paid_at: [todayIsoDate(), Validators.required],
   });
@@ -97,6 +97,6 @@ export class PaymentForm {
       reference: raw.reference || null,
       paid_at: raw.paid_at ? new Date(raw.paid_at).toISOString() : undefined,
     });
-    this.form.reset({ amount: 0, method: 'efectivo', reference: '', paid_at: todayIsoDate() });
+    this.form.reset({ amount: 0, method: 'cash', reference: '', paid_at: todayIsoDate() });
   }
 }

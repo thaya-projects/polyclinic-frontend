@@ -21,7 +21,7 @@ export class EncountersReportCard {
   readonly professionals = this.professionalsSvc.getAll();
   professionalId = signal('');
 
-  readonly count = this.reportSvc.summary;
+  readonly report = this.reportSvc.summary;
   readonly loading = this.reportSvc.loading;
   readonly error = this.reportSvc.error;
 

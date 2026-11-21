@@ -30,7 +30,7 @@
   </button>
 </form>
 
-@if (item().status === 'realizado') {
+@if (item().status === 'completed') {
   <p class="mt-2 text-xs text-muted">
     Realizado el {{ formatDate(item().done_at) }}
     @if (item().done_by) { · por {{ item().done_by }} }

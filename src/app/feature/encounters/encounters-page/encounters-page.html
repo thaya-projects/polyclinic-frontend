@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-6">
   <div class="flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h2 class="text-2xl font-bold text-navy">Encuentros clínicos</h2>
+      <h2 class="mt-1 text-2xl font-bold text-navy">Encuentros clínicos</h2>
       <p class="mt-1 text-sm text-muted">Notas de evolución de los pacientes de la clínica.</p>
     </div>
     @if (accessView() === 'allowed') {
@@ -26,6 +26,10 @@
     </div>
     }
   </div>
+
+  @if (patientFilter()) {
+    <app-patient-ficha-tabs [patientId]="patientFilter()" activeQuickAction="encounters" (contentTabClick)="goToFicha()" />
+  }
 
   @if (accessView() === 'loading') {
     <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-loading">

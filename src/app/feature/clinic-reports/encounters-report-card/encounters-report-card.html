@@ -18,6 +18,6 @@
       Cargando...
     </div>
   } @else {
-    <app-stat-card label="Encuentros firmados" [value]="count() ?? 0" icon="file-check" />
+    <app-stat-card label="Encuentros firmados" [value]="report()?.total_count ?? 0" icon="file-check" />
   }
 </div>

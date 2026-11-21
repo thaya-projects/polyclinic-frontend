@@ -22,7 +22,7 @@ export class InvoicesSummaryCard {
 
   status = signal('');
 
-  readonly summaries = this.reportSvc.summary;
+  readonly report = this.reportSvc.summary;
   readonly loading = this.reportSvc.loading;
   readonly error = this.reportSvc.error;
 
