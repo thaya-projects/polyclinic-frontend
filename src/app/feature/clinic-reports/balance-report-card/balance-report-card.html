@@ -1,0 +1,32 @@
+<div class="flex flex-col gap-3">
+  <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">Balance</h3>
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  } @else if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface p-5 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando...
+    </div>
+  } @else if (report(); as r) {
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <app-stat-card label="Ingresos" [value]="r.income.toFixed(2) + ' ' + r.currency" icon="trending-up" />
+      <app-stat-card label="Materiales" [value]="r.material_spend.toFixed(2) + ' ' + r.currency" icon="box" />
+      <app-stat-card label="Gastos" [value]="r.operating_expenses.toFixed(2) + ' ' + r.currency" icon="receipt" />
+      <app-stat-card label="Balance neto" [value]="r.net_balance.toFixed(2) + ' ' + r.currency" icon="scale" />
+    </div>
+
+    @if (r.other_currency_material_spend > 0 || r.other_currency_expenses > 0) {
+      <p class="text-xs text-muted">
+        El balance neto no incluye montos en otra moneda (sin tipo de cambio): quedaron afuera
+        {{ r.other_currency_material_spend.toFixed(2) }} en materiales y
+        {{ r.other_currency_expenses.toFixed(2) }} en gastos.
+      </p>
+    }
+
+    <app-data-table [columns]="branchColumns" [rows]="branchRows(r)" emptyMessage="Sin datos por sucursal." />
+  }
+</div>

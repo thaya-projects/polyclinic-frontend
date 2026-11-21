@@ -1,0 +1,21 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Nombre</span>
+      <input type="text" formControlName="name" placeholder="Mililitros" [class]="inputClass(form.controls.name)" />
+      @if (isInvalid(form.controls.name)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.name) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Código</span>
+      <input type="text" formControlName="code" placeholder="ml, caja, unidad..." [class]="inputClass(form.controls.code)" />
+      @if (isInvalid(form.controls.code)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.code) }}</span>
+      } @else {
+        <span class="text-xs text-muted">Se sugiere según el nombre (ej. "Quintales" → qq); podés cambiarlo.</span>
+      }
+    </label>
+  </div>
+</form>

@@ -1,10 +1,6 @@
 <div class="flex flex-col gap-6">
   <div class="flex flex-wrap items-center justify-between gap-4">
     <div>
-      <a routerLink="/patients" class="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand">
-        <i class="ti ti-arrow-left"></i>
-        Pacientes
-      </a>
       <h2 class="mt-1 text-2xl font-bold text-navy">Signos vitales</h2>
       @if (patientName()) {
         <p class="mt-1 text-sm text-muted" data-testid="patient-name">{{ patientName() }}</p>
@@ -24,6 +20,8 @@
       </div>
     }
   </div>
+
+  <app-patient-ficha-tabs [patientId]="patientId()" activeQuickAction="measurements" (contentTabClick)="goToFicha()" />
 
   @if (accessView() === 'loading') {
     <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted" data-testid="access-loading">

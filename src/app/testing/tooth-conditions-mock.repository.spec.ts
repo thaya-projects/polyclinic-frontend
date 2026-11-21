@@ -32,7 +32,7 @@ describe('MockToothConditionsRepository', () => {
   it('create: defaults surface whole y state existente; note vacía = null; created_by del token', async () => {
     const created = await firstValueFrom(repo.create('odo-2', { tooth_fdi: 11, condition_id: 'dc-1', note: '   ' }));
     expect(created).toEqual(expect.objectContaining({
-      odontogram_id: 'odo-2', tooth_fdi: 11, surface: 'whole', condition_id: 'dc-1', state: 'existente', note: null,
+      odontogram_id: 'odo-2', tooth_fdi: 11, surface: 'whole', condition_id: 'dc-1', state: 'existing', note: null,
       created_by: MOCK_TOOTH_CONDITION_USER_ID,
     }));
     expect(await firstValueFrom(repo.list('odo-2'))).toContainEqual(created);
@@ -43,7 +43,7 @@ describe('MockToothConditionsRepository', () => {
     // Textos reales del backend: FDI de otra dentición (ToothFdiNotInDentitionException) vs no-FDI (ToothFdi).
     const other = await errorOf(firstValueFrom(repo.create('odo-2', { tooth_fdi: 51, condition_id: 'dc-1' })));
     expect(other.status).toBe(422);
-    expect(other.error.detail).toBe("tooth_fdi 51 is not valid for a 'permanente' dentition.");
+    expect(other.error.detail).toBe("tooth_fdi 51 is not valid for a 'permanent' dentition.");
     for (const fdi of [19, 10]) {
       const err = await errorOf(firstValueFrom(repo.create('odo-2', { tooth_fdi: fdi, condition_id: 'dc-1' })));
       expect(err.status).toBe(422);
@@ -53,7 +53,7 @@ describe('MockToothConditionsRepository', () => {
     await expect(firstValueFrom(repo.create('odo-3', { tooth_fdi: 85, condition_id: 'dc-1' }))).resolves.toBeTruthy();
     await expect(firstValueFrom(repo.create('odo-3', { tooth_fdi: 48, condition_id: 'dc-1' }))).resolves.toBeTruthy();
     // temporal registrado: 56 no existe.
-    repo.registerOdontogram('odo-t', 'temporal');
+    repo.registerOdontogram('odo-t', 'temporary');
     expect((await errorOf(firstValueFrom(repo.create('odo-t', { tooth_fdi: 56, condition_id: 'dc-1' })))).status).toBe(422);
     expect((await errorOf(firstValueFrom(repo.create('odo-t', { tooth_fdi: 11, condition_id: 'dc-1' })))).status).toBe(422);
   });
@@ -70,15 +70,15 @@ describe('MockToothConditionsRepository', () => {
   });
 
   it('update: PATCH parcial; note null la quita; tooth_fdi no cambia', async () => {
-    const updated = await firstValueFrom(repo.update('odo-2', 'tc-2', { state: 'planificado', note: null }));
+    const updated = await firstValueFrom(repo.update('odo-2', 'tc-2', { state: 'planned', note: null }));
     expect(updated).toEqual(expect.objectContaining({
-      id: 'tc-2', tooth_fdi: 36, surface: 'whole', condition_id: 'dc-3', state: 'planificado', note: null,
+      id: 'tc-2', tooth_fdi: 36, surface: 'whole', condition_id: 'dc-3', state: 'planned', note: null,
     }));
   });
 
   it('update / remove: inexistente o de otro odontograma → 404', async () => {
-    expect((await errorOf(firstValueFrom(repo.update('odo-2', 'nope', { state: 'realizado' })))).status).toBe(404);
-    expect((await errorOf(firstValueFrom(repo.update('odo-3', 'tc-1', { state: 'realizado' })))).status).toBe(404);
+    expect((await errorOf(firstValueFrom(repo.update('odo-2', 'nope', { state: 'done' })))).status).toBe(404);
+    expect((await errorOf(firstValueFrom(repo.update('odo-3', 'tc-1', { state: 'done' })))).status).toBe(404);
     expect((await errorOf(firstValueFrom(repo.remove('odo-3', 'tc-1')))).status).toBe(404);
   });
 
@@ -92,7 +92,7 @@ describe('MockToothConditionsRepository', () => {
     expect(repo.odontogramEnabled()).toBe(false);
     const calls: Observable<unknown>[] = [
       repo.list('odo-2'), repo.create('odo-2', { tooth_fdi: 11, condition_id: 'dc-1' }),
-      repo.update('odo-2', 'tc-1', { state: 'realizado' }), repo.remove('odo-2', 'tc-1'),
+      repo.update('odo-2', 'tc-1', { state: 'done' }), repo.remove('odo-2', 'tc-1'),
     ];
     for (const call of calls) {
       const err = await errorOf(firstValueFrom(call));
@@ -107,7 +107,7 @@ describe('MockToothConditionsRepository', () => {
     repo.markHistoric('odo-2');
     for (const call of [
       repo.create('odo-2', { tooth_fdi: 11, condition_id: 'dc-1' }),
-      repo.update('odo-2', 'tc-1', { state: 'realizado' }),
+      repo.update('odo-2', 'tc-1', { state: 'done' }),
       repo.remove('odo-2', 'tc-1'),
     ]) {
       const err = await errorOf(firstValueFrom(call as Observable<unknown>));

@@ -6,13 +6,13 @@
   <div class="flex flex-col gap-2">
     @for (item of items(); track item.tempId) {
       <div class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
-        [class.opacity-50]="item.status === 'cancelado'">
+        [class.opacity-50]="item.status === 'cancelled'">
         <div class="flex min-w-0 flex-col">
           <span class="truncate text-sm font-medium text-text">{{ item.dto.description }}</span>
           <span class="text-xs text-muted">
             {{ item.dto.quantity }} × {{ item.dto.unit_price.toFixed(2) }}
             @if (item.dto.tooth_fdi) { · Pieza {{ item.dto.tooth_fdi }} }
-            @if (item.status === 'cancelado') { · Cancelado (no suma al total) }
+            @if (item.status === 'cancelled') { · Cancelado (no suma al total) }
           </span>
         </div>
         <div class="flex items-center gap-3">

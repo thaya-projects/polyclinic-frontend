@@ -1,55 +1,56 @@
 <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
-  <label class="flex max-w-40 flex-col gap-1.5">
-    <span class="text-xs font-medium text-muted">Grupo sanguíneo</span>
-    <select formControlName="blood_type" [class]="inputClass(form.controls.blood_type)">
-      <option value="">Sin especificar</option>
-      @for (type of bloodTypes; track type) {
-        <option [value]="type">{{ type }}</option>
-      }
-    </select>
-  </label>
+  @if (section() === 'clinical') {
+    <label class="flex max-w-40 flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Grupo sanguíneo</span>
+      <select formControlName="blood_type" [class]="inputClass(form.controls.blood_type)">
+        <option value="">Sin especificar</option>
+        @for (type of bloodTypes; track type) {
+          <option [value]="type">{{ type }}</option>
+        }
+      </select>
+    </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-xs font-medium text-muted">Alergias</span>
-    <textarea formControlName="allergies" rows="2" [class]="textareaClass"></textarea>
-  </label>
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Alergias</span>
+      <textarea formControlName="allergies" rows="2" [class]="textareaClass"></textarea>
+    </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-xs font-medium text-muted">Antecedentes crónicos</span>
-    <textarea formControlName="chronic_conditions" rows="2" [class]="textareaClass"></textarea>
-  </label>
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Antecedentes crónicos</span>
+      <textarea formControlName="chronic_conditions" rows="2" [class]="textareaClass"></textarea>
+    </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-xs font-medium text-muted">Medicación actual</span>
-    <textarea formControlName="current_medications" rows="2" [class]="textareaClass"></textarea>
-  </label>
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Medicación actual</span>
+      <textarea formControlName="current_medications" rows="2" [class]="textareaClass"></textarea>
+    </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-xs font-medium text-muted">Antecedentes familiares</span>
-    <textarea formControlName="family_history" rows="2" [class]="textareaClass"></textarea>
-  </label>
-
-  <fieldset formGroupName="habits" class="flex flex-col gap-3">
-    <legend class="mb-1 text-xs font-medium text-muted">Hábitos</legend>
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      @for (field of habitFields; track field.key) {
-        <label class="flex flex-col gap-1.5">
-          <span class="text-xs text-muted">{{ field.label }}</span>
-          @if (field.options.length) {
-            <select [formControlName]="field.key" [class]="inputClass(form.controls.habits.controls[field.key])">
-              <option value="">Sin especificar</option>
-              @for (opt of habitOptions(field.key, field.options); track opt) {
-                <option [value]="opt">{{ opt }}</option>
-              }
-            </select>
-          } @else {
-            <input type="text" [formControlName]="field.key" [placeholder]="field.placeholder ?? ''"
-              [class]="inputClass(form.controls.habits.controls[field.key])" />
-          }
-        </label>
-      }
-    </div>
-  </fieldset>
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Antecedentes familiares</span>
+      <textarea formControlName="family_history" rows="2" [class]="textareaClass"></textarea>
+    </label>
+  } @else {
+    <fieldset formGroupName="habits" class="flex flex-col gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        @for (field of habitFields; track field.key) {
+          <label class="flex flex-col gap-1.5">
+            <span class="text-xs text-muted">{{ field.label }}</span>
+            @if (field.options.length) {
+              <select [formControlName]="field.key" [class]="inputClass(form.controls.habits.controls[field.key])">
+                <option value="">Sin especificar</option>
+                @for (opt of habitOptions(field.key, field.options); track opt) {
+                  <option [value]="opt">{{ opt }}</option>
+                }
+              </select>
+            } @else {
+              <input type="text" [formControlName]="field.key" [placeholder]="field.placeholder ?? ''"
+                [class]="inputClass(form.controls.habits.controls[field.key])" />
+            }
+          </label>
+        }
+      </div>
+    </fieldset>
+  }
 
   <div class="flex items-center justify-end gap-3">
     @if (saved()) {

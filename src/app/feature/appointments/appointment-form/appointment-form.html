@@ -66,20 +66,47 @@
     </label>
 
     <label class="flex flex-col gap-1.5">
-      <span class="text-xs font-medium text-muted">Inicio</span>
-      <input type="datetime-local" formControlName="starts_at" [class]="inputClass(form.controls.starts_at)" />
-      @if (isInvalid(form.controls.starts_at)) {
-        <span class="text-xs text-red-500">{{ errorMessage(form.controls.starts_at) }}</span>
+      <span class="text-xs font-medium text-muted">Fecha</span>
+      <input type="date" formControlName="date" [class]="inputClass(form.controls.date)" />
+      @if (isInvalid(form.controls.date)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.date) }}</span>
       }
     </label>
 
     <label class="flex flex-col gap-1.5">
-      <span class="text-xs font-medium text-muted">Fin</span>
-      <input type="datetime-local" formControlName="ends_at" [class]="inputClass(form.controls.ends_at)" />
-      @if (isInvalid(form.controls.ends_at)) {
-        <span class="text-xs text-red-500">{{ errorMessage(form.controls.ends_at) }}</span>
+      <span class="text-xs font-medium text-muted">Duración</span>
+      <select formControlName="durationPreset" [class]="inputClass(form.controls.durationPreset)">
+        @for (p of durationPresets; track p.value) {
+          <option [value]="p.value">{{ p.label }}</option>
+        }
+        <option value="custom">Personalizada</option>
+      </select>
+      @if (isCustomDuration()) {
+        <input type="number" min="1" step="5" placeholder="Minutos" formControlName="durationCustomMinutes"
+          class="mt-1.5" [class]="inputClass(form.controls.durationCustomMinutes)" />
+      }
+      @if (isInvalid(form.controls.durationCustomMinutes)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.durationCustomMinutes) }}</span>
       }
     </label>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Horario</span>
+    <app-appointment-slot-picker
+      [professionalId]="professionalIdValue() ?? ''"
+      [branchId]="branchIdValue() ?? ''"
+      [date]="dateValue() ?? ''"
+      [durationMinutes]="durationMinutes()"
+      [excludeAppointmentId]="appointment()?.id ?? null"
+      [selectedStartsAt]="form.controls.starts_at.value"
+      (selected)="onSlotSelected($event)"
+      (slotsReady)="onSlotsReady($event)" />
+    @if (isInvalid(form.controls.starts_at)) {
+      <span class="text-xs text-red-500">Elegí un horario de la lista.</span>
+    } @else if (endsAtPreview()) {
+      <span class="text-xs text-muted">Termina a las {{ endsAtPreview() | date: 'HH:mm' }}.</span>
+    }
   </div>
 
   <app-appointment-online-fields

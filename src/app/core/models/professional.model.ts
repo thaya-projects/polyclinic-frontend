@@ -8,7 +8,8 @@ export interface Professional {
   is_active: boolean;
   created_at: string;
   specialty_ids: string[];
-  // Solo viene con valor si falló el envío del correo con la clave — es la única vez que se expone.
+  // Viene siempre que create_login_account=true (no hay servicio de email: nunca se la
+  // manda por correo) — se muestra una sola vez en el modal de alta, no se puede recuperar después.
   temporary_password: string | null;
 }
 

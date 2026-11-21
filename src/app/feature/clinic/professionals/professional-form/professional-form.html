@@ -28,30 +28,20 @@
 
     <div class="flex flex-col gap-1.5 md:col-span-2">
       <label class="text-xs font-medium text-muted uppercase tracking-wide" for="prof-email">
-        Email
-        @if (form.controls.create_login_account.value) {
-          <span class="text-red-500">*</span>
-        }
+        Email @if (!isEdit()) { <span class="text-red-500">*</span> }
       </label>
-      <input id="prof-email" type="email" formControlName="email" placeholder="Opcional"
+      <input id="prof-email" type="email" formControlName="email" placeholder="ej: nombre@clinica.com"
         [class]="inputClass(form.controls.email)" />
       @if (isInvalid(form.controls.email)) {
         <span class="text-xs text-red-500">{{ errorMessage(form.controls.email) }}</span>
+      } @else if (!isEdit()) {
+        <span class="text-xs text-muted">
+          Con este correo se crea la cuenta de acceso del profesional — la clave temporal se muestra
+          una sola vez en pantalla al guardarlo (no se envía por correo).
+        </span>
       }
     </div>
   </div>
-
-  @if (!isEdit()) {
-    <label class="flex items-start gap-2.5 rounded-xl border border-border bg-surface px-4 py-3">
-      <input type="checkbox" formControlName="create_login_account" class="mt-0.5 h-4 w-4 accent-brand" />
-      <span class="flex flex-col gap-0.5">
-        <span class="text-sm font-medium text-navy">Crear cuenta de acceso para este profesional</span>
-        <span class="text-xs text-muted">
-          Le va a llegar una clave temporal por correo. Requiere email.
-        </span>
-      </span>
-    </label>
-  }
 
   <div class="flex flex-col gap-2">
     <label class="text-xs font-medium text-muted uppercase tracking-wide">Especialidades</label>

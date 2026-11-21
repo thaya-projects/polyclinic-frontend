@@ -23,9 +23,9 @@ function seed(): Odontogram[] {
     is_current: isCurrent, snapshot_date: date,
   });
   return [
-    odontogram('odo-1', 'pat-1', 'permanente', false, '2025-09-01T13:00:00Z'),
-    odontogram('odo-2', 'pat-1', 'permanente', true, '2026-03-10T14:30:00Z'),
-    odontogram('odo-3', 'pat-3', 'mixta', true, '2026-05-20T10:00:00Z'),
+    odontogram('odo-1', 'pat-1', 'permanent', false, '2025-09-01T13:00:00Z'),
+    odontogram('odo-2', 'pat-1', 'permanent', true, '2026-03-10T14:30:00Z'),
+    odontogram('odo-3', 'pat-3', 'mixed', true, '2026-05-20T10:00:00Z'),
   ];
 }
 
@@ -39,7 +39,7 @@ export interface MockOdontogramEncounter {
   professional_active?: boolean;
 }
 
-const DENTITIONS: readonly Dentition[] = ['permanente', 'temporal', 'mixta'];
+const DENTITIONS: readonly Dentition[] = ['permanent', 'temporary', 'mixed'];
 
 function httpError(status: number, detail: string): Observable<never> {
   return throwError(() => new HttpErrorResponse({ status, error: { detail } }));
@@ -126,9 +126,9 @@ export class MockOdontogramRepository implements OdontogramRepository {
         return httpError(409, `Cannot attach odontograms to an encounter with status '${encounter.status}'.`);
       }
     }
-    const dentition = dto.dentition ?? 'permanente';
+    const dentition = dto.dentition ?? 'permanent';
     if (!DENTITIONS.includes(dentition)) {
-      return argumentError('dentition must be one of: permanente, temporal, mixta.', 'dentition');
+      return argumentError('dentition must be one of: permanent, temporary, mixed.', 'dentition');
     }
     if (this.conflictNext) {
       this.conflictNext = false;

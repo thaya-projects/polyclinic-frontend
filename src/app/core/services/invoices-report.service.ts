@@ -1,7 +1,7 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { InvoicesReportApi } from './invoices-report-api';
-import { InvoicesReportQuery, InvoicesSummaryByCurrency } from '../models/clinic-report.model';
+import { InvoicesReport, InvoicesReportQuery } from '../models/clinic-report.model';
 import { reportsErrorMessage } from '../../shared/utils/reports-error.util';
 
 // GET /tenants/reports/invoices?from=&to=&status=
@@ -10,7 +10,7 @@ export class InvoicesReportService {
   private api = inject(InvoicesReportApi);
   private platformId = inject(PLATFORM_ID);
 
-  private readonly summarySignal = signal<InvoicesSummaryByCurrency[] | null>(null);
+  private readonly summarySignal = signal<InvoicesReport | null>(null);
   private readonly loadingSignal = signal(false);
   private readonly errorSignal = signal<string | null>(null);
 

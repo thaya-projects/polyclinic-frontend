@@ -22,6 +22,17 @@ export function patientsListErrorMessage(err: unknown): string {
   return 'No se pudo cargar el listado de pacientes.';
 }
 
+// GET /tenants/patients/:id — ficha de un paciente puntual.
+export function patientDetailErrorMessage(err: unknown): string {
+  if (err instanceof HttpErrorResponse) {
+    return (
+      basePatientsMessage(err) ??
+      (typeof err.error?.message === 'string' ? err.error.message : 'No se pudo cargar el paciente.')
+    );
+  }
+  return 'No se pudo cargar el paciente.';
+}
+
 // POST /tenants/patients, PATCH /tenants/patients/:id — 409 significa
 // documento duplicado.
 export function patientSaveErrorMessage(err: unknown): string {

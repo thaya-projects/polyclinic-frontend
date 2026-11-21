@@ -15,33 +15,48 @@
       </div>
     }
 
-    <!-- Filas por hora: crecen según la celda con más citas -->
-    @for (row of grid(); track row.hour) {
-      <div class="border-b border-border px-2 pt-2 text-right text-xs text-muted">{{ timeLabel(row.hour) }}</div>
-      @for (cell of row.cells; track $index) {
-        <div class="flex min-h-14 flex-col gap-1.5 border-b border-l border-border p-1.5">
-          @for (appt of cell; track appt.id) {
-            <button type="button" (click)="onSelect(appt)"
-              (mouseenter)="showAppointment($event, appt)" (mouseleave)="hideHover()"
-              (focus)="showAppointment($event, appt)" (blur)="hideHover()"
-              class="w-full rounded-lg border border-l-4 px-2.5 py-1.5 text-left text-xs leading-snug transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand"
-              [class]="accentClass(appt) + (isInactive(appt)
+    <!-- Columna de horas: franjas fijas, solo para el rótulo -->
+    <div class="flex flex-col">
+      @for (hour of hours; track hour) {
+        <div [style.height.px]="rowHeight" class="border-b border-border px-2 pt-2 text-right text-xs text-muted">{{ timeLabel(hour) }}</div>
+      }
+    </div>
+
+    <!-- Una columna por día: fondo de franjas clickeables + tarjetas posicionadas por hora/duración real -->
+    @for (day of days(); track day.getTime(); let di = $index) {
+      <div class="relative border-l border-border">
+        <div class="flex flex-col">
+          @for (hour of hours; track hour) {
+            <div [style.height.px]="rowHeight" class="border-b border-border transition-colors"
+              [class]="isBlockedCell(day, hour) ? 'calendar-cell-blocked cursor-not-allowed bg-surface-alt' : 'cursor-pointer hover:bg-icon-soft'"
+              (click)="onCellClick(day, hour)"></div>
+          }
+        </div>
+
+        <div class="pointer-events-none absolute inset-0">
+          @for (card of dayLayouts()[di]; track card.appt.id) {
+            <button type="button" (click)="onSelect(card.appt); $event.stopPropagation()"
+              (mouseenter)="showAppointment($event, card.appt)" (mouseleave)="hideHover()"
+              (focus)="showAppointment($event, card.appt)" (blur)="hideHover()"
+              class="pointer-events-auto absolute cursor-pointer overflow-hidden rounded-lg border border-l-4 px-2.5 py-1.5 text-left text-xs leading-snug transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand"
+              [style.top.px]="card.top" [style.height.px]="card.height" [style.left]="card.left" [style.width]="card.width"
+              [class]="accentClass(card.appt) + (isInactive(card.appt)
                 ? ' border-dashed border-border bg-surface text-fg-muted'
                 : ' border-brand/15 bg-icon-soft text-brand')">
               <span class="flex items-baseline justify-between gap-2">
-                <span class="font-semibold whitespace-nowrap">{{ apptTimeRange(appt) }}</span>
-                <span class="shrink-0 text-[10px] text-fg-muted">{{ durationMinutes(appt) }}′</span>
+                <span class="font-semibold whitespace-nowrap">{{ apptTimeRange(card.appt) }}</span>
+                <span class="shrink-0 text-[10px] text-fg-muted">{{ durationMinutes(card.appt) }}′</span>
               </span>
-              <span class="mt-0.5 block truncate font-medium" [class.text-navy]="!isInactive(appt)" [class.line-through]="isInactive(appt)">
-                {{ apptTitle(appt) }}
+              <span class="mt-0.5 block truncate font-medium" [class.text-navy]="!isInactive(card.appt)" [class.line-through]="isInactive(card.appt)">
+                {{ apptTitle(card.appt) }}
               </span>
-              @if (appt.service_name) {
-                <span class="block truncate text-[11px] text-fg-muted">{{ appt.service_name }}</span>
+              @if (card.appt.service_name) {
+                <span class="block truncate text-[11px] text-fg-muted">{{ card.appt.service_name }}</span>
               }
             </button>
           }
         </div>
-      }
+      </div>
     }
   </div>
 </div>

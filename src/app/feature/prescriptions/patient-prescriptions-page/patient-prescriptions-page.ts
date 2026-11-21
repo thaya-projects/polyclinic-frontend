@@ -3,12 +3,13 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PrescriptionsStore } from '../prescriptions.store';
 import { PrescriptionForm } from '../prescription-form/prescription-form';
 import { PrescriptionItemRequest, PrescriptionsList } from '../prescriptions-list/prescriptions-list';
 import { Pagination } from '../../../shared/components/pagination/pagination';
 import { Modal } from '../../../shared/components/modal/modal';
+import { PatientFichaTabs } from '../../patients/patient-ficha-tabs/patient-ficha-tabs';
 import { EncounterLookupsService } from '../../../core/services/encounter-lookups.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import {
@@ -49,13 +50,14 @@ export const PRESCRIPTION_MAX_ITEMS_REACHED_MESSAGE =
 // 403/422 → inline; 401 → authInterceptor.
 @Component({
   selector: 'app-patient-prescriptions-page',
-  imports: [PrescriptionsList, PrescriptionForm, Pagination, Modal, RouterLink],
+  imports: [PrescriptionsList, PrescriptionForm, Pagination, Modal, PatientFichaTabs],
   providers: [PrescriptionsStore],
   templateUrl: './patient-prescriptions-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PatientPrescriptionsPage {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   private platformId = inject(PLATFORM_ID);
   readonly lookups = inject(EncounterLookupsService);
@@ -181,6 +183,10 @@ export class PatientPrescriptionsPage {
 
   setPage(page: number): void {
     this.store.setPage(page);
+  }
+
+  goToFicha(): void {
+    this.router.navigate(['/patients', this.patientId()]);
   }
 
   openCreate(): void {

@@ -1,0 +1,10 @@
+/* Rayado diagonal para celdas pasadas/bloqueadas — Tailwind no resuelve un patrón repetido. */
+.calendar-cell-blocked {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-border) 0,
+    var(--color-border) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+}

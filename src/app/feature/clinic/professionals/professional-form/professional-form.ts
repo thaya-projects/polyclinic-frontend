@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import {
   CreateProfessionalDto, Professional, UpdateProfessionalDto,
 } from '../../../../core/models/professional.model';
@@ -9,23 +9,6 @@ import {
 } from '../../../../shared/utils/form-validation.util';
 import { applyServerError } from '../../../../shared/utils/server-errors.util';
 import { PhoneInput } from '../../../../shared/components/phone-input/phone-input';
-
-// create_login_account=true requiere email.
-function emailRequiredForLoginValidator(group: AbstractControl): ValidationErrors | null {
-  const createLogin = group.get('create_login_account');
-  const email = group.get('email');
-  if (!createLogin || !email) return null;
-
-  const otherErrors = { ...email.errors };
-  delete otherErrors['requiredForLogin'];
-
-  if (createLogin.value && !(email.value as string)?.trim()) {
-    email.setErrors({ ...otherErrors, requiredForLogin: true });
-  } else {
-    email.setErrors(Object.keys(otherErrors).length ? otherErrors : null);
-  }
-  return null;
-}
 
 // Reutilizable: si `professional` viene → edit (emit saved). Si null → create (emit created).
 // Las specialties se manejan aparte porque el backend las expone en un endpoint PUT dedicado —
@@ -57,18 +40,22 @@ export class ProfessionalForm {
   // simple con signals que con FormArray para este caso).
   readonly selectedSpecialtyIds = signal<Set<string>>(new Set());
 
-  form = this.fb.group(
-    {
-      full_name: ['', requiredNotBlankValidator],
-      license_number: [''],
-      email: ['', emailValidator],
-      phone: ['', phoneValidator],
-      create_login_account: [false],
-    },
-    { validators: emailRequiredForLoginValidator },
-  );
+  form = this.fb.group({
+    full_name: ['', requiredNotBlankValidator],
+    license_number: [''],
+    email: ['', emailValidator],
+    phone: ['', phoneValidator],
+  });
 
   constructor() {
+    // Todo profesional nuevo se crea con cuenta de acceso (create_login_account va fijo en
+    // true), así que el email es obligatorio al crear. En edición no se fuerza: si un
+    // profesional ya existente no tiene cuenta, no hay por qué bloquearlo para guardar otro cambio.
+    if (!this.professional()) {
+      this.form.controls.email.addValidators(requiredNotBlankValidator);
+      this.form.controls.email.updateValueAndValidity({ emitEvent: false });
+    }
+
     effect(() => {
       const p = this.professional();
       if (p) {
@@ -77,12 +64,11 @@ export class ProfessionalForm {
           license_number: p.license_number ?? '',
           email: p.email ?? '',
           phone: p.phone ?? '',
-          create_login_account: false,
         }, { emitEvent: false });
         this.selectedSpecialtyIds.set(new Set(p.specialty_ids));
       } else {
         this.form.reset(
-          { full_name: '', license_number: '', email: '', phone: '', create_login_account: false },
+          { full_name: '', license_number: '', email: '', phone: '' },
           { emitEvent: false },
         );
         this.selectedSpecialtyIds.set(new Set());
@@ -151,7 +137,7 @@ export class ProfessionalForm {
       phone,
       user_id: null,
       specialty_ids: specialtyIds,
-      create_login_account: raw.create_login_account ?? false,
+      create_login_account: true,
     };
     this.created.emit({ dto });
   }

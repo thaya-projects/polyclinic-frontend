@@ -7,10 +7,10 @@ describe('tooth-condition.model', () => {
     const permanent = [1, 2, 3, 4].flatMap(q => Array.from({ length: 8 }, (_, i) => q * 10 + i + 1));
     const temporary = [5, 6, 7, 8].flatMap(q => Array.from({ length: 5 }, (_, i) => q * 10 + i + 1));
     const all = Array.from({ length: 100 }, (_, i) => i);
-    expect(all.filter(f => isValidFdiForDentition(f, 'permanente'))).toEqual(permanent);
-    expect(all.filter(f => isValidFdiForDentition(f, 'temporal'))).toEqual(temporary);
-    expect(all.filter(f => isValidFdiForDentition(f, 'mixta'))).toEqual([...permanent, ...temporary]);
-    expect(isValidFdiForDentition(11.5, 'mixta')).toBe(false);
+    expect(all.filter(f => isValidFdiForDentition(f, 'permanent'))).toEqual(permanent);
+    expect(all.filter(f => isValidFdiForDentition(f, 'temporary'))).toEqual(temporary);
+    expect(all.filter(f => isValidFdiForDentition(f, 'mixed'))).toEqual([...permanent, ...temporary]);
+    expect(isValidFdiForDentition(11.5, 'mixed')).toBe(false);
   });
 
   it('surfaceForFace: vestibular afuera, palatino/lingual adentro, mesial hacia la línea media', () => {
@@ -34,7 +34,7 @@ describe('tooth-condition.model', () => {
 
   it('buildOdontogramPaint: whole de fondo, caras encima, cervical aparte; gana la más reciente', () => {
     const mark = (id: string, fdi: number, surface: ToothCondition['surface'], conditionId: string, at: string): ToothCondition =>
-      ({ id, odontogram_id: 'o', tooth_fdi: fdi, surface, condition_id: conditionId, state: 'existente', note: null,
+      ({ id, odontogram_id: 'o', tooth_fdi: fdi, surface, condition_id: conditionId, state: 'existing', note: null,
         created_at: at, created_by: 'u' });
     const colors: Record<string, string | null> = { a: '#111111', b: '#222222', c: null };
     const paint = buildOdontogramPaint([

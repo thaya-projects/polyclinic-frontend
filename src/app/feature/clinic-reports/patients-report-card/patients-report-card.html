@@ -1,13 +1,22 @@
-@if (error()) {
-  <div class="flex h-full items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
-    <i class="ti ti-alert-circle"></i>
-    {{ error() }}
-  </div>
-} @else if (loading()) {
-  <div class="flex h-full items-center justify-center gap-2 rounded-xl border border-border bg-surface p-5 text-sm text-muted">
-    <i class="ti ti-loader-2 animate-spin"></i>
-    Cargando...
-  </div>
-} @else {
-  <app-stat-card label="Pacientes nuevos" [value]="count() ?? 0" icon="user-plus" />
-}
+<div class="flex h-full flex-col gap-2">
+  <select [value]="activeFilter()" (change)="onActiveFilterChange($any($event.target).value)"
+    class="self-end rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-text focus:border-brand focus:outline-none">
+    <option value="true">Activos</option>
+    <option value="false">Inactivos</option>
+    <option value="all">Todos</option>
+  </select>
+
+  @if (error()) {
+    <div class="flex flex-1 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  } @else if (loading()) {
+    <div class="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface p-5 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando...
+    </div>
+  } @else {
+    <app-stat-card label="Pacientes" [value]="report()?.total_count ?? 0" icon="user-plus" />
+  }
+</div>

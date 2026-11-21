@@ -1,0 +1,61 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Material</span>
+    <select formControlName="material_id" [class]="inputClass(form.controls.material_id)">
+      <option value="" disabled>Elegí un material</option>
+      @for (material of materials(); track material.id) {
+        <option [value]="material.id">{{ material.code ? material.code + ' · ' : '' }}{{ material.name }}</option>
+      }
+    </select>
+    @if (isInvalid(form.controls.material_id)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.material_id) }}</span>
+    }
+  </label>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Sucursal de origen</span>
+      <select formControlName="from_branch_id" [class]="inputClass(form.controls.from_branch_id)">
+        <option value="" disabled>Elegí una sucursal</option>
+        @for (branch of branches(); track branch.id) {
+          <option [value]="branch.id">{{ branch.name }}</option>
+        }
+      </select>
+      @if (isInvalid(form.controls.from_branch_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.from_branch_id) }}</span>
+      }
+    </label>
+
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-medium text-muted">Sucursal de destino</span>
+      <select formControlName="to_branch_id" [class]="inputClass(form.controls.to_branch_id)">
+        <option value="" disabled>Elegí una sucursal</option>
+        @for (branch of branches(); track branch.id) {
+          <option [value]="branch.id">{{ branch.name }}</option>
+        }
+      </select>
+      @if (isInvalid(form.controls.to_branch_id)) {
+        <span class="text-xs text-red-500">{{ errorMessage(form.controls.to_branch_id) }}</span>
+      }
+      @if (form.hasError('sameBranch') && form.controls.to_branch_id.touched) {
+        <span class="text-xs text-red-500">La sucursal de origen y la de destino deben ser distintas.</span>
+      }
+    </label>
+  </div>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Cantidad</span>
+    <input type="number" min="0" step="0.01" formControlName="quantity" [class]="inputClass(form.controls.quantity)" />
+    @if (isInvalid(form.controls.quantity)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.quantity) }}</span>
+    }
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-medium text-muted">Nota (opcional)</span>
+    <textarea formControlName="note" rows="2" [class]="inputClass(form.controls.note)"></textarea>
+    @if (isInvalid(form.controls.note)) {
+      <span class="text-xs text-red-500">{{ errorMessage(form.controls.note) }}</span>
+    }
+  </label>
+</form>

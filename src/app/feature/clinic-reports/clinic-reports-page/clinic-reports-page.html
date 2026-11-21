@@ -10,6 +10,11 @@
       [class]="activeTab() === 'summary' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
       Resumen
     </button>
+    <button type="button" (click)="setTab('financial')"
+      class="border-b-2 px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'financial' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
+      Financiero
+    </button>
     <button type="button" (click)="setTab('audit')"
       class="border-b-2 px-1 pb-3 text-sm font-medium transition-colors"
       [class]="activeTab() === 'audit' ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-text'">
@@ -19,6 +24,8 @@
 
   @if (activeTab() === 'summary') {
     <app-clinic-reports-summary-section />
+  } @else if (activeTab() === 'financial') {
+    <app-financial-reports-section />
   } @else {
     <app-audit-log-section />
   }

@@ -1,16 +1,16 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { PatientsReportApi } from './patients-report-api';
-import { PatientsReportQuery } from '../models/clinic-report.model';
+import { PatientsReport, PatientsReportQuery } from '../models/clinic-report.model';
 import { reportsErrorMessage } from '../../shared/utils/reports-error.util';
 
-// GET /tenants/reports/patients?from=&to=
+// GET /tenants/reports/patients?from=&to=&is_active=
 @Injectable({ providedIn: 'root' })
 export class PatientsReportService {
   private api = inject(PatientsReportApi);
   private platformId = inject(PLATFORM_ID);
 
-  private readonly summarySignal = signal<number | null>(null);
+  private readonly summarySignal = signal<PatientsReport | null>(null);
   private readonly loadingSignal = signal(false);
   private readonly errorSignal = signal<string | null>(null);
 
@@ -23,8 +23,8 @@ export class PatientsReportService {
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     this.api.getSummary(query).subscribe({
-      next: response => {
-        this.summarySignal.set(response.new_patients_count);
+      next: summary => {
+        this.summarySignal.set(summary);
         this.loadingSignal.set(false);
       },
       error: err => {

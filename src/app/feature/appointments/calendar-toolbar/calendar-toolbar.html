@@ -16,13 +16,15 @@
   </div>
 
   <div class="flex flex-wrap items-center gap-2">
-    <select [value]="selectedProfessionalId()" (change)="selectProfessional($any($event.target).value)"
-      class="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text">
-      <option value="">Todos los profesionales</option>
-      @for (p of professionals(); track p.id) {
-        <option [value]="p.id">{{ p.full_name }}</option>
-      }
-    </select>
+    @if (!hideProfessionalFilter()) {
+      <select [value]="selectedProfessionalId()" (change)="selectProfessional($any($event.target).value)"
+        class="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text">
+        <option value="">Todos los profesionales</option>
+        @for (p of professionals(); track p.id) {
+          <option [value]="p.id">{{ p.full_name }}</option>
+        }
+      </select>
+    }
 
     <select [value]="selectedBranchId()" (change)="selectBranch($any($event.target).value)"
       class="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text">

@@ -15,7 +15,7 @@ import {
 const TEETH = `${environment.apiUrl}/tenants/odontograms/odo-1/teeth`;
 const DTO: ToothCondition = {
   id: 'tc-1', odontogram_id: 'odo-1', tooth_fdi: 16, surface: 'oclusal', condition_id: 'dc-1',
-  state: 'existente', note: null, created_at: '2026-10-17T14:00:00Z', created_by: 'user-1',
+  state: 'existing', note: null, created_at: '2026-10-17T14:00:00Z', created_by: 'user-1',
 };
 
 describe('ToothConditionsApi', () => {
@@ -43,14 +43,14 @@ describe('ToothConditionsApi', () => {
 
   it('create: POST /tenants/odontograms/:id/teeth con whitelist y nunca tenant_id / created_by', () => {
     const dto = {
-      tooth_fdi: 16, condition_id: 'dc-1', surface: 'oclusal', state: 'planificado', note: 'Control',
+      tooth_fdi: 16, condition_id: 'dc-1', surface: 'oclusal', state: 'planned', note: 'Control',
       tenant_id: 'x', created_by: 'y', odontogram_id: 'z', created_at: 'w',
     };
     api.create('odo-1', dto as CreateToothConditionDto).subscribe();
     const req = http.expectOne(TEETH);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
-      tooth_fdi: 16, condition_id: 'dc-1', surface: 'oclusal', state: 'planificado', note: 'Control',
+      tooth_fdi: 16, condition_id: 'dc-1', surface: 'oclusal', state: 'planned', note: 'Control',
     });
     expect(req.request.body).not.toHaveProperty('tenant_id');
     expect(req.request.body).not.toHaveProperty('created_by');
@@ -65,10 +65,10 @@ describe('ToothConditionsApi', () => {
   });
 
   it('update: PATCH /tenants/odontograms/:id/teeth/:tcId solo con los campos cambiados', () => {
-    api.update('odo-1', 'tc-1', { state: 'realizado' }).subscribe();
+    api.update('odo-1', 'tc-1', { state: 'done' }).subscribe();
     const req = http.expectOne(`${TEETH}/tc-1`);
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ state: 'realizado' });
+    expect(req.request.body).toEqual({ state: 'done' });
     req.flush(DTO);
   });
 
@@ -113,7 +113,7 @@ describe('ToothConditionsApi: toast global', () => {
     for (const status of [403, 404, 409, 422]) {
       api.create('odo-1', { tooth_fdi: 11, condition_id: 'dc-1' }).subscribe({ error: () => {} });
       http.expectOne(TEETH).flush({ detail: 'x' }, { status, statusText: 'x' });
-      api.update('odo-1', 'tc-1', { state: 'realizado' }).subscribe({ error: () => {} });
+      api.update('odo-1', 'tc-1', { state: 'done' }).subscribe({ error: () => {} });
       http.expectOne(`${TEETH}/tc-1`).flush({ detail: 'x' }, { status, statusText: 'x' });
       api.remove('odo-1', 'tc-1').subscribe({ error: () => {} });
       http.expectOne(`${TEETH}/tc-1`).flush({ detail: 'x' }, { status, statusText: 'x' });

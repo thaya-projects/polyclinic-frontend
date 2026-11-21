@@ -26,6 +26,8 @@ export class ClinicalRecordForm {
   record = input<ClinicalRecord | null>(null);
   saved = input(false);
   saving = input(false);
+  // Qué mitad del form se ve (son tabs separados en la ficha, pero un solo guardado).
+  section = input<'clinical' | 'habits'>('clinical');
 
   submitted = output<ClinicalRecordDto>();
 

@@ -12,6 +12,8 @@ export class CalendarToolbar {
   // Desacoplado de la fuente de datos: solo recibe las listas ya resueltas.
   professionals = input.required<Professional[]>();
   branches = input.required<Branch[]>();
+  // Un profesional no elige "a quién ver": la página ya fuerza el filtro a sí mismo.
+  hideProfessionalFilter = input(false);
 
   selectedProfessionalId = model('');
   selectedBranchId = model('');

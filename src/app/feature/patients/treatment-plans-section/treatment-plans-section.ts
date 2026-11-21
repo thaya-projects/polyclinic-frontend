@@ -10,11 +10,12 @@ import {
   TreatmentPlanItemStatusChangeEvent,
 } from '../treatment-plan-items-status-list/treatment-plan-items-status-list';
 import { Modal } from '../../../shared/components/modal/modal';
+import { BillTreatmentPlanItemModal } from '../bill-treatment-plan-item-modal/bill-treatment-plan-item-modal';
 import { TreatmentPlansService } from '../../../core/services/treatment-plans.service';
 import { TreatmentPlanItemsService } from '../../../core/services/treatment-plan-items.service';
 import { TreatmentPlanOptionsService } from '../../../core/services/treatment-plan-options.service';
 import { TreatmentPlan, TreatmentPlanStatusChangeDto } from '../../../core/models/treatment-plan.model';
-import { TreatmentPlanItemDto } from '../../../core/models/treatment-plan-item.model';
+import { TreatmentPlanItem, TreatmentPlanItemDto } from '../../../core/models/treatment-plan-item.model';
 import { treatmentPlanDetailErrorMessage, treatmentPlanSaveErrorMessage } from '../../../shared/utils/treatment-plans-error.util';
 import {
   treatmentPlanItemSaveErrorMessage,
@@ -31,6 +32,7 @@ import {
     TreatmentPlanItemForm,
     TreatmentPlanItemsStatusList,
     Modal,
+    BillTreatmentPlanItemModal,
   ],
   templateUrl: './treatment-plans-section.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -76,6 +78,8 @@ export class TreatmentPlansSection {
   addingItem = signal(false);
   itemActionError = signal<string | null>(null);
   itemStatusSavingId = signal<string | null>(null);
+
+  billingItem = signal<TreatmentPlanItem | null>(null);
 
   readonly selectedPlan = computed<TreatmentPlan | null>(() => {
     const id = this.selectedPlanId();
@@ -192,6 +196,14 @@ export class TreatmentPlansSection {
     this.itemsSvc.remove(plan.id, itemId).subscribe({
       error: err => this.itemActionError.set(treatmentPlanItemSaveErrorMessage(err)),
     });
+  }
+
+  openBill(item: TreatmentPlanItem): void {
+    this.billingItem.set(item);
+  }
+
+  closeBill(): void {
+    this.billingItem.set(null);
   }
 
   openCreate(): void {
