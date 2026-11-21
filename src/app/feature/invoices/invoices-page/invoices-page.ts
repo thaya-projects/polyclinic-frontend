@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
-import { forkJoin, of } from 'rxjs';
 import { InvoicesFilters } from '../invoices-filters/invoices-filters';
 import { InvoicesTable, InvoiceRow } from '../invoices-table/invoices-table';
 import { InvoiceForm, InvoiceSubmitPayload } from '../invoice-form/invoice-form';
@@ -23,7 +22,7 @@ import { invoiceItemSaveErrorMessage } from '../../../shared/utils/invoice-items
 import { paymentSaveErrorMessage } from '../../../shared/utils/payments-error.util';
 import { PageTitleService } from '../../../core/services/page-title.service';
 
-const PAYABLE_STATUSES: InvoiceStatus[] = ['emitida', 'parcial'];
+const PAYABLE_STATUSES: InvoiceStatus[] = ['issued', 'partial'];
 
 @Component({
   selector: 'app-invoices-page',
@@ -55,7 +54,6 @@ export class InvoicesPage {
   private branches = this.optionsSvc.branches();
 
   // Forms hijos: un 400/422 de un campo se marca debajo de su input en vez del banner general.
-  private readonly createForm = viewChild<InvoiceForm>('createForm');
   private readonly editForm = viewChild<InvoiceForm>('editForm');
   private readonly itemForm = viewChild<InvoiceItemForm>('itemForm');
   private readonly paymentForm = viewChild<PaymentForm>('paymentForm');
@@ -68,7 +66,6 @@ export class InvoicesPage {
   readonly listLoading = this.invoicesSvc.loading;
   readonly listError = this.invoicesSvc.error;
 
-  creating = signal(false);
   saving = signal(false);
   actionError = signal<string | null>(null);
 
@@ -161,44 +158,6 @@ export class InvoicesPage {
       from: this.dateFrom() || undefined,
       to: this.dateTo() || undefined,
     };
-  }
-
-  openCreate(): void {
-    this.actionError.set(null);
-    this.creating.set(true);
-  }
-
-  closeCreate(): void {
-    this.creating.set(false);
-  }
-
-  // POST /tenants/invoices — persiste y aparece en el listado sin
-  // recargar la página. Cada item se crea con un POST real (create() de
-  // InvoiceItemsService ya refresca subtotal/total después de cada uno).
-  onCreate(payload: InvoiceSubmitPayload): void {
-    this.saving.set(true);
-    this.actionError.set(null);
-    this.invoicesSvc.create(payload.invoice).subscribe({
-      next: invoice => {
-        const itemRequests = payload.items.map(dto => this.itemsSvc.create(invoice.id, dto));
-        (itemRequests.length ? forkJoin(itemRequests) : of([])).subscribe({
-          next: () => {
-            this.saving.set(false);
-            this.creating.set(false);
-          },
-          error: err => {
-            // La factura ya quedó creada (y visible en el listado) aunque
-            // algún item haya fallado — el error se muestra igual.
-            this.saving.set(false);
-            this.actionError.set(invoiceItemSaveErrorMessage(err));
-          },
-        });
-      },
-      error: err => {
-        this.saving.set(false);
-        this.actionError.set(this.createForm()?.applyServerError(err) ? null : invoiceSaveErrorMessage(err));
-      },
-    });
   }
 
   openDetail(invoice: Invoice): void {

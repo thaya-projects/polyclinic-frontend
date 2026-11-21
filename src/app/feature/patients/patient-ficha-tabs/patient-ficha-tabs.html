@@ -1,0 +1,44 @@
+<div class="flex items-center gap-1 overflow-x-auto border-b border-border">
+  @for (tab of tabs; track tab.key) {
+    <button type="button" (click)="contentTabClick.emit(tab.key)"
+      class="shrink-0 px-3 pb-3 text-sm font-medium whitespace-nowrap transition-colors"
+      [class]="activeContentTab() === tab.key ? 'border-b-2 border-brand text-brand' : 'text-muted hover:text-navy'">
+      {{ tab.label }}
+    </button>
+  }
+
+  <div class="ml-4 flex shrink-0 items-center gap-1 border-l border-border pl-4">
+    @if (showEncounterButtons()) {
+      <button type="button" (click)="goToEncounters()" data-testid="patient-encounters"
+        [disabled]="!!encountersButtonDisabledReason()" [title]="encountersButtonDisabledReason() ?? ''"
+        class="shrink-0 px-3 pb-3 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted"
+        [class]="activeQuickAction() === 'encounters' ? 'border-b-2 border-brand text-brand' : 'text-muted hover:text-navy'">
+        Encuentros
+      </button>
+      <button type="button" (click)="goToMeasurements()" data-testid="patient-measurements"
+        [disabled]="!!encountersButtonDisabledReason()" [title]="encountersButtonDisabledReason() ?? ''"
+        class="shrink-0 px-3 pb-3 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted"
+        [class]="activeQuickAction() === 'measurements' ? 'border-b-2 border-brand text-brand' : 'text-muted hover:text-navy'">
+        Signos vitales
+      </button>
+      <button type="button" (click)="goToPrescriptions()" data-testid="patient-prescriptions"
+        [disabled]="!!encountersButtonDisabledReason()" [title]="encountersButtonDisabledReason() ?? ''"
+        class="shrink-0 px-3 pb-3 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted"
+        [class]="activeQuickAction() === 'prescriptions' ? 'border-b-2 border-brand text-brand' : 'text-muted hover:text-navy'">
+        Recetas
+      </button>
+      <button type="button" (click)="goToEncounters(true)" data-testid="patient-new-encounter"
+        [disabled]="!!newEncounterDisabledReason()" [title]="newEncounterDisabledReason() ?? ''"
+        class="shrink-0 px-3 pb-3 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-navy disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted">
+        Nueva nota
+      </button>
+    }
+    @if (odontogramEnabled()) {
+      <button type="button" (click)="goToOdontogram()" data-testid="patient-odontogram"
+        class="shrink-0 px-3 pb-3 text-sm font-medium whitespace-nowrap transition-colors"
+        [class]="activeQuickAction() === 'odontogram' ? 'border-b-2 border-brand text-brand' : 'text-muted hover:text-navy'">
+        Odontograma
+      </button>
+    }
+  </div>
+</div>

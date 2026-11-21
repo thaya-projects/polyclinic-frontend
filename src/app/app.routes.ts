@@ -41,7 +41,12 @@ export const routes: Routes = [
     path: '',
     component: Shell,
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'superadmin/tenants' },
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () => import('./feature/superadmin/home/home-page/home-page').then(m => m.HomePage),
+        canActivate: [authGuard, superadminGuard],
+      },
       {
         path: 'superadmin/tenants',
         loadComponent: () =>
@@ -113,6 +118,13 @@ export const routes: Routes = [
           import('./feature/clinic/professionals/professionals-page/professionals-page')
             .then(m => m.ProfessionalsPage),
         canActivate: [authGuard],
+      },
+      {
+        // feature/inventories: catálogo de materiales + stock por sucursal (movimientos/transferencias).
+        path: 'inventory',
+        loadComponent: () =>
+          import('./feature/inventory/inventory-page/inventory-page').then(m => m.InventoryPage),
+        canActivate: [authGuard, clinicGuard],
       },
       {
         // Fase 2 Rooms T4/T5: salas por sucursal del tenant.
@@ -215,6 +227,13 @@ export const routes: Routes = [
       {
         path: 'patients',
         loadComponent: () => import('./feature/patients/patients-page/patients-page').then(m => m.PatientsPage),
+        canActivate: [authGuard, clinicGuard],
+      },
+      {
+        // Ficha del paciente: página propia (antes modal) — se llega desde el listado.
+        path: 'patients/:patientId',
+        loadComponent: () =>
+          import('./feature/patients/patient-detail-page/patient-detail-page').then(m => m.PatientDetailPage),
         canActivate: [authGuard, clinicGuard],
       },
       {

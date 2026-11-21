@@ -55,7 +55,7 @@ export class TreatmentPlanForm {
   // lo recalcula el backend; excluye items cancelados.
   readonly totalPreview = computed(() =>
     this.items()
-      .filter(i => i.status !== 'cancelado')
+      .filter(i => i.status !== 'cancelled')
       .reduce((sum, i) => sum + i.dto.quantity * i.dto.unit_price, 0),
   );
 
@@ -85,7 +85,7 @@ export class TreatmentPlanForm {
   }
 
   onItemAdded(dto: TreatmentPlanItemDto): void {
-    this.items.update(list => [...list, { tempId: `draft-${nextTempId++}`, status: 'pendiente', dto }]);
+    this.items.update(list => [...list, { tempId: `draft-${nextTempId++}`, status: 'pending', dto }]);
   }
 
   onItemRemoved(tempId: string): void {

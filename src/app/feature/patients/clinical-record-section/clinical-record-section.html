@@ -17,5 +17,5 @@
       {{ saveError() }}
     </div>
   }
-  <app-clinical-record-form [record]="record()" [saving]="saving()" [saved]="savedJustNow()" (submitted)="onSave($event)" />
+  <app-clinical-record-form [record]="record()" [section]="section()" [saving]="saving()" [saved]="savedJustNow()" (submitted)="onSave($event)" />
 }

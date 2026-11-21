@@ -12,7 +12,7 @@ import { CreateOdontogramDto, Odontogram } from '../models/odontogram.model';
 
 const API = environment.apiUrl;
 const DTO: Odontogram = {
-  id: 'odo-1', clinical_record_id: 'cr-1', patient_id: 'pat-1', encounter_id: null, dentition: 'mixta',
+  id: 'odo-1', clinical_record_id: 'cr-1', patient_id: 'pat-1', encounter_id: null, dentition: 'mixed',
   is_current: true, snapshot_date: '2026-10-17T14:00:00Z',
 };
 
@@ -47,11 +47,11 @@ describe('OdontogramApi', () => {
   });
 
   it('create: POST /tenants/patients/:id/odontograms con clinical_record_id/encounter_id/dentition y nunca tenant_id', () => {
-    const dto = { clinical_record_id: 'cr-1', encounter_id: 'enc-1', dentition: 'temporal', tenant_id: 'x', patient_id: 'y' };
+    const dto = { clinical_record_id: 'cr-1', encounter_id: 'enc-1', dentition: 'temporary', tenant_id: 'x', patient_id: 'y' };
     api.create('pat-1', dto as CreateOdontogramDto).subscribe();
     const req = http.expectOne(`${API}/tenants/patients/pat-1/odontograms`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ clinical_record_id: 'cr-1', encounter_id: 'enc-1', dentition: 'temporal' });
+    expect(req.request.body).toEqual({ clinical_record_id: 'cr-1', encounter_id: 'enc-1', dentition: 'temporary' });
     req.flush(DTO, { status: 201, statusText: 'Created' });
   });
 

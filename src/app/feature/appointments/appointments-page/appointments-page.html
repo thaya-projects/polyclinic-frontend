@@ -14,6 +14,7 @@
   <app-calendar-toolbar
     [professionals]="professionals()"
     [branches]="branches()"
+    [hideProfessionalFilter]="isProfessional"
     [(selectedProfessionalId)]="selectedProfessionalId"
     [(selectedBranchId)]="selectedBranchId"
     [(viewMode)]="viewMode"
@@ -32,7 +33,9 @@
       Cargando agenda...
     </div>
   } @else {
-    <app-calendar-view [appointments]="appointments()" [viewMode]="viewMode()" [referenceDate]="referenceDate()" (select)="openEditModal($event)" />
+    <app-calendar-view [appointments]="appointments()" [viewMode]="viewMode()" [referenceDate]="referenceDate()"
+      [professionalId]="selectedProfessionalId()" [scheduleBlocks]="scheduleBlocks()"
+      (select)="openEditModal($event)" (createAt)="openCreateModalAt($event)" />
   }
 </div>
 
@@ -43,14 +46,16 @@
       {{ actionError() }}
     </div>
   }
-  <app-appointment-form #apptForm
-    [branches]="branches()"
-    [professionals]="professionals()"
-    [patients]="patients()"
-    [services]="services()"
-    [rooms]="rooms()"
-    [appointment]="selectedAppointment()"
-    (submitted)="onSave($event)" />
+  @if (modalMode() !== 'none') {
+    <app-appointment-form #apptForm
+      [branches]="branches()"
+      [professionals]="professionals()"
+      [patients]="patients()"
+      [services]="services()"
+      [rooms]="rooms()"
+      [appointment]="selectedAppointment()"
+      (submitted)="onSave($event)" />
+  }
 
   @if (modalMode() === 'edit' && selectedAppointment(); as appointment) {
     <div class="mt-6 border-t border-border pt-6">
@@ -64,7 +69,7 @@
       class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
       Cancelar
     </button>
-    <button type="button" (click)="apptForm.submit()" [disabled]="saving()"
+    <button type="button" (click)="submitAppointment()" [disabled]="saving()"
       class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
       {{ saving() ? 'Guardando...' : 'Guardar' }}
     </button>

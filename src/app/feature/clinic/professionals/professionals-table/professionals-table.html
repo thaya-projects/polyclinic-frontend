@@ -42,6 +42,10 @@
 
   <ng-template appDataTableCell="actions" let-row>
     <div class="flex items-center justify-end gap-2">
+      <button type="button" (click)="schedule.emit(row)"
+        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+        Horarios
+      </button>
       <button type="button" (click)="edit.emit(row)"
         class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:border-brand hover:text-brand">
         Editar

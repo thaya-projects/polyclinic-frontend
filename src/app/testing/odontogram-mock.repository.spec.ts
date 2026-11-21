@@ -20,7 +20,7 @@ describe('MockOdontogramRepository', () => {
 
   it('getCurrent: devuelve el current con la forma de OdontogramDTO (sin tenant_id)', async () => {
     const current = await firstValueFrom(repo.getCurrent('pat-1'));
-    expect(current).toEqual(expect.objectContaining({ id: 'odo-2', patient_id: 'pat-1', dentition: 'permanente', is_current: true }));
+    expect(current).toEqual(expect.objectContaining({ id: 'odo-2', patient_id: 'pat-1', dentition: 'permanent', is_current: true }));
     expect(Object.keys(current).sort()).toEqual(
       ['clinical_record_id', 'dentition', 'encounter_id', 'id', 'is_current', 'patient_id', 'snapshot_date']);
   });
@@ -41,7 +41,7 @@ describe('MockOdontogramRepository', () => {
   it('create: nuevo current y el anterior queda como histórico; dentition por defecto permanente', async () => {
     const created = await firstValueFrom(repo.create('pat-1', { clinical_record_id: 'cr-pat-1', encounter_id: 'enc-1' }));
     expect(created).toEqual(expect.objectContaining({
-      patient_id: 'pat-1', clinical_record_id: 'cr-pat-1', encounter_id: 'enc-1', dentition: 'permanente', is_current: true,
+      patient_id: 'pat-1', clinical_record_id: 'cr-pat-1', encounter_id: 'enc-1', dentition: 'permanent', is_current: true,
     }));
     expect((await firstValueFrom(repo.getCurrent('pat-1'))).id).toBe(created.id);
     const previous = await firstValueFrom(repo.getById('odo-2'));

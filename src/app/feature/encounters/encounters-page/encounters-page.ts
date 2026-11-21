@@ -10,6 +10,7 @@ import { EncountersTable } from '../encounters-table/encounters-table';
 import { EncounterCreateForm, EncounterCreateFormValue } from '../encounter-create-form/encounter-create-form';
 import { Pagination } from '../../../shared/components/pagination/pagination';
 import { Modal } from '../../../shared/components/modal/modal';
+import { PatientFichaTabs } from '../../patients/patient-ficha-tabs/patient-ficha-tabs';
 import { ENCOUNTERS_REPOSITORY } from '../../../core/services/encounters-repository';
 import { EncounterLookupsService } from '../../../core/services/encounter-lookups.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
@@ -39,7 +40,7 @@ type ListResult = { ok: PagedResult<EncounterSummary> } | { error: unknown };
 // El listado trabaja con EncounterSummary: nada acá usa anamnesis/exam/clinical_data.
 @Component({
   selector: 'app-encounters-page',
-  imports: [EncountersTable, EncounterCreateForm, Pagination, Modal],
+  imports: [EncountersTable, EncounterCreateForm, Pagination, Modal, PatientFichaTabs],
   templateUrl: './encounters-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -179,6 +180,10 @@ export class EncountersPage {
 
   openDetail(encounter: EncounterSummary): void {
     this.router.navigate(['/encounters', encounter.id]);
+  }
+
+  goToFicha(): void {
+    this.router.navigate(['/patients', this.patientFilter()]);
   }
 
   openCreate(patientId: string | null = null): void {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { CalendarToolbar } from '../calendar-toolbar/calendar-toolbar';
 import { CalendarView } from '../calendar-view/calendar-view';
 import { AppointmentForm } from '../appointment-form/appointment-form';
@@ -10,9 +10,14 @@ import { ProfessionalsService } from '../../../core/services/professionals.servi
 import { RoomsService } from '../../../core/services/rooms.service';
 import { ServicesService } from '../../../core/services/services.service';
 import { PatientsService } from '../../../core/services/patients.service';
+import { SchedulesApi } from '../../../core/services/schedules-api';
+import { AuthStore } from '../../../core/services/auth-store.service';
+import { CurrentUserService } from '../../../core/services/current-user.service';
 import { Appointment, AppointmentDto } from '../../../core/models/appointment.model';
+import { ScheduleBlock } from '../../../core/models/schedule.model';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { appointmentSaveErrorMessage } from '../../../shared/utils/appointments-error.util';
+import { AppointmentPrefill, toDateOnly } from '../appointment-form/appointment-form.util';
 
 type ModalMode = 'none' | 'create' | 'edit';
 
@@ -29,10 +34,19 @@ export class AppointmentsPage {
   private roomsSvc = inject(RoomsService);
   private servicesSvc = inject(ServicesService);
   private patientsSvc = inject(PatientsService);
+  private schedulesApi = inject(SchedulesApi);
+  private authStore = inject(AuthStore);
+  private currentUser = inject(CurrentUserService);
+  private injector = inject(Injector);
   private readonly apptForm = viewChild<AppointmentForm>('apptForm');
 
   readonly branches = this.branchesSvc.getAll();
   readonly professionals = this.professionalsSvc.getAll();
+  // Un profesional ve directo su propia agenda, sin selector; si no
+  // encontramos su registro, se deja el select como red de seguridad.
+  readonly isProfessional = this.currentUser.hasRole('professional');
+  readonly ownProfessional = computed(() =>
+    this.isProfessional ? this.professionals().find(p => p.user_id === this.authStore.user()?.id) ?? null : null);
   readonly rooms = this.roomsSvc.getAll();
   readonly patients = this.patientsSvc.getAll();
   readonly services = computed(() => this.servicesSvc.getAll()().filter(s => s.is_active));
@@ -45,6 +59,7 @@ export class AppointmentsPage {
 
   selectedProfessionalId = signal('');
   selectedBranchId = signal('');
+  scheduleBlocks = signal<ScheduleBlock[]>([]);
   viewMode = signal<'day' | 'week'>('week');
   referenceDate = signal(new Date());
 
@@ -78,6 +93,28 @@ export class AppointmentsPage {
     effect(() => {
       this.roomsSvc.loadFor(this.selectedBranchId() || null);
     });
+
+    // Fuerza el filtro al propio profesional en cuanto se resuelve su
+    // registro (el select ya está oculto para este rol en el toolbar).
+    effect(() => {
+      const own = this.ownProfessional();
+      if (own) this.selectedProfessionalId.set(own.id);
+    });
+
+    // Horario real del profesional filtrado, para bloquear en la grilla las horas
+    // fuera de su jornada — pedido directo a la API (sin estado compartido).
+    effect(() => {
+      const professionalId = this.selectedProfessionalId();
+      if (!professionalId) {
+        this.scheduleBlocks.set([]);
+        return;
+      }
+      const branchId = this.selectedBranchId();
+      this.schedulesApi.getScheduleFor(professionalId).subscribe({
+        next: blocks => this.scheduleBlocks.set(branchId ? blocks.filter(b => b.branch_id === branchId) : blocks),
+        error: () => this.scheduleBlocks.set([]),
+      });
+    });
   }
 
   private rangeFor(viewMode: 'day' | 'week', referenceDate: Date): { from: string; to: string } {
@@ -97,6 +134,24 @@ export class AppointmentsPage {
     this.modalMode.set('create');
   }
 
+  // Click en una celda libre del calendario: precarga fecha + hora candidata + los
+  // filtros activos. Se aplica a mano (afterNextRender) una vez que
+  // <app-appointment-form> ya existe en el DOM, en vez de un @Input reactivo — evita
+  // cualquier duda de orden de efectos.
+  openCreateModalAt(at: Date): void {
+    this.selectedAppointment.set(null);
+    this.actionError.set(null);
+    this.modalMode.set('create');
+
+    const prefill: AppointmentPrefill = {
+      date: toDateOnly(at.toISOString()),
+      starts_at: at.toISOString(),
+      professional_id: this.selectedProfessionalId() || undefined,
+      branch_id: this.selectedBranchId() || undefined,
+    };
+    afterNextRender(() => this.apptForm()?.applyPrefill(prefill), { injector: this.injector });
+  }
+
   openEditModal(appointment: Appointment): void {
     this.selectedAppointment.set(appointment);
     this.actionError.set(null);
@@ -107,6 +162,10 @@ export class AppointmentsPage {
     this.modalMode.set('none');
     this.selectedAppointment.set(null);
     this.actionError.set(null);
+  }
+
+  submitAppointment(): void {
+    this.apptForm()?.submit();
   }
 
   onSave(dto: AppointmentDto): void {

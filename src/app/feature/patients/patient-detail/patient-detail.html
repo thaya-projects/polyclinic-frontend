@@ -1,5 +1,4 @@
-<div class="flex flex-col gap-6">
-
+<div class="flex flex-col gap-5">
   <!-- Encabezado -->
   <div class="flex items-start justify-between gap-4">
     <div>
@@ -9,69 +8,73 @@
     <app-status-chip [label]="patient().is_active ? 'Activo' : 'Inactivo'" [tone]="patient().is_active ? 'ok' : 'neutral'" />
   </div>
 
-  <!-- Datos personales -->
-  <section class="flex flex-col gap-3">
-    <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Datos personales</h4>
-    <div class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-xl border border-border bg-surface p-4 sm:grid-cols-2">
-      <div>
-        <p class="text-xs text-muted">Fecha de nacimiento</p>
-        <p class="text-sm text-text">{{ formatDate(patient().birth_date) }}</p>
-      </div>
-      <div>
-        <p class="text-xs text-muted">Sexo</p>
-        <p class="text-sm text-text">{{ sexLabel(patient().sex) }}</p>
-      </div>
-    </div>
-  </section>
+  <!-- Misma barra reutilizada en Encuentros/Signos vitales/Recetas/Odontograma,
+       para que esa navegación no se pierda al salir de la ficha. -->
+  <app-patient-ficha-tabs
+    [patientId]="patient().id"
+    [patientActive]="patient().is_active"
+    [activeContentTab]="activeTab()"
+    (contentTabClick)="setTab($event)" />
 
-  <!-- Historia clínica (datos básicos) — sin encounters (T4/historia) -->
-  <section class="flex flex-col gap-3">
-    <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Historia clínica (datos básicos)</h4>
+  @if (activeTab() === 'personal') {
+    <div class="flex flex-col gap-5">
+      <section class="flex flex-col gap-3">
+        <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Datos personales</h4>
+        <div class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-xl border border-border bg-surface p-4 sm:grid-cols-2">
+          <div>
+            <p class="text-xs text-muted">Fecha de nacimiento</p>
+            <p class="text-sm text-text">{{ formatDate(patient().birth_date) }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-muted">Sexo</p>
+            <p class="text-sm text-text">{{ sexLabel(patient().sex) }}</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3">
+        <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Contacto</h4>
+        <div class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-xl border border-border bg-surface p-4 sm:grid-cols-2">
+          <div>
+            <p class="text-xs text-muted">WhatsApp</p>
+            <p class="text-sm text-text">{{ patient().whatsapp_phone || '—' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-muted">Teléfono alternativo</p>
+            <p class="text-sm text-text">{{ patient().phone_alt || '—' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-muted">Correo</p>
+            <p class="text-sm text-text">{{ patient().email || '—' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-muted">Dirección</p>
+            <p class="text-sm text-text">{{ patient().address || '—' }}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (activeTab() === 'clinical' || activeTab() === 'habits') {
+    <!-- Se mantiene montado entre estas dos pestañas: es un solo form/guardado,
+         cambiar de pestaña no debe perder lo que se tipeó en la otra mitad. -->
     <div class="rounded-xl border border-border bg-surface p-4">
-      <app-clinical-record-section [patientId]="patient().id" />
+      <app-clinical-record-section [patientId]="patient().id" [section]="activeTab() === 'habits' ? 'habits' : 'clinical'" />
     </div>
-  </section>
+  }
 
-  <!-- Contacto -->
-  <section class="flex flex-col gap-3">
-    <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Contacto</h4>
-    <div class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-xl border border-border bg-surface p-4 sm:grid-cols-2">
-      <div>
-        <p class="text-xs text-muted">WhatsApp</p>
-        <p class="text-sm text-text">{{ patient().whatsapp_phone || '—' }}</p>
-      </div>
-      <div>
-        <p class="text-xs text-muted">Teléfono alternativo</p>
-        <p class="text-sm text-text">{{ patient().phone_alt || '—' }}</p>
-      </div>
-      <div>
-        <p class="text-xs text-muted">Correo</p>
-        <p class="text-sm text-text">{{ patient().email || '—' }}</p>
-      </div>
-      <div>
-        <p class="text-xs text-muted">Dirección</p>
-        <p class="text-sm text-text">{{ patient().address || '—' }}</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Notas -->
-  <section class="flex flex-col gap-3">
-    <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Notas</h4>
+  @if (activeTab() === 'notes') {
     <div class="rounded-xl border border-border bg-surface p-4">
       <p class="text-sm text-text whitespace-pre-line">{{ patient().notes || 'Sin notas.' }}</p>
     </div>
-  </section>
+  }
 
-  <!-- Contactos (patient_contact) — distinto del contacto propio del paciente de arriba -->
-  <section class="flex flex-col gap-3">
-    <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Contactos</h4>
+  @if (activeTab() === 'contacts') {
     <app-patient-contacts [patientId]="patient().id" />
-  </section>
+  }
 
-  <!-- Fase 7 T1: planes de tratamiento (solo lectura — alta/edición es T2, cambio de estado es T3) -->
-  <section class="flex flex-col gap-3">
-    <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">Planes de tratamiento</h4>
+  @if (activeTab() === 'plans') {
     <app-treatment-plans-section [patientId]="patient().id" />
-  </section>
+  }
 </div>

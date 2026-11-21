@@ -1,0 +1,37 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h2 class="text-2xl font-bold text-navy">
+      @if (fullName()) {
+        Hola, {{ fullName() }}
+      } @else {
+        Inicio
+      }
+    </h2>
+    <p class="mt-1 text-sm text-muted">Resumen general de la plataforma.</p>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <a routerLink="/superadmin/tenants"
+      class="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:border-brand">
+      <i class="ti ti-building-hospital text-xl text-brand"></i>
+      <span class="text-sm font-medium text-navy">Clínicas</span>
+    </a>
+    <a routerLink="/superadmin/plans"
+      class="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:border-brand">
+      <i class="ti ti-package text-xl text-brand"></i>
+      <span class="text-sm font-medium text-navy">Planes</span>
+    </a>
+    <a routerLink="/superadmin/reports"
+      class="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:border-brand">
+      <i class="ti ti-report-analytics text-xl text-brand"></i>
+      <span class="text-sm font-medium text-navy">Reportes</span>
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <app-tenants-overview-card />
+    <app-subscriptions-overview-card />
+  </div>
+
+  <app-mrr-card />
+</div>

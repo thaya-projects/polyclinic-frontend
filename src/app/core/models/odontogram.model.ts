@@ -1,7 +1,7 @@
 // Fase 6 (Odontología): espeja OdontogramDTO (snake_case). Sin tenant_id (no se expone). Un paciente
 // tiene a lo sumo un odontograma current (is_current); crear uno nuevo deja el anterior como snapshot
 // histórico (is_current = false) con su snapshot_date original.
-export type Dentition = 'permanente' | 'temporal' | 'mixta';
+export type Dentition = 'permanent' | 'temporary' | 'mixed';
 
 export interface Odontogram {
   id: string;
@@ -31,9 +31,9 @@ export interface OdontogramPatientOption {
 }
 
 export const DENTITION_OPTIONS: readonly { value: Dentition; label: string }[] = [
-  { value: 'permanente', label: 'Permanente' },
-  { value: 'temporal', label: 'Temporal' },
-  { value: 'mixta', label: 'Mixta' },
+  { value: 'permanent', label: 'Permanente' },
+  { value: 'temporary', label: 'Temporal' },
+  { value: 'mixed', label: 'Mixta' },
 ];
 
 export function dentitionLabel(dentition: Dentition): string {
@@ -50,7 +50,7 @@ export interface ToothArch {
 }
 
 export interface DentitionChart {
-  kind: 'permanente' | 'temporal';
+  kind: 'permanent' | 'temporary';
   upper: ToothArch;
   lower: ToothArch;
 }
@@ -60,13 +60,13 @@ function quadrant(q: number, count: number): number[] {
 }
 
 const PERMANENT_CHART: DentitionChart = {
-  kind: 'permanente',
+  kind: 'permanent',
   upper: { left: quadrant(1, 8).reverse(), right: quadrant(2, 8) },
   lower: { left: quadrant(4, 8).reverse(), right: quadrant(3, 8) },
 };
 
 const TEMPORARY_CHART: DentitionChart = {
-  kind: 'temporal',
+  kind: 'temporary',
   upper: { left: quadrant(5, 5).reverse(), right: quadrant(6, 5) },
   lower: { left: quadrant(8, 5).reverse(), right: quadrant(7, 5) },
 };
@@ -74,8 +74,8 @@ const TEMPORARY_CHART: DentitionChart = {
 // Mixta muestra ambas grillas (permanente arriba, temporal abajo).
 export function dentitionCharts(dentition: Dentition): DentitionChart[] {
   switch (dentition) {
-    case 'temporal': return [TEMPORARY_CHART];
-    case 'mixta': return [PERMANENT_CHART, TEMPORARY_CHART];
+    case 'temporary': return [TEMPORARY_CHART];
+    case 'mixed': return [PERMANENT_CHART, TEMPORARY_CHART];
     default: return [PERMANENT_CHART];
   }
 }

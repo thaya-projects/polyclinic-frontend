@@ -66,12 +66,6 @@ export class ContactForm {
     } as PatientContactDto);
   }
 
-  // T5: el guardado ahora es async — el form ya no se limpia solo al
-  // emitir; el contenedor llama esto recién cuando el POST tuvo éxito.
-  resetForCreate(): void {
-    this.form.reset({ full_name: '', relationship: '', phone: '' });
-  }
-
   cancel(): void {
     this.cancelled.emit();
   }

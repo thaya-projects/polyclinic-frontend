@@ -2,12 +2,13 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MeasurementsTable } from '../measurements-table/measurements-table';
 import { MeasurementForm, OTHER_MEASUREMENT_TYPE } from '../measurement-form/measurement-form';
 import { MeasurementsStore } from '../measurements.store';
 import { Pagination } from '../../../shared/components/pagination/pagination';
 import { Modal } from '../../../shared/components/modal/modal';
+import { PatientFichaTabs } from '../../patients/patient-ficha-tabs/patient-ficha-tabs';
 import { EncounterLookupsService } from '../../../core/services/encounter-lookups.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import {
@@ -37,13 +38,14 @@ const PAGE_SIZE = 10;
 // Filtro por tipo: catálogo + "Otro…" con un código libre (los tipos libres también se filtran).
 @Component({
   selector: 'app-patient-measurements-page',
-  imports: [MeasurementsTable, MeasurementForm, Pagination, Modal, RouterLink],
+  imports: [MeasurementsTable, MeasurementForm, Pagination, Modal, PatientFichaTabs],
   providers: [MeasurementsStore],
   templateUrl: './patient-measurements-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PatientMeasurementsPage {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   readonly lookups = inject(EncounterLookupsService);
   readonly store = inject(MeasurementsStore);
@@ -171,6 +173,10 @@ export class PatientMeasurementsPage {
 
   setPage(page: number): void {
     this.store.setPage(page);
+  }
+
+  goToFicha(): void {
+    this.router.navigate(['/patients', this.patientId()]);
   }
 
   openCreate(): void {

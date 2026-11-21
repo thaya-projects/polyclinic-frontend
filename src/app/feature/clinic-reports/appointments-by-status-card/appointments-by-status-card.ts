@@ -39,7 +39,7 @@ export class AppointmentsByStatusCard {
   professionalId = signal('');
   status = signal('');
 
-  readonly breakdown = this.reportSvc.summary;
+  readonly report = this.reportSvc.summary;
   readonly loading = this.reportSvc.loading;
   readonly error = this.reportSvc.error;
 
@@ -64,5 +64,9 @@ export class AppointmentsByStatusCard {
 
   borderClass(status: AppointmentStatus): string {
     return TONE_BORDER_CLASS[APPOINTMENT_STATUS_TONES[status]];
+  }
+
+  statusLabel(status: AppointmentStatus): string {
+    return this.statusLabels[status];
   }
 }

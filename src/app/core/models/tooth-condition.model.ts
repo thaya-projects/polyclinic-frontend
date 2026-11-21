@@ -6,7 +6,7 @@ import { Dentition } from './odontogram.model';
 export type ToothSurface =
   | 'mesial' | 'distal' | 'oclusal' | 'incisal' | 'vestibular' | 'lingual' | 'palatino' | 'cervical' | 'whole';
 
-export type ToothConditionState = 'existente' | 'planificado' | 'en_proceso' | 'realizado';
+export type ToothConditionState = 'existing' | 'planned' | 'in_progress' | 'done';
 
 export interface ToothCondition {
   id: string;
@@ -39,7 +39,7 @@ export interface UpdateToothConditionDto {
 }
 
 export const DEFAULT_TOOTH_SURFACE: ToothSurface = 'whole';
-export const DEFAULT_TOOTH_CONDITION_STATE: ToothConditionState = 'existente';
+export const DEFAULT_TOOTH_CONDITION_STATE: ToothConditionState = 'existing';
 
 export const TOOTH_SURFACE_OPTIONS: readonly { value: ToothSurface; label: string }[] = [
   { value: 'whole', label: 'Pieza completa' },
@@ -54,10 +54,10 @@ export const TOOTH_SURFACE_OPTIONS: readonly { value: ToothSurface; label: strin
 ];
 
 export const TOOTH_CONDITION_STATE_OPTIONS: readonly { value: ToothConditionState; label: string }[] = [
-  { value: 'existente', label: 'Existente' },
-  { value: 'planificado', label: 'Planificado' },
-  { value: 'en_proceso', label: 'En proceso' },
-  { value: 'realizado', label: 'Realizado' },
+  { value: 'existing', label: 'Existente' },
+  { value: 'planned', label: 'Planificado' },
+  { value: 'in_progress', label: 'En proceso' },
+  { value: 'done', label: 'Realizado' },
 ];
 
 export const TOOTH_SURFACES: readonly ToothSurface[] = TOOTH_SURFACE_OPTIONS.map(o => o.value);
@@ -91,9 +91,9 @@ function isTemporaryFdi(fdi: number): boolean {
 export function isValidFdiForDentition(fdi: number, dentition: Dentition): boolean {
   if (!Number.isInteger(fdi)) return false;
   switch (dentition) {
-    case 'permanente': return isPermanentFdi(fdi);
-    case 'temporal': return isTemporaryFdi(fdi);
-    case 'mixta': return isPermanentFdi(fdi) || isTemporaryFdi(fdi);
+    case 'permanent': return isPermanentFdi(fdi);
+    case 'temporary': return isTemporaryFdi(fdi);
+    case 'mixed': return isPermanentFdi(fdi) || isTemporaryFdi(fdi);
     default: return false;
   }
 }

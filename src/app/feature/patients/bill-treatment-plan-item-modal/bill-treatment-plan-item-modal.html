@@ -1,0 +1,7 @@
+<app-modal [open]="item() !== null" title="Facturar" size="lg" (closed)="close()">
+  @if (item(); as i) {
+    <app-invoice-form [lockedPatientId]="patientId()" [prefillItem]="itemDto(i)" [prefillCurrency]="currency()"
+      [saving]="saving()" [saveError]="saveError()"
+      (submitted)="onSubmit($event)" (cancelled)="close()" />
+  }
+</app-modal>

@@ -27,6 +27,12 @@ export class PatientsService {
     return this.records().find(p => p.id === id) ?? null;
   }
 
+  // GET /tenants/patients/:id — para la página de ficha, independiente de que el
+  // listado esté cargado (ej. entrar directo por URL).
+  getById(id: string): Observable<Patient> {
+    return this.api.getById(id);
+  }
+
   // GET /tenants/patients?q=&document=&page=&limit= — no corre en SSR:
   // depende del token del navegador. La página es quien decide cuándo
   // volver a pedir (cambió la búsqueda, la página, o se creó un registro).

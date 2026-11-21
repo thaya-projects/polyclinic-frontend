@@ -1,0 +1,104 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-end gap-3">
+    <button type="button" (click)="openMovement()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl border border-border px-5 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand">
+      <i class="ti ti-package-import"></i>
+      Registrar movimiento
+    </button>
+    <button type="button" (click)="openTransfer()"
+      class="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark">
+      <i class="ti ti-transfer"></i>
+      Transferir stock
+    </button>
+  </div>
+
+  @if (summaryError()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ summaryError() }}
+    </div>
+  }
+
+  @if (summaryLoading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-14 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando stock...
+    </div>
+  } @else {
+    <div class="flex items-center gap-2">
+      <button type="button" (click)="setViewMode('total')"
+        class="rounded-full px-4 py-1.5 text-xs font-semibold transition-colors"
+        [class]="viewMode() === 'total' ? 'bg-brand text-white' : 'border border-border text-muted hover:text-navy'">
+        Total clínica
+      </button>
+      <button type="button" (click)="setViewMode('branch')"
+        class="rounded-full px-4 py-1.5 text-xs font-semibold transition-colors"
+        [class]="viewMode() === 'branch' ? 'bg-brand text-white' : 'border border-border text-muted hover:text-navy'">
+        Por sucursal
+      </button>
+    </div>
+
+    @if (viewMode() === 'total') {
+      <app-data-table [columns]="totalColumns" [rows]="totalRows()" emptyMessage="Sin stock registrado.">
+        <ng-template appDataTableCell="material_name" let-row>
+          {{ row.material_code ? row.material_code + ' · ' : '' }}{{ row.material_name }}
+        </ng-template>
+      </app-data-table>
+    } @else {
+      <app-data-table [columns]="byBranchColumns" [rows]="byBranchRows()" emptyMessage="Sin stock registrado por sucursal.">
+        <ng-template appDataTableCell="branch_id" let-row>
+          {{ branchName(row.branch_id) }}
+        </ng-template>
+        <ng-template appDataTableCell="material_name" let-row>
+          {{ row.material_code ? row.material_code + ' · ' : '' }}{{ row.material_name }}
+        </ng-template>
+      </app-data-table>
+    }
+  }
+</div>
+
+<app-modal [open]="modalMode() === 'movement'" title="Registrar movimiento" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  @if (modalMode() === 'movement') {
+    <app-stock-movement-form #movementForm [branches]="branches()" [materials]="activeMaterials()" (submitted)="onMovementSubmit($event)" />
+  }
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submitMovement()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+</app-modal>
+
+<app-modal [open]="modalMode() === 'transfer'" title="Transferir stock" size="lg" (closed)="closeModal()">
+  @if (actionError()) {
+    <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ actionError() }}
+    </div>
+  }
+  @if (modalMode() === 'transfer') {
+    <app-stock-transfer-form #transferForm [branches]="branches()" [materials]="activeMaterials()" (submitted)="onTransferSubmit($event)" />
+  }
+
+  <div modalFooter class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="closeModal()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-navy transition-colors hover:border-brand hover:text-brand disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" (click)="submitTransfer()" [disabled]="saving()"
+      class="flex h-10 items-center justify-center rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-60">
+      {{ saving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+</app-modal>

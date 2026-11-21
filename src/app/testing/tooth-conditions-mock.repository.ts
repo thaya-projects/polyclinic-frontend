@@ -13,7 +13,7 @@ import {
 export const MOCK_TOOTH_CONDITION_USER_ID = 'user-mock';
 
 // Dentición de los odontogramas del MockOdontogramRepository (odo-1/odo-2 de pat-1, odo-3 de pat-3).
-const SEED_DENTITIONS: Record<string, Dentition> = { 'odo-1': 'permanente', 'odo-2': 'permanente', 'odo-3': 'mixta' };
+const SEED_DENTITIONS: Record<string, Dentition> = { 'odo-1': 'permanent', 'odo-2': 'permanent', 'odo-3': 'mixed' };
 
 // condition_id del MockDentalConditionsRepository (dc-1 caries, dc-2 obturación, dc-3 corona, dc-4 ausente).
 function seed(): ToothCondition[] {
@@ -25,10 +25,10 @@ function seed(): ToothCondition[] {
     created_at: createdAt, created_by: MOCK_TOOTH_CONDITION_USER_ID,
   });
   return [
-    mark('tc-1', 'odo-2', 16, 'oclusal', 'dc-1', 'existente', '2026-03-10T14:35:00Z'),
-    mark('tc-2', 'odo-2', 36, 'whole', 'dc-3', 'realizado', '2026-03-10T14:36:00Z', 'Corona de porcelana'),
-    mark('tc-3', 'odo-2', 46, 'whole', 'dc-4', 'existente', '2026-03-10T14:37:00Z'),
-    mark('tc-4', 'odo-3', 54, 'oclusal', 'dc-2', 'planificado', '2026-05-20T10:05:00Z'),
+    mark('tc-1', 'odo-2', 16, 'oclusal', 'dc-1', 'existing', '2026-03-10T14:35:00Z'),
+    mark('tc-2', 'odo-2', 36, 'whole', 'dc-3', 'done', '2026-03-10T14:36:00Z', 'Corona de porcelana'),
+    mark('tc-3', 'odo-2', 46, 'whole', 'dc-4', 'existing', '2026-03-10T14:37:00Z'),
+    mark('tc-4', 'odo-3', 54, 'oclusal', 'dc-2', 'planned', '2026-05-20T10:05:00Z'),
   ];
 }
 
@@ -87,9 +87,9 @@ export class MockToothConditionsRepository implements ToothConditionsRepository 
 
   create(odontogramId: string, dto: CreateToothConditionDto): Observable<ToothCondition> {
     if (!this.moduleEnabled) return moduleDisabled();
-    const dentition = this.dentitions[odontogramId] ?? 'mixta';
+    const dentition = this.dentitions[odontogramId] ?? 'mixed';
     if (this.historic.has(odontogramId)) return historic(odontogramId);
-    if (!isValidFdiForDentition(dto.tooth_fdi, 'mixta')) {
+    if (!isValidFdiForDentition(dto.tooth_fdi, 'mixed')) {
       return httpError(422, `tooth_fdi ${dto.tooth_fdi} is not a valid FDI tooth number `
         + '(11-18, 21-28, 31-38, 41-48, 51-55, 61-65, 71-75, 81-85).');
     }

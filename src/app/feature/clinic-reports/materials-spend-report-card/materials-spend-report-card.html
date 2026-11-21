@@ -1,0 +1,46 @@
+<div class="flex flex-col gap-3">
+  <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">Gasto en materiales</h3>
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+      <i class="ti ti-alert-circle"></i>
+      {{ error() }}
+    </div>
+  } @else if (loading()) {
+    <div class="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface p-5 text-sm text-muted">
+      <i class="ti ti-loader-2 animate-spin"></i>
+      Cargando...
+    </div>
+  } @else if (report(); as r) {
+    @if (r.by_currency.length === 0) {
+      <p class="text-sm text-muted">No hubo movimientos de materiales en el rango elegido.</p>
+    } @else {
+      @for (group of r.by_currency; track group.currency) {
+        <div class="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
+          <div class="flex items-baseline justify-between gap-2">
+            <span class="text-xs font-semibold tracking-wide text-muted uppercase">{{ group.currency }}</span>
+            <span class="text-lg font-bold text-navy">{{ group.total_spend.toFixed(2) }} {{ group.currency }}</span>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div class="flex flex-col gap-1.5">
+              <span class="text-xs text-muted">Por material</span>
+              <app-data-table [columns]="materialColumns" [rows]="materialRows(group)" emptyMessage="Sin materiales." />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <span class="text-xs text-muted">Por sucursal</span>
+              <app-branch-amount-table [rows]="group.by_branch" [currency]="group.currency" />
+            </div>
+          </div>
+
+          @if (group.monthly_breakdown.length > 0) {
+            <div class="flex flex-col gap-1.5">
+              <span class="text-xs text-muted">Por mes</span>
+              <app-data-table [columns]="monthlyColumns" [rows]="monthlyRows(group)" />
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+</div>

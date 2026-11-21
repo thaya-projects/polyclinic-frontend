@@ -1,7 +1,7 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { EncountersReportApi } from './encounters-report-api';
-import { EncountersReportQuery } from '../models/clinic-report.model';
+import { EncountersReport, EncountersReportQuery } from '../models/clinic-report.model';
 import { reportsErrorMessage } from '../../shared/utils/reports-error.util';
 
 // GET /tenants/reports/encounters?from=&to=&professional_id=
@@ -10,7 +10,7 @@ export class EncountersReportService {
   private api = inject(EncountersReportApi);
   private platformId = inject(PLATFORM_ID);
 
-  private readonly summarySignal = signal<number | null>(null);
+  private readonly summarySignal = signal<EncountersReport | null>(null);
   private readonly loadingSignal = signal(false);
   private readonly errorSignal = signal<string | null>(null);
 
@@ -23,8 +23,8 @@ export class EncountersReportService {
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     this.api.getSummary(query).subscribe({
-      next: response => {
-        this.summarySignal.set(response.signed_encounters_count);
+      next: summary => {
+        this.summarySignal.set(summary);
         this.loadingSignal.set(false);
       },
       error: err => {

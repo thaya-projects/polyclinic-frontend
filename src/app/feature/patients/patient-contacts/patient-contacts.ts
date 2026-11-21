@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { ContactsTable } from '../contacts-table/contacts-table';
 import { ContactForm } from '../contact-form/contact-form';
+import { Modal } from '../../../shared/components/modal/modal';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { PatientContactsService } from '../../../core/services/patient-contacts.service';
 import { PatientContact, PatientContactDto } from '../../../core/models/patient-contact.model';
@@ -8,7 +9,7 @@ import { contactRemoveErrorMessage, contactSaveErrorMessage } from '../../../sha
 
 @Component({
   selector: 'app-patient-contacts',
-  imports: [ContactsTable, ContactForm, ConfirmDialog],
+  imports: [ContactsTable, ContactForm, Modal, ConfirmDialog],
   templateUrl: './patient-contacts.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -23,6 +24,7 @@ export class PatientContacts {
   readonly listLoading = this.contactsSvc.loading;
   readonly listError = this.contactsSvc.error;
 
+  creating = signal(false);
   editingContact = signal<PatientContact | null>(null);
   saving = signal(false);
   saveError = signal<string | null>(null);
@@ -58,10 +60,11 @@ export class PatientContacts {
     request$.subscribe({
       next: () => {
         this.saving.set(false);
-        // Solo limpia el form en alta — al editar no hay nada que "limpiar",
-        // el form ya refleja lo que quedó guardado vía el input `contact`.
-        if (!editing) this.contactForm()?.resetForCreate();
-        this.editingContact.set(null);
+        // Ambos modales se cierran al guardar: cerrar destruye el form
+        // (Modal envuelve su contenido en @if), así que la próxima
+        // apertura ya arranca con una instancia nueva y limpia.
+        if (editing) this.editingContact.set(null);
+        else this.creating.set(false);
       },
       error: err => {
         this.saving.set(false);
@@ -71,8 +74,20 @@ export class PatientContacts {
     });
   }
 
+  openCreate(): void {
+    this.saveError.set(null);
+    this.editingContact.set(null);
+    this.creating.set(true);
+  }
+
+  closeCreate(): void {
+    this.saveError.set(null);
+    this.creating.set(false);
+  }
+
   onEdit(contact: PatientContact): void {
     this.saveError.set(null);
+    this.creating.set(false);
     this.editingContact.set(contact);
   }
 

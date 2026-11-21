@@ -15,7 +15,7 @@ export interface ToothConditionRow {
 }
 
 const STATE_TONES: Record<ToothConditionState, StatusChipTone> = {
-  existente: 'neutral', planificado: 'wait', en_proceso: 'wait', realizado: 'ok',
+  existing: 'neutral', planned: 'wait', in_progress: 'wait', done: 'ok',
 };
 
 // Presentacional: condiciones ya marcadas en una pieza, con el color y el nombre del catálogo.

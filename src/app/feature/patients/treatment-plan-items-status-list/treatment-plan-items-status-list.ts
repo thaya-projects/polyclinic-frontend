@@ -23,6 +23,7 @@ export class TreatmentPlanItemsStatusList {
 
   changed = output<TreatmentPlanItemStatusChangeEvent>();
   remove = output<string>();
+  bill = output<TreatmentPlanItem>();
 
   private readonly statusForms = viewChildren(TreatmentPlanItemStatusForm);
 

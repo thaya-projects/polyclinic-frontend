@@ -37,6 +37,13 @@ export class InvoiceForm {
   invoice = input<Invoice | null>(null);
   saving = input(false);
   saveError = input<string | null>(null);
+  // "Facturar" desde el paciente (ej. un item de plan de tratamiento ya
+  // completado): paciente fijo, sin selector, y el item ya precargado.
+  lockedPatientId = input<string | null>(null);
+  prefillItem = input<InvoiceItemDto | null>(null);
+  // Moneda del origen del item precargado (ej. la del plan de tratamiento) —
+  // el precio ya está en esa moneda, no en la default del tenant.
+  prefillCurrency = input<string | null>(null);
 
   submitted = output<InvoiceSubmitPayload>();
   cancelled = output<void>();
@@ -56,7 +63,7 @@ export class InvoiceForm {
   // editar items", que acá extendemos a todo el form).
   readonly readonlyMode = computed(() => {
     const inv = this.invoice();
-    return inv !== null && inv.status !== 'borrador';
+    return inv !== null && inv.status !== 'draft';
   });
 
   form = this.fb.group({
@@ -81,22 +88,28 @@ export class InvoiceForm {
   readonly totalPreview = computed(() => this.subtotalPreview() + (Number(this.taxValue()) || 0));
 
   private readonly selectedPatientId = toSignal(this.form.controls.patient_id.valueChanges, { initialValue: '' });
-  readonly currentPatientId = computed(() => this.selectedPatientId() || this.invoice()?.patient_id || null);
+  readonly currentPatientId = computed(() =>
+    this.selectedPatientId() || this.invoice()?.patient_id || this.lockedPatientId() || null);
 
   constructor() {
     effect(() => {
       const inv = this.invoice();
+      const locked = this.lockedPatientId();
       this.form.patchValue(
         {
-          patient_id: inv?.patient_id ?? '',
+          patient_id: inv?.patient_id ?? locked ?? '',
           branch_id: inv?.branch_id ?? '',
           notes: inv?.notes ?? '',
           tax: inv?.tax ?? 0,
-          currency: inv?.currency ?? this.tenantCurrency,
+          currency: inv?.currency ?? this.prefillCurrency() ?? this.tenantCurrency,
         },
         { emitEvent: false },
       );
+      if (locked) this.form.controls.patient_id.disable({ emitEvent: false });
     });
+
+    const prefill = this.prefillItem();
+    if (prefill) this.items.set([{ tempId: `draft-${nextTempId++}`, dto: prefill }]);
   }
 
   // Error 400/422 del backend: lo marca en el input del campo que falló. false = no es de un campo

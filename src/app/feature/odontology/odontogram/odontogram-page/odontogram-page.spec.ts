@@ -64,8 +64,8 @@ describe('OdontogramPage', () => {
   it('mixta: dibuja las dos grillas', async () => {
     await render('pat-3');
     expect(q('odontogram-meta')!.textContent).toContain('Dentición mixta');
-    expect(q('chart-permanente')).not.toBeNull();
-    expect(q('chart-temporal')).not.toBeNull();
+    expect(q('chart-permanent')).not.toBeNull();
+    expect(q('chart-temporary')).not.toBeNull();
   });
 
   it('seleccionar una pieza la muestra en el panel; otro click la deselecciona', async () => {
@@ -116,14 +116,14 @@ describe('OdontogramPage', () => {
     q('new-odontogram')!.click();
     fixture.detectChanges();
     expect(q('create-history-warning')?.textContent).toContain(previousDate);
-    (q('dentition-temporal') as HTMLInputElement).click();
+    (q('dentition-temporary') as HTMLInputElement).click();
     q('create-submit')!.click();
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(page.createOpen()).toBe(false);
     expect(q('notice')?.textContent).toContain(`El odontograma anterior quedó como histórico del ${previousDate}`);
-    expect(page.odontogram()).toEqual(expect.objectContaining({ dentition: 'temporal', is_current: true }));
+    expect(page.odontogram()).toEqual(expect.objectContaining({ dentition: 'temporary', is_current: true }));
     expect(q('odontogram-meta')!.textContent).toContain('Dentición temporal');
     expect((await firstValueFrom(repo.getById('odo-2'))).is_current).toBe(false);
   });
@@ -136,7 +136,7 @@ describe('OdontogramPage', () => {
     fixture.detectChanges();
     expect(q('create-encounter-note')).not.toBeNull();
     page.onCreate();
-    expect(create).toHaveBeenCalledWith('pat-1', { clinical_record_id: 'cr-pat-1', dentition: 'permanente', encounter_id: 'enc-9' });
+    expect(create).toHaveBeenCalledWith('pat-1', { clinical_record_id: 'cr-pat-1', dentition: 'permanent', encounter_id: 'enc-9' });
   });
 
   it('403 encounter ajeno / 422 profesional inactivo: mensaje en el modal, sin tratarlo como módulo apagado', async () => {
@@ -236,7 +236,7 @@ describe('OdontogramPage', () => {
     expect(q('tooth-condition-empty')).not.toBeNull();
 
     pickCondition('dc-own-1');
-    choose('state-select', 'planificado');
+    choose('state-select', 'planned');
     q('tooth-condition-submit')!.click();
     fixture.detectChanges();
 
@@ -246,7 +246,7 @@ describe('OdontogramPage', () => {
     expect(fill('face-11-top')).toBe('#00ACC1');
     expect(list).not.toHaveBeenCalled();
     expect(await firstValueFrom(teethRepo.list('odo-2'))).toContainEqual(
-      expect.objectContaining({ tooth_fdi: 11, condition_id: 'dc-own-1', surface: 'whole', state: 'planificado' }));
+      expect.objectContaining({ tooth_fdi: 11, condition_id: 'dc-own-1', surface: 'whole', state: 'planned' }));
   });
 
   it('click en una cara: selecciona la pieza y preselecciona esa cara en el formulario', async () => {

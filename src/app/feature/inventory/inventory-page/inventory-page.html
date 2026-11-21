@@ -1,0 +1,32 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h2 class="text-2xl font-bold text-navy">Inventario</h2>
+    <p class="mt-1 text-sm text-muted">Catálogo de materiales y stock por sucursal.</p>
+  </div>
+
+  <div class="flex gap-2 border-b border-border">
+    <button type="button" (click)="setTab('materials')"
+      class="px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'materials' ? 'border-b-2 border-brand text-brand' : 'text-muted hover:text-navy'">
+      Materiales
+    </button>
+    <button type="button" (click)="setTab('stock')"
+      class="px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'stock' ? 'border-b-2 border-brand text-brand' : 'text-muted hover:text-navy'">
+      Stock
+    </button>
+    <button type="button" (click)="setTab('units')"
+      class="px-1 pb-3 text-sm font-medium transition-colors"
+      [class]="activeTab() === 'units' ? 'border-b-2 border-brand text-brand' : 'text-muted hover:text-navy'">
+      Unidades
+    </button>
+  </div>
+
+  @if (activeTab() === 'materials') {
+    <app-materials-section />
+  } @else if (activeTab() === 'stock') {
+    <app-stock-section />
+  } @else {
+    <app-units-section />
+  }
+</div>

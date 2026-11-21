@@ -129,7 +129,7 @@ describe('odontogramError: condiciones por pieza (/teeth)', () => {
 
   it('422 tooth_fdi requerido / de otra dentición', () => {
     expect(msg(422, "tooth_fdi is required. (Parameter 'tooth_fdi')").message).toBe('Elegí la pieza a marcar.');
-    expect(msg(422, "tooth_fdi 51 is not valid for a 'permanente' dentition.").message)
+    expect(msg(422, "tooth_fdi 51 is not valid for a 'permanent' dentition.").message)
       .toBe('La pieza 51 no corresponde a la dentición permanente de este odontograma.');
   });
 
@@ -143,7 +143,7 @@ describe('odontogramError: condiciones por pieza (/teeth)', () => {
     expect(msg(422, "surface cannot be null. (Parameter 'surface')").message).toBe('La cara elegida no es válida.');
     expect(msg(422, "surface must be one of: mesial, distal, oclusal, incisal, vestibular, lingual, palatino, cervical, whole. (Parameter 'surface')").message)
       .toBe('La cara elegida no es válida.');
-    expect(msg(422, "state must be one of: existente, planificado, en_proceso, realizado. (Parameter 'state')").message)
+    expect(msg(422, "state must be one of: existing, planned, in_progress, done. (Parameter 'state')").message)
       .toBe('El estado elegido no es válido.');
     expect(msg(422, "note cannot exceed 500 characters. (Parameter 'note')").message)
       .toBe('La nota no puede superar los 500 caracteres.');

@@ -65,6 +65,7 @@ const FIELD_LABELS: Record<string, string> = {
   specialty_id: 'Especialidad',
   specialty_ids: 'Especialidades',
   material_id: 'Material',
+  unit_of_measure_id: 'Unidad de medida',
   user_id: 'Usuario',
   role_id: 'Rol',
   role_code: 'Rol',
@@ -167,6 +168,8 @@ const ENTITIES: Record<string, { label: string; gender: Gender; field: string | 
   TreatmentPlan: { label: 'plan de tratamiento', gender: 'm', field: null },
   TreatmentPlanItem: { label: 'ítem del plan', gender: 'm', field: 'treatment_plan_item_id' },
   Material: { label: 'material', gender: 'm', field: 'material_id' },
+  UnitOfMeasure: { label: 'unidad de medida', gender: 'f', field: 'unit_of_measure_id' },
+  'Unit of measure': { label: 'unidad de medida', gender: 'f', field: 'unit_of_measure_id' },
   AppUser: { label: 'usuario', gender: 'm', field: 'user_id' },
   'App user': { label: 'usuario', gender: 'm', field: 'user_id' },
   Role: { label: 'rol', gender: 'm', field: 'role_id' },
@@ -188,6 +191,7 @@ const CODE_OWNERS: Record<string, string> = {
   specialty: 'una especialidad',
   service: 'un servicio',
   material: 'un material',
+  'unit of measure': 'una unidad de medida',
   'dental condition': 'una condición dental',
   role: 'un rol',
   'system role': 'un rol del sistema',
@@ -201,8 +205,8 @@ const APPOINTMENT_STATUS: Record<string, string> = {
 };
 
 const INVOICE_STATUS: Record<string, string> = {
-  borrador: 'en borrador', emitida: 'emitida', pagada: 'pagada', parcial: 'con pago parcial',
-  anulada: 'anulada', vencida: 'vencida',
+  draft: 'en borrador', issued: 'emitida', paid: 'pagada', partial: 'con pago parcial',
+  voided: 'anulada', overdue: 'vencida',
 };
 
 const SUBSCRIPTION_OPERATION: Record<string, string> = {
@@ -369,7 +373,7 @@ const KNOWN_MESSAGES: KnownMessage[] = [
     message: () => 'La sucursal elegida no pertenece a esta clínica.', field: 'branch_id' },
 
   // --- Catálogos y plantillas ----------------------------------------------------------------
-  { pattern: /^A (?:global )?(specialty|service|material|dental condition|role|system role|subscription plan) with code '(.+?)' already exists/i,
+  { pattern: /^A (?:global )?(specialty|service|material|unit of measure|dental condition|role|system role|subscription plan) with code '(.+?)' already exists/i,
     message: m => `Ya existe ${CODE_OWNERS[m[1].toLowerCase()] ?? 'un registro'} con el código "${m[2]}".`, field: 'code' },
   { pattern: /^A (?:global )?clinical form template with code '(.+?)' and version (\d+) already exists/i,
     message: m => `Ya existe una plantilla clínica con el código "${m[1]}" y la versión ${m[2]}.`, field: 'code' },
@@ -394,6 +398,10 @@ const KNOWN_MESSAGES: KnownMessage[] = [
     field: 'tooth_fdi' },
   { pattern: /^Unknown module '(.+?)'/i, message: m => `"${m[1]}" no es un módulo válido.`, field: 'enabled_modules' },
 
+  // --- Moneda (Material/Stock/Expense) --------------------------------------------------------
+  { pattern: /^Currency '(.+)' is not allowed; use '(.+)' or '(.+)'\.?$/i,
+    message: m => `La moneda "${m[1]}" no está permitida: usá ${m[2]} o ${m[3]}.`, field: 'currency' },
+
   // --- Stock ---------------------------------------------------------------------------------
   { pattern: /^Material '.*' does not have enough stock in branch/i,
     message: () => 'No hay stock suficiente del material en esa sucursal para esta operación.', field: 'quantity' },
@@ -401,7 +409,7 @@ const KNOWN_MESSAGES: KnownMessage[] = [
     message: () => 'La operación dejaría el stock en negativo.', field: 'quantity' },
   { pattern: /^FromBranchId and ToBranchId must be different/i,
     message: () => 'La sucursal de origen y la de destino deben ser distintas.', field: 'to_branch_id' },
-  { pattern: /^transferencia_salida\/transferencia_entrada cannot be created directly/i,
+  { pattern: /^transfer_out\/transfer_in cannot be created directly/i,
     message: () => 'Las transferencias entre sucursales se registran con "Transferir stock", no como movimiento.',
     field: 'type' },
 
